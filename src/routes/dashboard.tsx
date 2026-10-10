@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FolderPlus, FilePlus2, Layers, ArrowRight, Info } from "lucide-react";
+import { FolderPlus, FilePlus2, Layers, ArrowRight, Info, Bot, FileCheck2, Check, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -195,6 +195,60 @@ function Dashboard() {
 
   return (
     <div className="bg-muted/40">
+      <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
+        <HeroBackdrop />
+        <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-24">
+          <p className="inline-flex items-center gap-2 rounded-full border border-ink-foreground/15 bg-ink-foreground/5 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-electric">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-electric" /> My MetaTwin
+          </p>
+          <h1 className="mt-5 max-w-4xl text-4xl font-semibold leading-[1.08] md:text-6xl">
+            The job market is shifting to a <span className="text-gradient-electric">proof-of-capability market.</span>
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg text-ink-muted">
+            Listing skills is no longer enough. To compete, you need to bring your skills, the projects that prove them — and your own team of AI employees. Your MetaTwin is where all three come together.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild variant="hero" size="lg"><Link to="/profile">View a MetaTwin <ArrowRight /></Link></Button>
+            <Button asChild variant="heroOutline" size="lg"><Link to="/signup">Build Your MetaTwin</Link></Button>
+          </div>
+        </div>
+      </section>
+
+      <Section className="py-16 md:py-20">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">What you bring</p>
+        <h2 className="mt-3 max-w-2xl text-3xl font-semibold md:text-4xl">Three things make a MetaTwin.</h2>
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          {[
+            { n: "01", i: Layers, t: "Skills", d: "What you can do — technical, creative, problem-solving and collaborative capabilities.", tag: "The claim" },
+            { n: "02", i: FileCheck2, t: "Projects & evidence", d: "The work that proves it — prototypes, code, reports, feedback and reviews, linked to each skill.", tag: "The proof" },
+            { n: "03", i: Bot, t: "AI employees", d: "Your own team of AI agents that research, build and operate — directed and supervised by you.", tag: "The multiplier" },
+          ].map(({ n, i: I, t, d, tag }) => (
+            <Card key={t} className="relative overflow-hidden">
+              <span className="absolute right-5 top-4 font-display text-5xl font-semibold text-muted">{n}</span>
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-electric text-primary-foreground"><I className="h-5 w-5" /></div>
+              <p className="mt-5 font-mono text-[11px] uppercase tracking-wider text-electric">{tag}</p>
+              <h3 className="mt-1 text-xl font-semibold">{t}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{d}</p>
+            </Card>
+          ))}
+        </div>
+
+        <div className="mt-12 grid overflow-hidden rounded-2xl border md:grid-cols-2">
+          <div className="bg-card p-6 md:p-8">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">The old way · CV</p>
+            <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+              {["A static list of claimed skills", "Projects described, not shown", "You alone — capacity limited to your hours", "Rewritten every time you apply"].map((x) => <li key={x} className="flex gap-2"><X className="mt-0.5 h-4 w-4 shrink-0" />{x}</li>)}
+            </ul>
+          </div>
+          <div className="bg-ink p-6 text-ink-foreground md:p-8">
+            <p className="text-xs font-semibold uppercase tracking-wider text-electric">The new way · MetaTwin</p>
+            <ul className="mt-4 space-y-3 text-sm">
+              {["Skills with a clear evidence status", "Projects with work samples, feedback and journey", "You + your AI employees — a team, ready to hire", "A living record that grows as you do"].map((x) => <li key={x} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-electric" />{x}</li>)}
+            </ul>
+          </div>
+        </div>
+      </Section>
+
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
         <HeroBackdrop />
         <div className="relative mx-auto flex max-w-7xl flex-col gap-4 px-5 py-14 md:flex-row md:items-end md:justify-between md:py-16">

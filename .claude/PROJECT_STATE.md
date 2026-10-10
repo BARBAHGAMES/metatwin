@@ -73,6 +73,15 @@ Andrew built a full MetaTwin design in Lovable (project `48ea735b-4de2-4b28-986c
 
 **Found and fixed a real bug during testing**: on `/login` and `/signup`, the white card's input text was inheriting the dark page wrapper's light `text-ink-foreground` color, making typed text essentially invisible (white-on-white). Fixed by adding `text-foreground` to those Cards. Caught via actual browser screenshots before Chrome automation started failing with an unrelated `chrome-extension://` conflict (looked like interference from another installed extension) — switched to scripted verification against Supabase directly for the rest, which is arguably the more reliable check for data-layer correctness anyway.
 
+## Dashboard marketing content synced from Lovable (2026-10-10, later again)
+
+Andrew updated the "My MetaTwin" page in Lovable (new commit `598b603`) and asked to pull it in. Diffed Lovable's new `dashboard.tsx` against ours and merged selectively rather than wholesale — ours is a real authenticated page now, Lovable's isn't:
+
+- **Added**: the new top explainer content, verbatim — "The job market is shifting to a proof-of-capability market" hero, the "Three things make a MetaTwin" (Skills / Projects & evidence / AI employees) card row, and the CV-vs-MetaTwin comparison grid. All generic marketing copy, not tied to any user's data, so safe to show as-is. Changed its "Build Your MetaTwin" CTA to `/signup` (same convention as everywhere else — `/build` is the dead-end demo wizard).
+- **Not added**: Lovable's new "Your AI team: Nia (Research Analyst) · Kito (CAD & Render Assistant) · ..." banner. Its own dashboard has no real auth, so that banner is harmless filler there — but ours is a real, logged-in user's own dashboard, and showing them someone else's fictional AI employees as "Your AI team" would be a straightforwardly false claim about their own account, not a "prototype" label away from being misleading. Skipped it; "AI employees" as a real feature is still the open, undecided item below.
+- Kept our real "Welcome back, {real name}" hero, and everything below it (profile completion, capabilities, projects, recent activity, profile editor, dialogs) exactly as built last session — none of that changed in Lovable's update anyway.
+- Verified: `tsc --noEmit` clean, `npm run build` clean, `/dashboard` smoke-tested at 200 via `vite dev`. **Not yet deployed.**
+
 ## In progress / next up
 
 1. **Wire `/profile`, `/capability/$slug`, `/projects`, `/projects/$id`, `/journey`** to real per-user data once there's a real public-profile concept (a route keyed by twin id/slug, visibility-gated per the `twins.visibility` RLS policies already in the schema) — currently these all show the same hardcoded "Victorious Kibaki" sample regardless of who's logged in.
