@@ -7,7 +7,7 @@
 - **v1 scope: student-only.** No employer portal, university integrations, automated credential verification, or BARBAH account linking in v1.
 - **Auth: MetaTwin has its own, fully separate Supabase Auth** — no shared user base with BARBAH.
 - **Supabase project**: `metatwin` (id `yxfclmareqiykgixklbp`), org `kqtcxuppoddunjbfpmzv` (barbahgamesfounder's Org), region `ap-south-1` (Mumbai — the nearest available Supabase region to Nairobi; Supabase has no African region), **Free plan** ($0/mo). Caveat: free projects auto-pause after 7 days with no activity — upgrade to Pro before relying on this for real users.
-- **Mail domain**: `metatwin.metaglobe.co.ke` (not yet created in Resend — see Blocked, below).
+- **Mail domain**: `metaglobetechnologies.co.ke` (already verified in Resend) — changed from the originally-planned `metatwin.metaglobe.co.ke` after that hit the account's 3/3 domain cap; Andrew chose reusing the existing verified domain over upgrading the Resend plan or freeing a slot. Emails send as `hello@metaglobetechnologies.co.ke`.
 - **Cloudflare access**: Andrew will create a scoped API token (Workers edit + DNS edit on `metaglobe.co.ke` only) and hand it to Claude as a secret. Claude then runs deploys and manages the custom domain/DNS directly — but always says what it's about to do first, every time, before touching DNS or production.
 - **GitHub**: repo created under the `BARBAHGAMES` org (matches where `barbah-games-platform` lives), private.
 
@@ -26,9 +26,8 @@
 
 ## Blocked
 
-1. **Resend domain limit.** The Resend account is at `3/3` domains on its current plan (`metaglobetechnologies.co.ke`, `nairobiesportsexpo.co.ke`, `barbahgames.gg`) — creating `metatwin.metaglobe.co.ke` failed with a plan-limit error. Needs Andrew to either upgrade the Resend plan or pick a different approach. **Did not upgrade the plan — that's a billing decision, asked Andrew instead.**
-2. **Cloudflare token not yet provided.** `wrangler` is unauthenticated in this environment. Blocks: `npm run deploy`, adding `metatwin` as a Worker custom domain, and adding the Resend domain-verification DNS records to `metaglobe.co.ke` once the domain limit above is resolved. Waiting on Andrew to create the scoped token (Workers edit + DNS edit on `metaglobe.co.ke` only) and hand it over.
-3. **Local `npm install` / build not yet run or verified in this session** — the scaffold hasn't been typechecked or built end-to-end yet.
+1. **Cloudflare token not yet provided.** `wrangler` is unauthenticated in this environment. Blocks: `npm run deploy` and adding `metatwin` as a Worker custom domain. Waiting on Andrew to create the scoped token (Workers edit + DNS edit on `metaglobe.co.ke` only) and hand it over. No DNS work is needed for email anymore — `metaglobetechnologies.co.ke` is already verified.
+3. **Supabase Auth Custom SMTP not configured yet** — no MCP tool exposes Auth SMTP settings; needs to be done by hand in the Supabase dashboard (Authentication → Settings → SMTP), using Resend's SMTP credentials for `metaglobetechnologies.co.ke`.
 
 ## In progress / next up
 

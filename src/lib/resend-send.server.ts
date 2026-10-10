@@ -16,7 +16,11 @@ export async function sendResendEmail(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        from: "MetaTwin <hello@metatwin.metaglobe.co.ke>",
+        // metaglobetechnologies.co.ke is already verified in Resend — reused
+        // here instead of registering a new metatwin.metaglobe.co.ke domain,
+        // which would have needed a Resend plan upgrade (account was at its
+        // 3/3 domain cap).
+        from: "MetaTwin <hello@metaglobetechnologies.co.ke>",
         to: [to],
         subject,
         html,
