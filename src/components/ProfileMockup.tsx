@@ -1,5 +1,6 @@
 import { capabilities, person, projects } from "@/lib/data";
-import { SampleAvatar, StatusBadge } from "@/components/site";
+import sampleProfilePhoto from "@/assets/sample-profile.png";
+import { StatusBadge } from "@/components/site";
 import { MessageSquare, Sparkles, Target, FileCheck2 } from "lucide-react";
 
 export function ProfileMockup() {
@@ -17,7 +18,7 @@ export function ProfileMockup() {
         <div className="grid gap-4 p-5 sm:grid-cols-[1.1fr_1fr]">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <SampleAvatar initials={person.initials} className="h-12 w-12 rounded-xl text-sm" />
+              <img src={sampleProfilePhoto} alt={person.name} className="h-12 w-12 shrink-0 rounded-xl object-cover object-top" />
               <div className="min-w-0">
                 <p className="font-display font-semibold">{person.name}</p>
                 <p className="truncate text-xs text-muted-foreground">{person.headline}</p>

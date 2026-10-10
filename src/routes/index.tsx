@@ -3,7 +3,8 @@ import { ArrowRight, Layers, FileCheck2, TrendingUp, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProfileMockup } from "@/components/ProfileMockup";
 import { CareerGraph } from "@/components/CareerGraph";
-import { Card, SampleAvatar, Section, StatusBadge } from "@/components/site";
+import sampleProfilePhoto from "@/assets/sample-profile.png";
+import { Card, Section, StatusBadge } from "@/components/site";
 import { capBySlug, person, statusMeta, type Status } from "@/lib/data";
 
 export const Route = createFileRoute("/")({
@@ -58,7 +59,7 @@ function Home() {
             <Card>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your network</p>
               <div className="mt-4 flex items-center gap-3">
-                <SampleAvatar initials={person.initials} className="h-10 w-10 rounded-full text-xs" />
+                <img src={sampleProfilePhoto} alt="Victorious Kibaki" className="h-10 w-10 shrink-0 rounded-full object-cover object-top" />
                 <div className="min-w-0"><p className="truncate text-sm font-semibold">Victorious Kibaki</p><p className="text-xs text-muted-foreground">added new evidence · 2h</p></div>
               </div>
               <p className="mt-3 text-sm">Pilot results are in: AquaLoop v3 is diverting ~600 L of water a week. 💧</p>
