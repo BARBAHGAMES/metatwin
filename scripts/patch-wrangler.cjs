@@ -57,6 +57,11 @@ const yesterday = new Date();
 yesterday.setDate(yesterday.getDate() - 1);
 config.compatibility_date = yesterday.toISOString().slice(0, 10);
 
+// Nitro auto-derives the Worker name from the git remote (ends up
+// "barbahgames-metatwin", since the repo lives under the BARBAHGAMES org) —
+// pin it to the plain product name instead.
+config.name = "metatwin";
+
 // Cloudflare Workers vars are fully replaced (not merged) on every deploy, so
 // any plain var not re-injected here disappears silently on the next deploy.
 config.vars = {
