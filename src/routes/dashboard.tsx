@@ -199,14 +199,14 @@ function Dashboard() {
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
         <HeroBackdrop />
         <div className="relative mx-auto flex max-w-7xl flex-col gap-4 px-5 py-14 md:flex-row md:items-end md:justify-between md:py-16">
-          <div>
+          <div className="hero-rise">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">Owner view · Managing a MetaTwin</p>
             <h1 className="mt-2 text-3xl font-semibold md:text-5xl">
               Welcome back{twin.name ? `, ${twin.name.split(" ")[0]}` : ""}.
             </h1>
             <p className="mt-2 text-ink-muted">Skills, evidence and your MetaTwin in one place.</p>
           </div>
-          <Button asChild variant="heroOutline"><Link to="/profile">View my MetaTwin <ArrowRight /></Link></Button>
+          <Button asChild variant="heroOutline" className="hero-rise-delay-1"><Link to="/profile">View my MetaTwin <ArrowRight /></Link></Button>
         </div>
       </section>
       <Section className="py-10 md:py-12">
@@ -222,15 +222,15 @@ function Dashboard() {
         )}
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <button onClick={() => setProjectDialog(true)} className="flex items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition hover:border-electric/50">
+          <button onClick={() => setProjectDialog(true)} className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition-all duration-200 hover:border-electric/50 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2">
             <FolderPlus className="h-5 w-5 shrink-0 text-electric" />Add a project
           </button>
-          <button onClick={() => setCapabilityDialog(true)} className="flex items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition hover:border-electric/50">
+          <button onClick={() => setCapabilityDialog(true)} className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition-all duration-200 hover:border-electric/50 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2">
             <Layers className="h-5 w-5 shrink-0 text-electric" />Add a capability
           </button>
           <button
             onClick={() => (competencies.length === 0 ? toast.info("Add a capability first.") : setEvidenceDialog(true))}
-            className="flex items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition hover:border-electric/50"
+            className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition-all duration-200 hover:border-electric/50 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2"
           >
             <FilePlus2 className="h-5 w-5 shrink-0 text-electric" />Add evidence
           </button>

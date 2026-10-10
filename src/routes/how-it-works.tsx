@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Bot, Check, FileCheck2, Layers, Paperclip, Rocket, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, HeroBackdrop, Section } from "@/components/site";
+import { Reveal } from "@/components/Reveal";
 
 export const Route = createFileRoute("/how-it-works")({
   head: () => ({
@@ -35,14 +36,14 @@ function How() {
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
         <HeroBackdrop />
         <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-24">
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">How It Works</p>
-          <h1 className="mt-5 max-w-4xl text-4xl font-semibold leading-[1.08] md:text-6xl">
+          <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">How It Works</p>
+          <h1 className="hero-rise-delay-1 mt-5 max-w-4xl text-4xl font-semibold leading-[1.08] md:text-6xl">
             The job market is shifting to a <span className="text-gradient-electric">proof-of-capability market.</span>
           </h1>
-          <p className="mt-6 max-w-2xl text-lg text-ink-muted">
+          <p className="hero-rise-delay-1 mt-6 max-w-2xl text-lg text-ink-muted">
             Listing skills is no longer enough. To compete, you need to bring your skills, the projects that prove them — and your own team of AI employees. Your MetaTwin is where all three come together.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="hero-rise-delay-2 mt-8 flex flex-wrap gap-3">
             <Button asChild variant="hero" size="lg"><Link to="/build">Build Your MetaTwin <ArrowRight /></Link></Button>
             <Button asChild variant="heroOutline" size="lg"><Link to="/profile">View a MetaTwin</Link></Button>
           </div>
@@ -52,7 +53,7 @@ function How() {
       <Section>
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">What you bring</p>
         <h2 className="mt-3 text-3xl font-semibold md:text-4xl">Three things make a MetaTwin.</h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <Reveal stagger={0.1} className="mt-10 grid gap-5 md:grid-cols-3">
           {pillars.map(({ n, i: I, t, d, tag }) => (
             <Card key={t} className="relative overflow-hidden">
               <span className="absolute right-5 top-4 font-display text-5xl font-semibold text-muted">{n}</span>
@@ -62,7 +63,7 @@ function How() {
               <p className="mt-2 text-sm text-muted-foreground">{d}</p>
             </Card>
           ))}
-        </div>
+        </Reveal>
 
         <div className="mt-12 grid overflow-hidden rounded-2xl border md:grid-cols-2">
           <div className="bg-card p-6 md:p-8">
@@ -83,7 +84,7 @@ function How() {
       <section className="border-t bg-card">
         <Section>
           <h2 className="text-3xl font-semibold md:text-4xl">Five steps to your MetaTwin.</h2>
-          <ol className="mt-10 grid gap-5 md:grid-cols-5">
+          <Reveal as="ol" stagger={0.08} className="mt-10 grid gap-5 md:grid-cols-5">
             {steps.map(({ i: I, t, d }, n) => (
               <li key={t} className="rounded-2xl border bg-background p-6 shadow-card">
                 <span className="font-mono text-xs text-electric">Step {n + 1}</span>
@@ -92,7 +93,7 @@ function How() {
                 <p className="mt-2 text-sm text-muted-foreground">{d}</p>
               </li>
             ))}
-          </ol>
+          </Reveal>
           <div className="mt-10 flex flex-wrap gap-3">
             <Button asChild variant="hero" size="lg"><Link to="/build">Build Your MetaTwin</Link></Button>
             <Button asChild variant="outline" size="lg" className="rounded-full"><Link to="/dashboard">See an example setup</Link></Button>

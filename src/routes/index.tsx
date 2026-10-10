@@ -5,6 +5,7 @@ import { ProfileMockup } from "@/components/ProfileMockup";
 import { CareerGraph } from "@/components/CareerGraph";
 import sampleProfilePhoto from "@/assets/sample-profile.png";
 import { Card, Section, StatusBadge } from "@/components/site";
+import { Reveal } from "@/components/Reveal";
 import { capBySlug, person, statusMeta, type Status } from "@/lib/data";
 
 export const Route = createFileRoute("/")({
@@ -30,16 +31,16 @@ function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/80 to-ink/20" aria-hidden />
         <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 md:py-24 lg:grid-cols-[1fr_1.05fr]">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-ink-foreground/15 bg-ink-foreground/5 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-electric">
+            <p className="hero-rise inline-flex items-center gap-2 rounded-full border border-ink-foreground/15 bg-ink-foreground/5 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-electric">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-electric" /> The age of capability
             </p>
-            <h1 className="mt-5 text-4xl font-semibold leading-[1.08] md:text-6xl">
+            <h1 className="hero-rise-delay-1 mt-5 text-4xl font-semibold leading-[1.08] md:text-6xl">
               Your CV tells people what you've done. <span className="text-gradient-electric">MetaTwin shows them what you can do.</span>
             </h1>
-            <p className="mt-6 max-w-xl text-lg text-ink-muted">
+            <p className="hero-rise-delay-1 mt-6 max-w-xl text-lg text-ink-muted">
               MetaTwin is your digital twin of capability—a living record of what you know, what you create, what you can demonstrate, and the evidence behind your work.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="hero-rise-delay-2 mt-8 flex flex-wrap gap-3">
               <Button asChild variant="hero" size="lg"><Link to="/build">Build Your MetaTwin <ArrowRight /></Link></Button>
               <Button asChild variant="heroOutline" size="lg"><Link to="/profile">Explore a Profile</Link></Button>
             </div>
@@ -55,7 +56,7 @@ function Home() {
             <h2 className="mt-3 text-3xl font-semibold md:text-4xl">Connect. Show your work. Get matched on evidence.</h2>
             <p className="mt-4 text-muted-foreground">A professional network, a portfolio of proof and a marketplace of opportunity — for a new breed of workforce: individuals with proven capability and their own team of AI employees.</p>
           </div>
-          <div className="mt-10 grid gap-5 lg:grid-cols-3">
+          <Reveal stagger={0.1} className="mt-10 grid gap-5 lg:grid-cols-3">
             <Card>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your network</p>
               <div className="mt-4 flex items-center gap-3">
@@ -89,13 +90,13 @@ function Home() {
                 </div>
               ))}
             </Card>
-          </div>
+          </Reveal>
         </Section>
       </section>
 
       <Section>
         <h2 className="text-3xl font-semibold md:text-4xl">From Claims to Capability.</h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <Reveal stagger={0.1} className="mt-10 grid gap-5 md:grid-cols-3">
           {[
             { icon: Layers, t: "Capture Your Capabilities", d: "Build a structured record of your skills, experience, interests, projects, and development." },
             { icon: FileCheck2, t: "Show the Evidence", d: "Connect skills to real projects, prototypes, work samples, documented contributions, and relevant reviews." },
@@ -107,7 +108,7 @@ function Home() {
               <p className="mt-2 text-sm text-muted-foreground">{d}</p>
             </Card>
           ))}
-        </div>
+        </Reveal>
       </Section>
 
       <section className="border-y bg-card">
@@ -119,7 +120,7 @@ function Home() {
                 Instead of rewriting a CV whenever you gain experience, you keep adding new evidence to an evolving record. Your MetaTwin develops as you do.
               </p>
             </div>
-            <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Reveal as="ol" stagger={0.06} className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {loop.map((s, i) => (
                 <li key={s} className="relative rounded-xl border bg-background p-4">
                   <span className="font-mono text-xs text-electric">0{i + 1}</span>
@@ -127,13 +128,14 @@ function Home() {
                   {i < loop.length - 1 && <ArrowRight className="absolute right-3 top-4 h-4 w-4 text-muted-foreground" />}
                 </li>
               ))}
-            </ol>
+            </Reveal>
           </div>
         </Section>
       </section>
 
-      <Section>
-        <div className="grid gap-10 lg:grid-cols-2">
+      <Reveal>
+        <Section>
+          <div className="grid gap-10 lg:grid-cols-2">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">Proof of capability</p>
             <h2 className="mt-3 text-3xl font-semibold md:text-4xl">Skills Are Claims. Evidence Makes Them Credible.</h2>
@@ -164,9 +166,11 @@ function Home() {
             <div className="p-4"><Button asChild variant="link" className="px-0"><Link to="/capability/$slug" params={{ slug: cap.slug }}>Open capability detail <ArrowRight /></Link></Button></div>
           </Card>
         </div>
-      </Section>
+        </Section>
+      </Reveal>
 
       <section className="bg-ink text-ink-foreground">
+        <Reveal>
         <Section>
           <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
             <div>
@@ -195,15 +199,18 @@ function Home() {
             </div>
           </div>
         </Section>
+        </Reveal>
       </section>
 
-      <Section className="text-center">
-        <h2 className="mx-auto max-w-2xl text-3xl font-semibold md:text-5xl">Don't just tell the world what you can do. <span className="text-gradient-electric">Show the evidence.</span></h2>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Button asChild variant="hero" size="lg"><Link to="/build">Build Your MetaTwin</Link></Button>
-          <Button asChild variant="outline" size="lg" className="rounded-full"><Link to="/profile">Explore a Profile</Link></Button>
-        </div>
-      </Section>
+      <Reveal>
+        <Section className="text-center">
+          <h2 className="mx-auto max-w-2xl text-3xl font-semibold md:text-5xl">Don't just tell the world what you can do. <span className="text-gradient-electric">Show the evidence.</span></h2>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Button asChild variant="hero" size="lg"><Link to="/build">Build Your MetaTwin</Link></Button>
+            <Button asChild variant="outline" size="lg" className="rounded-full"><Link to="/profile">Explore a Profile</Link></Button>
+          </div>
+        </Section>
+      </Reveal>
     </>
   );
 }

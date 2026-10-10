@@ -10,6 +10,7 @@ import { CareerGraph } from "@/components/CareerGraph";
 import { Button } from "@/components/ui/button";
 import sampleProfilePhoto from "@/assets/sample-profile.png";
 import { Card, SampleAvatar, SampleTag, Section, StatusBadge } from "@/components/site";
+import { Reveal } from "@/components/Reveal";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import type { Status } from "@/lib/data";
 
@@ -110,7 +111,7 @@ function RealProfile({ userId }: { userId: string }) {
             <p className="font-mono text-xs text-ink-muted">Your MetaTwin</p>
             <Link to="/dashboard" className="text-xs text-ink-muted underline-offset-4 hover:text-ink-foreground hover:underline">Owner view →</Link>
           </div>
-          <div className="mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
+          <div className="hero-rise mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
             <SampleAvatar initials={initials} className="h-64 w-52 rounded-3xl text-5xl shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64" />
             <div className="min-w-0">
               <h1 className="mt-4 text-4xl font-semibold md:text-6xl">{twin.name || "Add your name"}</h1>
@@ -143,7 +144,7 @@ function RealProfile({ userId }: { userId: string }) {
                 <p className="text-sm text-muted-foreground">No capabilities added yet. Add some from your <Link to="/dashboard" className="text-electric">dashboard</Link>.</p>
               </Card>
             ) : (
-              <div className="mt-6 space-y-6">
+              <Reveal stagger={0.05} className="mt-6 space-y-6">
                 {groups
                   .filter((g) => competencies.some((c) => c.skills?.category === g))
                   .map((g) => (
@@ -151,7 +152,7 @@ function RealProfile({ userId }: { userId: string }) {
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{g}</p>
                       <div className="grid gap-3 sm:grid-cols-2">
                         {competencies.filter((c) => c.skills?.category === g).map((c) => (
-                          <div key={c.id} className="rounded-xl border bg-card p-4">
+                          <div key={c.id} className="rounded-xl border bg-card p-4 transition-shadow duration-200 hover:shadow-card">
                             <div className="flex items-start justify-between gap-2">
                               <p className="font-medium">{c.skills?.name ?? "Unknown skill"}</p>
                               <StatusBadge status={competencyStatus(c)} />
@@ -161,7 +162,7 @@ function RealProfile({ userId }: { userId: string }) {
                       </div>
                     </div>
                   ))}
-              </div>
+              </Reveal>
             )}
           </div>
 
@@ -172,21 +173,21 @@ function RealProfile({ userId }: { userId: string }) {
                 <p className="text-sm text-muted-foreground">No projects added yet. Add some from your <Link to="/dashboard" className="text-electric">dashboard</Link>.</p>
               </Card>
             ) : (
-              <div className="mt-5 space-y-3">
+              <Reveal stagger={0.08} className="mt-5 space-y-3">
                 {projectList.map((p) => (
-                  <Card key={p.id}>
+                  <Card key={p.id} className="transition-shadow duration-200 hover:shadow-card">
                     <p className="font-display font-semibold">{p.title}</p>
                     {p.description && <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>}
                   </Card>
                 ))}
-              </div>
+              </Reveal>
             )}
           </div>
 
           {recentActivity.length > 0 && (
             <div>
               <h2 className="text-2xl font-semibold">Growth Timeline</h2>
-              <ol className="mt-5 space-y-0 border-l-2 border-electric/20 pl-6">
+              <Reveal as="ol" stagger={0.06} className="mt-5 space-y-0 border-l-2 border-electric/20 pl-6">
                 {recentActivity.map((g, i) => (
                   <li key={i} className="relative pb-6">
                     <span className="absolute -left-[31px] top-1 h-3 w-3 rounded-full border-2 border-background bg-electric" />
@@ -194,7 +195,7 @@ function RealProfile({ userId }: { userId: string }) {
                     <p className="mt-0.5">{g.text}</p>
                   </li>
                 ))}
-              </ol>
+              </Reveal>
             </div>
           )}
         </div>
@@ -228,7 +229,7 @@ function SampleProfile() {
               <SampleTag />
             </div>
           </div>
-          <div className="mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
+          <div className="hero-rise mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
             <img src={sampleProfilePhoto} alt={person.name} width={928} height={1152} className="h-64 w-52 shrink-0 rounded-3xl object-cover shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64" />
             <div className="min-w-0">
               <span className="inline-flex items-center gap-2 rounded-full border border-electric/40 bg-electric/10 px-3 py-1 text-xs text-electric">
@@ -265,13 +266,13 @@ function SampleProfile() {
           <div>
             <h2 className="text-2xl font-semibold">Capability Map</h2>
             <p className="mt-1 text-sm text-muted-foreground">Each capability shows its evidence status. Open one to see what supports it.</p>
-            <div className="mt-6 space-y-6">
+            <Reveal stagger={0.05} className="mt-6 space-y-6">
               {groups.map((g) => (
                 <div key={g}>
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{g}</p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {capabilities.filter((c) => c.group === g).map((c) => (
-                      <Link key={c.slug} to="/capability/$slug" params={{ slug: c.slug }} className="group rounded-xl border bg-card p-4 transition hover:border-electric/50 hover:shadow-card">
+                      <Link key={c.slug} to="/capability/$slug" params={{ slug: c.slug }} className="group rounded-xl border bg-card p-4 transition-all duration-200 hover:border-electric/50 hover:shadow-card motion-safe:hover:-translate-y-0.5">
                         <div className="flex items-start justify-between gap-2">
                           <p className="font-medium">{c.name}</p>
                           <StatusBadge status={c.status} />
@@ -282,7 +283,7 @@ function SampleProfile() {
                   </div>
                 </div>
               ))}
-            </div>
+            </Reveal>
           </div>
 
           <div>
@@ -308,7 +309,7 @@ function SampleProfile() {
 
           <div>
             <h2 className="text-2xl font-semibold">Growth Timeline</h2>
-            <ol className="mt-5 space-y-0 border-l-2 border-electric/20 pl-6">
+            <Reveal as="ol" stagger={0.05} className="mt-5 space-y-0 border-l-2 border-electric/20 pl-6">
               {growth.map((g, i) => (
                 <li key={i} className="relative pb-6">
                   <span className="absolute -left-[31px] top-1 h-3 w-3 rounded-full border-2 border-background bg-electric" />
@@ -316,7 +317,7 @@ function SampleProfile() {
                   <p className="mt-0.5">{g.text}</p>
                 </li>
               ))}
-            </ol>
+            </Reveal>
           </div>
         </div>
 

@@ -42,7 +42,7 @@ const seeking = ["Freelance gigs", "Internships", "Full-time roles", "Collaborat
 
 function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: string }) {
   return (
-    <button type="button" onClick={onClick} className={cn("rounded-full border px-3.5 py-1.5 text-sm transition", on ? "border-electric bg-electric-soft text-accent-foreground" : "bg-card hover:border-electric/50")}>
+    <button type="button" onClick={onClick} className={cn("cursor-pointer rounded-full border px-3.5 py-1.5 text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2", on ? "border-electric bg-electric-soft text-accent-foreground" : "bg-card hover:border-electric/50 motion-safe:hover:-translate-y-0.5")}>
       {on && <Check className="mr-1 inline h-3.5 w-3.5" />}{children}
     </button>
   );
@@ -91,12 +91,12 @@ function Build() {
       <div className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
         <HeroBackdrop />
         <div className="relative mx-auto max-w-7xl px-5 py-10">
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">Build Your MetaTwin</p>
-          <h1 className="mt-3 text-3xl font-semibold md:text-4xl">Don't just tell the world. Show the evidence.</h1>
+          <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Build Your MetaTwin</p>
+          <h1 className="hero-rise-delay-1 mt-3 text-3xl font-semibold md:text-4xl">Don't just tell the world. Show the evidence.</h1>
           <ol className="mt-8 grid grid-cols-5 gap-2">
             {steps.map((s, i) => (
               <li key={s.t}>
-                <button disabled={i > step} onClick={() => setStep(i)} className="w-full text-left disabled:cursor-not-allowed">
+                <button disabled={i > step} onClick={() => setStep(i)} className="w-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2 disabled:cursor-not-allowed">
                   <div className={cn("h-1 rounded-full", i <= step ? "bg-gradient-electric" : "bg-ink-foreground/15")} />
                   <p className={cn("mt-2 flex items-center gap-1.5 text-xs font-medium sm:text-sm", i <= step ? "text-ink-foreground" : "text-ink-muted")}>
                     {i < step ? <Check className="h-3.5 w-3.5 shrink-0 text-electric" /> : <s.i className="hidden h-3.5 w-3.5 shrink-0 sm:block" />}
@@ -138,7 +138,7 @@ function Build() {
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Suggestions</p>
                 <div className="flex flex-wrap gap-2">
                   {suggestions.filter((s) => !caps.some((c) => c.name === s)).map((s) => (
-                    <button key={s} onClick={() => addCap(s)} className="rounded-full border border-dashed px-3 py-1.5 text-sm hover:border-electric hover:text-electric"><Plus className="mr-1 inline h-3 w-3" />{s}</button>
+                    <button key={s} onClick={() => addCap(s)} className="cursor-pointer rounded-full border border-dashed px-3 py-1.5 text-sm transition-all duration-150 hover:border-electric hover:text-electric motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2"><Plus className="mr-1 inline h-3 w-3" />{s}</button>
                   ))}
                 </div>
               </div>
@@ -146,7 +146,7 @@ function Build() {
                 {caps.map((c) => (
                   <li key={c.name} className="flex items-center justify-between gap-3 rounded-xl border p-3">
                     <div className="min-w-0"><p className="truncate font-medium">{c.name}</p><p className="text-xs text-muted-foreground">{c.group}</p></div>
-                    <div className="flex items-center gap-2"><StatusBadge status={c.status} /><button onClick={() => setCaps(caps.filter((x) => x !== c))} aria-label="Remove" className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button></div>
+                    <div className="flex items-center gap-2"><StatusBadge status={c.status} /><button onClick={() => setCaps(caps.filter((x) => x !== c))} aria-label="Remove" className="cursor-pointer rounded p-1 text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button></div>
                   </li>
                 ))}
                 {caps.length === 0 && <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">Add at least one capability to continue.</p>}
@@ -202,7 +202,7 @@ function Build() {
                   ["network", "My network", "People you've connected with."],
                   ["public", "Public & discoverable", "Can appear in opportunity matches."],
                 ] as const).map(([v, t, d]) => (
-                  <button key={v} onClick={() => setVis(v)} className={cn("rounded-xl border p-4 text-left transition", vis === v ? "border-electric bg-electric-soft" : "hover:border-electric/50")}>
+                  <button key={v} onClick={() => setVis(v)} className={cn("cursor-pointer rounded-xl border p-4 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2", vis === v ? "border-electric bg-electric-soft" : "hover:border-electric/50 motion-safe:hover:-translate-y-0.5")}>
                     <p className="flex items-center justify-between font-medium">{t}{vis === v && <Check className="h-4 w-4 text-electric" />}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{d}</p>
                   </button>
@@ -265,9 +265,9 @@ function Done({ name, caps, evs, vis }: { name: string; caps: Cap[]; evs: Ev[]; 
     <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
       <HeroBackdrop />
       <div className="relative mx-auto max-w-3xl px-5 py-20 text-center">
-        <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-electric shadow-glow"><Check className="h-8 w-8" /></div>
-        <h1 className="mt-6 text-4xl font-semibold md:text-5xl">Your MetaTwin is live, {name.split(" ")[0]}.</h1>
-        <p className="mt-4 text-ink-muted">{caps.length} capabilities · {evs.length} evidence items · visibility: {vis}. Keep adding evidence as you learn and build — your record grows with you.</p>
+        <div className="pop-in mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-electric shadow-glow"><Check className="h-8 w-8" /></div>
+        <h1 className="hero-rise mt-6 text-4xl font-semibold md:text-5xl">Your MetaTwin is live, {name.split(" ")[0]}.</h1>
+        <p className="hero-rise-delay-1 mt-4 text-ink-muted">{caps.length} capabilities · {evs.length} evidence items · visibility: {vis}. Keep adding evidence as you learn and build — your record grows with you.</p>
         <div className="mt-8 flex flex-wrap justify-center gap-2">{counts.map(([s, n]) => <span key={s} className="flex items-center gap-2"><StatusBadge status={s} /><span className="font-mono text-sm">{n}</span></span>)}</div>
         <div className="mt-10 grid gap-3 text-left sm:grid-cols-3">
           {[

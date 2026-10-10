@@ -180,6 +180,30 @@
 @keyframes career-draw { from { stroke-dashoffset: 2400; } to { stroke-dashoffset: 0; } }
 .career-line { stroke-dasharray: 2400; animation: career-draw 3s ease-out forwards; }
 
+/* Hero entrance — above-the-fold content animates on mount, not on scroll
+   (there's nothing to scroll-trigger yet), so plain CSS is enough here;
+   GSAP/ScrollTrigger (see Reveal.tsx) is reserved for below-the-fold content. */
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hero-rise { animation: hero-rise 0.5s ease-out both; }
+.hero-rise-delay-1 { animation: hero-rise 0.5s ease-out 0.08s both; }
+.hero-rise-delay-2 { animation: hero-rise 0.5s ease-out 0.16s both; }
+
+/* Success-state pop, e.g. the checkmark on "Build Your MetaTwin"'s done screen. */
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.5); }
+  70% { opacity: 1; transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.pop-in { animation: pop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .career-line { animation: none; stroke-dashoffset: 0; }
+  .hero-rise, .hero-rise-delay-1, .hero-rise-delay-2, .pop-in { animation: none; }
+}
+
 .dark {
   --sidebar: hsl(240 5.9% 10%);
   --sidebar-foreground: hsl(240 4.8% 95.9%);

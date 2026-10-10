@@ -177,9 +177,9 @@ export function PageHero({ eyebrow, title, children }: { eyebrow: string; title:
     <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
       <HeroBackdrop />
       <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-20">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">{eyebrow}</p>
-        <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight md:text-5xl">{title}</h1>
-        {children && <div className="mt-5 max-w-2xl text-ink-muted">{children}</div>}
+        <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">{eyebrow}</p>
+        <h1 className="hero-rise-delay-1 mt-4 max-w-3xl text-4xl font-semibold leading-tight md:text-5xl">{title}</h1>
+        {children && <div className="hero-rise-delay-2 mt-5 max-w-2xl text-ink-muted">{children}</div>}
       </div>
     </section>
   );
