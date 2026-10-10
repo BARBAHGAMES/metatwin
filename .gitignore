@@ -1,0 +1,10 @@
+node_modules/
+.output/
+.vite/
+dist/
+.env
+.env.local
+*.local
+.DS_Store
+*.log
+src/routeTree.gen.ts
