@@ -94,7 +94,11 @@ Andrew made further changes in Lovable and asked to sync "exactly as shown," plu
 
 Also fixed a build break: `profile.tsx`'s fictional-sample section still imported the never-existent `victorious-kibaki.jpg` binary (Lovable's MCP can't transfer binary assets, same issue as before) — swapped for `SampleAvatar` again, like everywhere else.
 
-Verified: `tsc --noEmit` clean, `npm run build` clean, real Supabase queries verified against a disposable test user. **Not yet deployed.**
+Verified: `tsc --noEmit` clean, `npm run build` clean, real Supabase queries verified against a disposable test user.
+
+**Also added**: a real sample profile photo (Andrew dropped `Assets/hero-youth-barbah.jpg` into the repo root — actually PNG data despite the name, 928×1152, matching Lovable's original photo slot exactly). Moved to `src/assets/sample-profile.png`, replacing the `SampleAvatar` initials placeholder in the three spots that used it (homepage network card, `ProfileMockup`, sample `/profile` hero). `RealProfile` (logged-in users) still uses `SampleAvatar` with the user's own initials — no real photo upload exists yet.
+
+**Deployed and verified live** (Andrew asked explicitly) — version `94ab37a5-d0c9-4a82-b049-215e55c4a4d0`. Confirmed: homepage serves the new `sample-profile-*.png` asset, `/dashboard` and `/profile` both 200. Note: both show "Loading..." in raw `curl`/SSR output — expected, not a regression — auth state only resolves client-side after hydration (same pre-existing behavior `/dashboard` has had since real auth was wired in).
 
 ## In progress / next up
 
@@ -104,4 +108,4 @@ Verified: `tsc --noEmit` clean, `npm run build` clean, real Supabase queries ver
 4. **Make `/build` actually create an account**, if that's wanted later — needs an email/password step added (not in Lovable's design) and its final step wired to real `supabase.auth.signUp` + persisting the collected profile/capabilities/goals/visibility. Deliberately not done this round — Andrew chose the lower-risk "just relink the CTAs" option.
 5. Configure Supabase Auth Custom SMTP (Resend) once able.
 6. The parental-consent flow for under-18 students, and seeding `opportunities` — unchanged from before the design port.
-7. **Deploy this session's changes** — nav/CTA sync, dashboard content sync, and the new real `/profile` are all committed but not yet live. Last confirmed live version was `567797fa-ae8f-4506-ad8f-b16d002a63e4` (`/login` contrast fix + real dashboard, from earlier this session).
+7. Real photo upload for authenticated users — `RealProfile` currently falls back to `SampleAvatar` (initials) since there's no storage/upload path yet.
