@@ -71,6 +71,14 @@ config.vars = {
   VITE_SUPABASE_PUBLISHABLE_KEY: envVars.VITE_SUPABASE_PUBLISHABLE_KEY,
 };
 
+// Custom Domain: Cloudflare creates the DNS record + SSL cert for this
+// automatically on deploy, since metaglobetechnologies.co.ke is on the same
+// account. (Not metaglobe.co.ke — that's a different, unrelated domain.)
+config.routes = [
+  ...(config.routes || []).filter((r) => r.pattern !== "metatwin.metaglobetechnologies.co.ke"),
+  { pattern: "metatwin.metaglobetechnologies.co.ke", custom_domain: true },
+];
+
 config.upload_source_maps = true;
 config.observability = {
   ...(config.observability || {}),

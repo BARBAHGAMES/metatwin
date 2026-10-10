@@ -7,8 +7,8 @@
 - **v1 scope: student-only.** No employer portal, university integrations, automated credential verification, or BARBAH account linking in v1.
 - **Auth: MetaTwin has its own, fully separate Supabase Auth** — no shared user base with BARBAH.
 - **Supabase project**: `metatwin` (id `yxfclmareqiykgixklbp`), org `kqtcxuppoddunjbfpmzv` (barbahgamesfounder's Org), region `ap-south-1` (Mumbai — the nearest available Supabase region to Nairobi; Supabase has no African region), **Free plan** ($0/mo). Caveat: free projects auto-pause after 7 days with no activity — upgrade to Pro before relying on this for real users.
-- **Mail domain**: `metaglobetechnologies.co.ke` (already verified in Resend) — changed from the originally-planned `metatwin.metaglobe.co.ke` after that hit the account's 3/3 domain cap; Andrew chose reusing the existing verified domain over upgrading the Resend plan or freeing a slot. Emails send as `hello@metaglobetechnologies.co.ke`.
-- **Cloudflare access**: Andrew will create a scoped API token (Workers edit + DNS edit on `metaglobe.co.ke` only) and hand it to Claude as a secret. Claude then runs deploys and manages the custom domain/DNS directly — but always says what it's about to do first, every time, before touching DNS or production.
+- **App domain / mail domain: `metaglobetechnologies.co.ke`** — NOT `metaglobe.co.ke` (that was this session's wrong assumption, corrected by Andrew; there is no separate `metaglobe.co.ke` zone in play here). The app lives at `metatwin.metaglobetechnologies.co.ke`; mail sends from `hello@metaglobetechnologies.co.ke`, reusing the domain already verified in Resend (the originally-planned dedicated domain hit the account's 3/3 Resend domain cap).
+- **Cloudflare access**: Andrew ran `wrangler login` himself on 2026-10-10 (OAuth, full account access on the "Barbah Games" Cloudflare account — broader than the scoped-token plan originally discussed, but his explicit choice). Claude runs deploys and manages the custom domain/DNS directly through this login — but always says what it's about to do first, every time, before touching DNS or production.
 - **GitHub**: repo created under the `BARBAHGAMES` org (matches where `barbah-games-platform` lives), private.
 
 ## Done this session
@@ -26,13 +26,14 @@
 
 ## Blocked
 
-1. **Cloudflare token not yet provided.** `wrangler` is unauthenticated in this environment. Blocks: `npm run deploy` and adding `metatwin` as a Worker custom domain. Waiting on Andrew to create the scoped token (Workers edit + DNS edit on `metaglobe.co.ke` only) and hand it over. No DNS work is needed for email anymore — `metaglobetechnologies.co.ke` is already verified.
-3. **Supabase Auth Custom SMTP not configured yet** — no MCP tool exposes Auth SMTP settings; needs to be done by hand in the Supabase dashboard (Authentication → Settings → SMTP), using Resend's SMTP credentials for `metaglobetechnologies.co.ke`.
+1. **Supabase Auth Custom SMTP not configured yet** — no MCP tool exposes Auth SMTP settings; needs to be done by hand in the Supabase dashboard (Authentication → Settings → SMTP), using Resend's SMTP credentials for `metaglobetechnologies.co.ke`.
+2. **`SUPABASE_SERVICE_ROLE_KEY` still blank** — not set as a `wrangler secret` yet, so the deployed Worker's `supabaseAdmin` paths (the new-user webhook) will throw until Andrew pastes it into `.env` and it gets set as a secret.
 
 ## In progress / next up
 
-- Once unblocked: `npm install`, `npm run typecheck`, `npm run dev` smoke test.
-- Configure Supabase Auth Custom SMTP (Resend) once the domain is verified.
-- Configure the `auth.users` INSERT Database Webhook in the Supabase dashboard pointing at `/api/webhooks/new-user`, with `SUPABASE_WEBHOOK_SECRET` set both there and as a `wrangler secret`.
-- First deploy + add `metatwin.metaglobe.co.ke` as a Worker custom domain (needs the Cloudflare token — tell Andrew before doing this).
+- `npm install`, `npm run typecheck`, `npm run build` all verified passing this session (see "Done this session").
+- First deploy + custom domain **blocked by Claude Code's own auto-mode safety classifier** ("Production Deploy") — `npm run deploy` needs to be run by Andrew directly from his machine (secrets/env already in place; see `.env`). Did not attempt to route around this.
+- **Design**: Andrew is having Lovable produce the look & feel (design system / mockups) — explicitly NOT replacing this app. Claude implements that design into this repo's existing TanStack Start routes/components once Andrew shares Lovable's output; the Supabase schema, auth, and deploy pipeline built this session stay as-is.
+- Configure Supabase Auth Custom SMTP (Resend) once able.
+- Configure the `auth.users` INSERT Database Webhook in the Supabase dashboard pointing at `/api/webhooks/new-user`, once `SUPABASE_SERVICE_ROLE_KEY` is set.
 - Product work beyond the scaffold: UI for `skills`/`competencies`/`courses`/`projects`/`assessments` (dashboard currently only covers the `twins` profile row), the parental-consent flow for under-18 students, and seeding `opportunities`.

@@ -6,7 +6,7 @@ At the **end of a session that changed anything real** (code, data, deploys, or 
 
 ## What this is
 
-MetaTwin is a standalone product for MetaGlobe Technologies, at `metatwin.metaglobe.co.ke`. It's a student's verified digital twin: a living record of competencies, skills, projects, personality traits and coursework, matched to opportunities before the student graduates.
+MetaTwin is a standalone product for MetaGlobe Technologies, at `metatwin.metaglobetechnologies.co.ke`. It's a student's verified digital twin: a living record of competencies, skills, projects, personality traits and coursework, matched to opportunities before the student graduates.
 
 Same stack as `barbah-games-platform` (TanStack Start, Cloudflare Worker, Supabase, Resend) but **its own repo and its own Supabase project** — no data is shared between the two products.
 
@@ -21,4 +21,4 @@ v1 scope is **student-only**: students build/edit their own twin; evidence (cour
 - **Any column read from the browser needs an explicit `GRANT SELECT`** — Postgres denies an entire row if even one selected column lacks a grant, not just that column. See `barbah-games-platform`'s `public.gamers` outage for the cautionary tale this convention comes from. `check-grants.mjs` enforces this at deploy time.
 - **`apply_migration` (the Supabase MCP tool) assigns its own version timestamp when it applies SQL directly to the live database — write (or rename) the local file to `<exact-version>_<exact-name>.sql` with the exact SQL that was applied, in the same commit.** `check-migrations-sync.mjs` enforces this at deploy time.
 - Students are often minors or young adults: collect the minimum personal data, and require parental consent for under-18s (see the `twins` table's `parental_consent_at` column).
-- Cloudflare access: a scoped API token (Workers edit + DNS edit on `metaglobe.co.ke` only) is required to deploy and to manage the custom domain/DNS — Andrew owns that token. Tell him before any action that touches DNS or production.
+- Cloudflare access: Andrew's own account (logged in via `wrangler login` on 2026-10-10) is used to deploy and manage the custom domain/DNS on the `metaglobetechnologies.co.ke` zone. Tell him before any action that touches DNS or production.

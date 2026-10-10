@@ -1,6 +1,6 @@
 // Invoked by a Supabase Database Webhook on `auth.users` INSERT (configure
 // in Supabase dashboard -> Database -> Webhooks, pointing at
-// https://metatwin.metaglobe.co.ke/api/webhooks/new-user, header
+// https://metatwin.metaglobetechnologies.co.ke/api/webhooks/new-user, header
 // "Authorization: Bearer <SUPABASE_WEBHOOK_SECRET>"). Verification email
 // itself is Supabase Auth's own "Confirm signup" template, sent through
 // Custom SMTP (Resend) configured in the dashboard — this route only sends
