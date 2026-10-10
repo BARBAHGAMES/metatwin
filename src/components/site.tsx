@@ -80,7 +80,11 @@ export function Header() {
             <Link to="/build">Build Your MetaTwin</Link>
           </Button>
         </div>
-        <button className="text-ink-foreground lg:hidden" onClick={() => setOpen(!open)} aria-label="Toggle menu">
+        <button
+          className="-mr-2 cursor-pointer rounded-md p-2.5 text-ink-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2 lg:hidden"
+          onClick={() => setOpen(!open)}
+          aria-label="Toggle menu"
+        >
           {open ? <X /> : <Menu />}
         </button>
       </div>

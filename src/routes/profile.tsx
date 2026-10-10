@@ -222,7 +222,7 @@ function SampleProfile() {
         <HeroBackdrop />
         <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-24">
           <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Your MetaTwin</p>
-          <h1 className="hero-rise-delay-1 mt-4 max-w-4xl text-4xl font-semibold md:text-6xl">Your digital twin. Working for you, 24/7.</h1>
+          <h1 className="hero-rise-delay-1 mt-4 max-w-4xl text-4xl font-semibold leading-tight md:text-6xl">Your digital twin. Working for you, 24/7.</h1>
           <p className="hero-rise-delay-1 mt-5 max-w-2xl text-lg text-ink-muted">A MetaTwin is the AI version of you. It presents your proven skills to the world and searches for jobs, projects, gigs and collaborations that fit what you can actually do. It does this while you learn, build and sleep.</p>
           <div className="hero-rise-delay-2 mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {([
