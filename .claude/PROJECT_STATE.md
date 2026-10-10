@@ -109,3 +109,7 @@ Verified: `tsc --noEmit` clean, `npm run build` clean, real Supabase queries ver
 5. Configure Supabase Auth Custom SMTP (Resend) once able.
 6. The parental-consent flow for under-18 students, and seeding `opportunities` — unchanged from before the design port.
 7. Real photo upload for authenticated users — `RealProfile` currently falls back to `SampleAvatar` (initials) since there's no storage/upload path yet.
+
+## how-it-works.tsx sync (2026-10-11, same Lovable commit `21c4950`)
+
+Andrew flagged that `/how-it-works` didn't match Lovable — this was a file I'd missed diffing in the previous sync round (same commit, not a new Lovable edit). Lovable rewrote it entirely: new "job market is shifting" hero, the "Three things make a MetaTwin" pillars + old-way/new-way comparison (same content as the dashboard/how-it-works duplication elsewhere), and a new simpler 5-step list (Create your profile → Add your skills → Prove them with projects → Add your AI employees → Get hired as a team), dropping the old "Initial operating model / Google Workspace tools" section entirely. Pure generic marketing copy with no real/fake data conflict, so synced directly, no judgment calls needed. `tsc --noEmit` and `npm run build` clean.
