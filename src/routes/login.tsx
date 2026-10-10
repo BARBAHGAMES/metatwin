@@ -1,9 +1,17 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, HeroBackdrop } from "@/components/site";
 
 export const Route = createFileRoute("/login")({
+  head: () => ({
+    meta: [{ title: "Log in · MetaTwin" }],
+  }),
   component: LoginPage,
 });
 
@@ -27,33 +35,44 @@ function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-6 text-2xl font-bold">Log in</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <input
-          type="email"
-          required
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="rounded-md border px-3 py-2"
-        />
-        <input
-          type="password"
-          required
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="rounded-md border px-3 py-2"
-        />
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
-        >
-          {submitting ? "Logging in..." : "Log in"}
-        </button>
-      </form>
-    </main>
+    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
+      <HeroBackdrop />
+      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-5 py-16">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">Welcome back</p>
+        <h1 className="mt-3 text-3xl font-semibold">Log in to your MetaTwin</h1>
+        <Card className="mt-8 bg-card/95">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+            <Button type="submit" variant="hero" className="w-full" disabled={submitting}>
+              {submitting ? "Logging in..." : <>Log in <ArrowRight /></>}
+            </Button>
+          </form>
+        </Card>
+        <p className="mt-6 text-center text-sm text-ink-muted">
+          New to MetaTwin? <Link to="/signup" className="text-electric">Build your MetaTwin</Link>
+        </p>
+      </div>
+    </div>
   );
 }
