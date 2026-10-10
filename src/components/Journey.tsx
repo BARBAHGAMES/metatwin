@@ -1,9 +1,10 @@
 import { Paperclip } from "lucide-react";
 import type { Project } from "@/lib/data";
+import { Reveal } from "@/components/Reveal";
 
 export function Journey({ steps }: { steps: Project["journey"] }) {
   return (
-    <ol className="relative space-y-0">
+    <Reveal as="ol" stagger={0.1} className="relative space-y-0">
       {steps.map((s, i) => (
         <li key={i} className="relative grid grid-cols-[88px_24px_minmax(0,1fr)] gap-3 pb-8 last:pb-0 md:grid-cols-[110px_24px_minmax(0,1fr)]">
           <p className="pt-0.5 text-right font-mono text-xs text-muted-foreground">{s.date}</p>
@@ -18,6 +19,6 @@ export function Journey({ steps }: { steps: Project["journey"] }) {
           </div>
         </li>
       ))}
-    </ol>
+    </Reveal>
   );
 }

@@ -3,6 +3,7 @@ import { ArrowLeft, FileCheck2, MessageSquare } from "lucide-react";
 import { capBySlug, projectById } from "@/lib/data";
 import { Card, PageHero, SampleTag, Section, StatusBadge } from "@/components/site";
 import { Journey } from "@/components/Journey";
+import { Reveal } from "@/components/Reveal";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/projects/$id")({
@@ -50,14 +51,14 @@ function ProjectPage() {
           </Card>
           <div>
             <h2 className="text-2xl font-semibold">Work samples</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <Reveal stagger={0.06} className="mt-4 grid gap-3 sm:grid-cols-2">
               {p.samples.map((s) => (
-                <div key={s.title} className="flex items-center gap-3 rounded-xl border bg-card p-4">
+                <div key={s.title} className="flex items-center gap-3 rounded-xl border bg-card p-4 transition-shadow duration-200 hover:shadow-card">
                   <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-electric-soft text-electric"><FileCheck2 className="h-5 w-5" /></div>
                   <div className="min-w-0"><p className="truncate text-sm font-medium">{s.title}</p><p className="text-xs text-muted-foreground">{s.kind}</p></div>
                 </div>
               ))}
-            </div>
+            </Reveal>
           </div>
           <Accordion type="multiple" defaultValue={["feedback"]} className="rounded-xl border bg-card px-5">
             <AccordionItem value="feedback">

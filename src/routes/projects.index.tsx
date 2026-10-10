@@ -3,6 +3,7 @@ import { useState } from "react";
 import { FileCheck2, Users, User } from "lucide-react";
 import { capBySlug, projects, type Discipline, type Stage } from "@/lib/data";
 import { PageHero, Section } from "@/components/site";
+import { Reveal } from "@/components/Reveal";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/projects/")({
@@ -22,7 +23,7 @@ const stages: Stage[] = ["Idea", "In Progress", "Prototype", "Completed"];
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: string }) {
   return (
-    <button onClick={onClick} className={cn("rounded-full border px-3.5 py-1.5 text-sm transition", active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:border-electric/50")}>
+    <button onClick={onClick} className={cn("cursor-pointer rounded-full border px-3.5 py-1.5 text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2", active ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:border-electric/50 motion-safe:hover:-translate-y-0.5")}>
       {children}
     </button>
   );
@@ -50,7 +51,7 @@ function Projects() {
             {stages.map((x) => <Chip key={x} active={s === x} onClick={() => setS(x)}>{x}</Chip>)}
           </div>
         </div>
-        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <Reveal stagger={0.06} className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {list.map((p) => (
             <Link key={p.id} to="/projects/$id" params={{ id: p.id }} className="group flex flex-col rounded-2xl border bg-card p-6 shadow-card transition hover:-translate-y-0.5 hover:border-electric/50">
               <div className="flex items-center justify-between gap-2 text-xs">
@@ -70,7 +71,7 @@ function Projects() {
             </Link>
           ))}
           {list.length === 0 && <p className="text-muted-foreground">No projects match these filters.</p>}
-        </div>
+        </Reveal>
       </Section>
     </>
   );

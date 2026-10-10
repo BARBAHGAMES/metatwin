@@ -3,6 +3,7 @@ import { ArrowLeft, FileCheck2, AlertCircle } from "lucide-react";
 import { capBySlug, projectById, statusMeta, type Status } from "@/lib/data";
 import { Card, PageHero, SampleTag, Section, StatusBadge } from "@/components/site";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Reveal } from "@/components/Reveal";
 
 export const Route = createFileRoute("/capability/$slug")({
   loader: ({ params }) => {
@@ -41,10 +42,10 @@ function CapabilityPage() {
                 <p className="text-sm text-muted-foreground">No evidence attached yet. This capability is self-reported — it reflects what Victorious states, not what has been demonstrated.</p>
               </Card>
             ) : (
-              <div className="mt-4 space-y-3">
+              <Reveal stagger={0.06} className="mt-4 space-y-3">
                 {cap.evidence.map((e) => (
                   <Collapsible key={e.title} className="rounded-xl border bg-card">
-                    <CollapsibleTrigger className="flex w-full items-center gap-3 p-4 text-left">
+                    <CollapsibleTrigger className="flex w-full cursor-pointer items-center gap-3 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-inset">
                       <FileCheck2 className="h-5 w-5 shrink-0 text-electric" />
                       <span className="min-w-0 flex-1"><span className="block font-medium">{e.title}</span><span className="text-xs text-muted-foreground">{e.type}</span></span>
                       <span className="text-xs text-electric">Details</span>
@@ -52,7 +53,7 @@ function CapabilityPage() {
                     <CollapsibleContent className="border-t px-4 py-3 text-sm text-muted-foreground">{e.note}</CollapsibleContent>
                   </Collapsible>
                 ))}
-              </div>
+              </Reveal>
             )}
           </div>
           {cap.review && (
@@ -65,17 +66,17 @@ function CapabilityPage() {
           )}
           <div>
             <h2 className="text-2xl font-semibold">Used in projects</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <Reveal stagger={0.06} className="mt-4 grid gap-3 sm:grid-cols-2">
               {cap.projects.map((id) => {
                 const p = projectById(id)!;
                 return (
-                  <Link key={id} to="/projects/$id" params={{ id }} className="rounded-xl border bg-card p-4 hover:border-electric/50">
+                  <Link key={id} to="/projects/$id" params={{ id }} className="rounded-xl border bg-card p-4 transition-all duration-200 hover:border-electric/50 hover:shadow-card motion-safe:hover:-translate-y-0.5">
                     <p className="font-medium">{p.title}</p>
                     <p className="text-xs text-muted-foreground">{p.discipline} · {p.stage}</p>
                   </Link>
                 );
               })}
-            </div>
+            </Reveal>
           </div>
         </div>
         <aside>
