@@ -129,8 +129,25 @@ Ran the skill's `--design-system` generator for guidance, but did **not** adopt 
 - **Hero/heroOutline button variants** got a subtle `motion-safe:hover:-translate-y-0.5` + `active:scale-[0.98]` press/lift, guarded the same way.
 - **Dashboard deliberately gets less motion** (hero entrance only, no scroll-reveal on its stat cards) — it's a dense, repeat-use app surface rather than a marketing page, matching the skill's own density-tier guidance (less ornamental motion on dashboards).
 
-Verified: `tsc --noEmit` clean, `npm run build` clean, `check-grants` clean, and all 12 routes smoke-tested at 200 via `vite dev` with no console errors. **Not yet deployed.**
+Verified: `tsc --noEmit` clean, `npm run build` clean, `check-grants` clean, and all 12 routes smoke-tested at 200 via `vite dev` with no console errors. **Deployed** — version `95e231e1-fe98-4417-b940-adec3a13f29a`.
 
 ### Separately installed this session: the `21st` MCP server
 
 Andrew asked to install the 21st.dev MCP server (`https://21st.dev/api/mcp`, API-key auth). Added to `~/.claude.json`'s top-level `mcpServers` (same place `notebooklm` already lives) — not inside this repo, since it carries a personal API key that must never be committed. Requires a Claude Code restart to take effect; not yet used in this session.
+
+## New Pricing page, synced from Lovable (2026-10-11)
+
+Andrew added a pricing page in the Lovable "Exact Screenshot" project (`lovable.dev/projects/48ea735b-4de2-4b28-986c-6cb0cda09057` — this is the actual design-reference project behind this site; its auto-generated name/description are unrelated to its real purpose, which tripped up finding it this time). That project's routes (about/build/capability.$slug/dashboard/how-it-works/index/journey/pricing/profile/projects.$id/projects.index) are the closest 1:1 match to ours, confirming it as the right source going forward.
+
+Ported verbatim:
+- **`src/lib/pricing.ts`** — individual plans (Basic/Guided/Builder, KES 2,000–10,000/yr), team packages (Duo/Studio/Launch) × team tiers (Basic/Guided/Builder) pricing matrix, comparison-table rows, and an `Availability` type (`live`/`proposed`/`planned`) that renders a dashed "Proposed"/"Coming soon" tag next to not-yet-live features.
+- **`src/routes/pricing.tsx`** — individual/team tab toggle, team-size radio picker, full comparison tables, a Campus/institutional-partnership CTA band, and an FAQ accordion. Reuses the site's existing `Card`/`PageHero`/`Section`/`Accordion`/`Button` components and design tokens — no new UI primitives needed.
+- Added "Pricing" to the header nav and footer "Company" column (`src/components/site.tsx`).
+
+One deliberate deviation from the Lovable source: added `cursor-pointer` + `focus-visible` rings to the plan-type tab buttons and team-size radio buttons, consistent with the accessibility pass done site-wide in the premium pass above (Lovable's raw `<button>`s lacked these).
+
+Did not port the Lovable project's `vitest.config.ts` / `src/test/` scaffold or `src/lib/pricing.test.ts` — this repo has no test runner wired up yet (vitest is a `package.json` devDependency left over from the barbah-games-platform scaffold, but unconfigured), and adding one wasn't part of this ask.
+
+`CONTACT_PLACEHOLDER` (`#contact-placeholder`) is still a dead link in both the Lovable source and here — flagged as a known gap, not fixed, since there's no real contact destination yet.
+
+Verified: `tsc --noEmit` clean, `npm run build` clean, `check-grants` clean (79 files scanned, up from 77), `/pricing` + 3 other routes smoke-tested at 200 via `vite dev` with no console errors. **Not yet deployed.**
