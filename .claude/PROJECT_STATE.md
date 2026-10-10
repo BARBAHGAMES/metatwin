@@ -59,10 +59,25 @@ Andrew built a full MetaTwin design in Lovable (project `48ea735b-4de2-4b28-986c
 
 **Deployed and verified live** — Andrew asked for the deploy explicitly (same production-deploy guardrail as before, ran clean on his direct request). `metatwin.metaglobetechnologies.co.ke` confirmed serving the new design (`<title>MetaTwin — The Future of the CV</title>`, "Victorious Kibaki" on `/profile`). Version `2ec12b2e-c2e0-4d41-a115-8a0e2e371a68`.
 
+## Dashboard wired to real data (2026-10-10, later same session)
+
+`/dashboard` no longer uses Lovable's mock state — rewritten against the real schema:
+- Reads the signed-in user's `twins` row, their `competencies` (joined to `skills.name`), and their `projects` on load; redirects to `/login` if not authenticated.
+- "Add a project" → real insert into `projects`. "Add a capability" → real insert into `competencies` (skill picked from the seeded `skills` list — users can't invent new skills client-side, matching the RLS/grants design). "Add evidence" → increments the chosen competency's `evidence_count` (no generic evidence/attachment table exists yet, so this is the honest real mapping, not a fabricated one — see item 2 below).
+- Dropped the "Record a milestone" and "View feedback" demo actions (no backing table for either); replaced the milestones card with a real "Recent activity" feed derived from `competencies.updated_at` / `projects.created_at`.
+- `competencyStatus()` derives self/evidence (no "reviewed" — there's no reviewer/review concept in the schema yet).
+- Added a profile editor (name/headline/institution/programme/year/visibility) writing to `twins` via upsert — same pattern the pre-port dashboard used.
+- New migration `20261010212116_seed_skills.sql` seeds 8 starter skills (matching the ported design's taxonomy) so the "Add a capability" dropdown has real options.
+
+**Verified against the live Supabase project** (not just typecheck/build): created a disposable confirmed test auth user via the admin API, signed in with the plain publishable-key client (real RLS, not service-role), and ran every query/insert/update the dashboard performs — twin read/upsert, skills read, competency insert + evidence-count update, project insert, and the joined read-back — all succeeded; a cross-user read by a bogus id correctly returned null with no error. Test user and all cascaded rows deleted afterward.
+
+**Found and fixed a real bug during testing**: on `/login` and `/signup`, the white card's input text was inheriting the dark page wrapper's light `text-ink-foreground` color, making typed text essentially invisible (white-on-white). Fixed by adding `text-foreground` to those Cards. Caught via actual browser screenshots before Chrome automation started failing with an unrelated `chrome-extension://` conflict (looked like interference from another installed extension) — switched to scripted verification against Supabase directly for the rest, which is arguably the more reliable check for data-layer correctness anyway.
+
 ## In progress / next up
 
-1. **Wire `/dashboard` to real data** — biggest gap from the port. Currently 100% Lovable mock state (capabilities count, "Add project/evidence/capability/milestone" dialogs that don't persist). Needs real reads/writes against `twins`/`competencies`/`courses`/`projects`/`assessments`, reusing the query pattern from the pre-port `dashboard.tsx` (now gone, but simple: `supabase.from("twins").select(...).eq("id", user.id)`).
-2. **Wire `/profile`, `/capability/$slug`, `/projects`, `/projects/$id`, `/journey`** to real per-user data once there's a real public-profile concept (a route keyed by twin id/slug, visibility-gated per the `twins.visibility` RLS policies already in the schema) — currently these all show the same hardcoded "Victorious Kibaki" sample regardless of who's logged in.
+1. **Wire `/profile`, `/capability/$slug`, `/projects`, `/projects/$id`, `/journey`** to real per-user data once there's a real public-profile concept (a route keyed by twin id/slug, visibility-gated per the `twins.visibility` RLS policies already in the schema) — currently these all show the same hardcoded "Victorious Kibaki" sample regardless of who's logged in.
+2. **No generic evidence/attachment table exists** — "evidence" is currently just `competencies.evidence_count`, a counter with no title/file/link per item. Lovable's design implies real evidence items (title, type, link, note) like the mock `capabilities[].evidence[]` shape. Worth a real `evidence` table before this goes much further.
 3. **Decide on "AI employees," hire/connect/follow, connections/followers** — these are pure Lovable concepts with no backing schema or product decision yet. Andrew said "build on it," not necessarily "build these specific features" — surface this choice before investing in schema for any of them.
 4. Configure Supabase Auth Custom SMTP (Resend) once able.
 5. The parental-consent flow for under-18 students, and seeding `opportunities` — unchanged from before the design port.
+6. Not yet redeployed with this session's dashboard changes — `npm run deploy` still needs to run again.

@@ -53,7 +53,7 @@ function SignupPage() {
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">Get started</p>
         <h1 className="mt-3 text-3xl font-semibold">Build your MetaTwin</h1>
         <p className="mt-2 text-ink-muted">Create your account — you'll start documenting capabilities and evidence from your dashboard.</p>
-        <Card className="mt-8 bg-card/95">
+        <Card className="mt-8 bg-card/95 text-foreground">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
