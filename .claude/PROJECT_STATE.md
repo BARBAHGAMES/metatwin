@@ -80,4 +80,4 @@ Andrew built a full MetaTwin design in Lovable (project `48ea735b-4de2-4b28-986c
 3. **Decide on "AI employees," hire/connect/follow, connections/followers** — these are pure Lovable concepts with no backing schema or product decision yet. Andrew said "build on it," not necessarily "build these specific features" — surface this choice before investing in schema for any of them.
 4. Configure Supabase Auth Custom SMTP (Resend) once able.
 5. The parental-consent flow for under-18 students, and seeding `opportunities` — unchanged from before the design port.
-6. Not yet redeployed with this session's dashboard changes — `npm run deploy` still needs to run again.
+6. ~~Not yet redeployed~~ — deployed and verified live (Andrew asked explicitly again). Version `567797fa-ae8f-4506-ad8f-b16d002a63e4`. Confirmed the `/login` text-contrast fix is actually in the served HTML, `/` and `/dashboard` both 200.
