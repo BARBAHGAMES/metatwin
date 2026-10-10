@@ -46,7 +46,7 @@ function How() {
           ))}
         </ol>
         <div className="mt-10 flex flex-wrap gap-3">
-          <Button asChild variant="hero" size="lg"><Link to="/signup">Build Your MetaTwin</Link></Button>
+          <Button asChild variant="hero" size="lg"><Link to="/build">Build Your MetaTwin</Link></Button>
           <Button asChild variant="outline" size="lg" className="rounded-full"><Link to="/journey">See a project journey</Link></Button>
         </div>
       </Section>

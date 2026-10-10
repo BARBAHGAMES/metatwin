@@ -39,7 +39,7 @@ export function Logo({ light = false }: { light?: boolean }) {
 
 const nav = [
   { to: "/", label: "Home" },
-  { to: "/dashboard", label: "My MetaTwin" },
+  { to: "/profile", label: "My MetaTwin" },
   { to: "/projects", label: "Explore Capabilities" },
   { to: "/how-it-works", label: "How It Works" },
   { to: "/about", label: "About" },
@@ -76,7 +76,7 @@ export function Header() {
             </Link>
           )}
           <Button asChild variant="hero" size="sm" className="px-4">
-            <Link to="/signup">Build Your MetaTwin</Link>
+            <Link to="/build">Build Your MetaTwin</Link>
           </Button>
         </div>
         <button className="text-ink-foreground lg:hidden" onClick={() => setOpen(!open)} aria-label="Toggle menu">
@@ -106,7 +106,7 @@ export function Header() {
             </Link>
           )}
           <Button asChild variant="hero" className="mt-2 w-full">
-            <Link to="/signup" onClick={() => setOpen(false)}>Build Your MetaTwin</Link>
+            <Link to="/build" onClick={() => setOpen(false)}>Build Your MetaTwin</Link>
           </Button>
         </nav>
       )}
@@ -130,7 +130,7 @@ export function Footer() {
           <Link to="/profile" className="block hover:text-ink-foreground">Sample profile</Link>
           <Link to="/projects" className="block hover:text-ink-foreground">Projects</Link>
           <Link to="/journey" className="block hover:text-ink-foreground">The Journey of Your Work</Link>
-          <Link to="/dashboard" className="block hover:text-ink-foreground">Dashboard preview</Link>
+          <Link to="/dashboard" className="block hover:text-ink-foreground">Owner dashboard</Link>
         </div>
         <div className="space-y-2 text-sm">
           <p className="font-display text-ink-foreground">Company</p>

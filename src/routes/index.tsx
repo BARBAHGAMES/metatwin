@@ -39,7 +39,7 @@ function Home() {
               MetaTwin is your digital twin of capability—a living record of what you know, what you create, what you can demonstrate, and the evidence behind your work.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild variant="hero" size="lg"><Link to="/signup">Build Your MetaTwin <ArrowRight /></Link></Button>
+              <Button asChild variant="hero" size="lg"><Link to="/build">Build Your MetaTwin <ArrowRight /></Link></Button>
               <Button asChild variant="heroOutline" size="lg"><Link to="/profile">Explore a Profile</Link></Button>
             </div>
           </div>
@@ -199,7 +199,7 @@ function Home() {
       <Section className="text-center">
         <h2 className="mx-auto max-w-2xl text-3xl font-semibold md:text-5xl">Don't just tell the world what you can do. <span className="text-gradient-electric">Show the evidence.</span></h2>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Button asChild variant="hero" size="lg"><Link to="/signup">Build Your MetaTwin</Link></Button>
+          <Button asChild variant="hero" size="lg"><Link to="/build">Build Your MetaTwin</Link></Button>
           <Button asChild variant="outline" size="lg" className="rounded-full"><Link to="/profile">Explore a Profile</Link></Button>
         </div>
       </Section>

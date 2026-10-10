@@ -1,19 +1,23 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ArrowRight, MapPin, Target, Lock, Bot, Briefcase, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { aiEmployees, capabilities, growth, person, projects } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { AITeam } from "@/components/AITeam";
 import { CareerGraph } from "@/components/CareerGraph";
 import { Button } from "@/components/ui/button";
 import { Card, SampleAvatar, SampleTag, Section, StatusBadge } from "@/components/site";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "Victorious Kibaki · Maker + AI Team on MetaTwin" },
+      { title: "My MetaTwin · Victorious Kibaki" },
       { name: "description", content: "Explore a sample MetaTwin profile: capabilities, projects, evidence and growth over time." },
-      { property: "og:title", content: "Victorious Kibaki · Maker + AI Team on MetaTwin" },
+      { property: "og:title", content: "My MetaTwin · Victorious Kibaki" },
       { property: "og:description", content: "Proven capability plus a supervised team of AI employees." },
     ],
   }),
@@ -23,6 +27,193 @@ export const Route = createFileRoute("/profile")({
 const groups = ["Technical", "Creative", "Problem-solving", "Collaboration", "Domain"] as const;
 
 function Profile() {
+  const { user, loading: authLoading } = useAuth();
+  if (authLoading) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  return user ? <RealProfile userId={user.id} /> : <SampleProfile />;
+}
+
+type Twin = {
+  id: string;
+  name: string | null;
+  institution: string | null;
+  programme: string | null;
+  year: number | null;
+  headline: string | null;
+  visibility: "private" | "public";
+};
+type Competency = {
+  id: string;
+  level: number;
+  evidence_count: number;
+  updated_at: string;
+  skills: { name: string; category: string | null } | null;
+};
+type Project = { id: string; title: string; description: string | null; created_at: string };
+
+function competencyStatus(c: Competency): Status {
+  return c.evidence_count > 0 ? "evidence" : "self";
+}
+
+function RealProfile({ userId }: { userId: string }) {
+  const [twin, setTwin] = useState<Twin | null>(null);
+  const [competencies, setCompetencies] = useState<Competency[]>([]);
+  const [projectList, setProjectList] = useState<Project[]>([]);
+  const [fetching, setFetching] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const [twinRes, compsRes, projectsRes] = await Promise.all([
+        supabase.from("twins").select("id, name, institution, programme, year, headline, visibility").eq("id", userId).maybeSingle(),
+        supabase
+          .from("competencies")
+          .select("id, level, evidence_count, updated_at, skills(name, category)")
+          .eq("twin_id", userId)
+          .order("updated_at", { ascending: false }),
+        supabase.from("projects").select("id, title, description, created_at").eq("twin_id", userId).order("created_at", { ascending: false }),
+      ]);
+      if (cancelled) return;
+      if (twinRes.error) console.error("[profile] load twin failed:", twinRes.error.message);
+      if (compsRes.error) console.error("[profile] load competencies failed:", compsRes.error.message);
+      if (projectsRes.error) console.error("[profile] load projects failed:", projectsRes.error.message);
+      setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private" });
+      setCompetencies((compsRes.data as unknown as Competency[] | null) ?? []);
+      setProjectList((projectsRes.data as Project[] | null) ?? []);
+      setFetching(false);
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  if (fetching || !twin) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+
+  const reviewedCount = 0; // no reviewer/review concept in the schema yet
+  const evidenceCount = competencies.filter((c) => c.evidence_count > 0).length;
+  const initials = (twin.name ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
+  const recentActivity = [
+    ...competencies.map((c) => ({ at: c.updated_at, text: `${c.skills?.name ?? "A capability"} — ${c.evidence_count > 0 ? "evidence added" : "self-reported"}` })),
+    ...projectList.map((p) => ({ at: p.created_at, text: `Started project: ${p.title}` })),
+  ]
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 6);
+
+  return (
+    <>
+      <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
+        <div className="absolute inset-0 opacity-50"><CareerGraph /></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/30" aria-hidden />
+        <div className="relative mx-auto max-w-7xl px-5 py-12 md:py-16">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="font-mono text-xs text-ink-muted">Your MetaTwin</p>
+            <Link to="/dashboard" className="text-xs text-ink-muted underline-offset-4 hover:text-ink-foreground hover:underline">Owner view →</Link>
+          </div>
+          <div className="mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
+            <SampleAvatar initials={initials} className="h-64 w-52 rounded-3xl text-5xl shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64" />
+            <div className="min-w-0">
+              <h1 className="mt-4 text-4xl font-semibold md:text-6xl">{twin.name || "Add your name"}</h1>
+              <p className="mt-2 text-lg text-ink-muted">{twin.headline || "Add a headline from your dashboard"}</p>
+              {(twin.institution || twin.programme) && (
+                <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-muted">
+                  <MapPin className="h-4 w-4" />{[twin.institution, twin.programme].filter(Boolean).join(" · ")}{twin.year ? ` · Year ${twin.year}` : ""}
+                </p>
+              )}
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button asChild variant="hero"><Link to="/dashboard">Edit your MetaTwin</Link></Button>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-6 text-sm">
+                {[[String(competencies.length), "Capabilities"], [String(evidenceCount), "Evidence added"], [String(reviewedCount), "Reviewed"], [String(projectList.length), "Projects"]].map(([v, l]) => (
+                  <div key={l}><p className="font-display text-xl font-semibold">{v}</p><p className="text-xs text-ink-muted">{l}</p></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <Section className="grid gap-8 lg:grid-cols-[1fr_340px]">
+        <div className="min-w-0 space-y-12">
+          <div>
+            <h2 className="text-2xl font-semibold">Capability Map</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Each capability shows its evidence status.</p>
+            {competencies.length === 0 ? (
+              <Card className="mt-6 border-dashed">
+                <p className="text-sm text-muted-foreground">No capabilities added yet. Add some from your <Link to="/dashboard" className="text-electric">dashboard</Link>.</p>
+              </Card>
+            ) : (
+              <div className="mt-6 space-y-6">
+                {groups
+                  .filter((g) => competencies.some((c) => c.skills?.category === g))
+                  .map((g) => (
+                    <div key={g}>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{g}</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {competencies.filter((c) => c.skills?.category === g).map((c) => (
+                          <div key={c.id} className="rounded-xl border bg-card p-4">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-medium">{c.skills?.name ?? "Unknown skill"}</p>
+                              <StatusBadge status={competencyStatus(c)} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-semibold">Projects</h2>
+            {projectList.length === 0 ? (
+              <Card className="mt-6 border-dashed">
+                <p className="text-sm text-muted-foreground">No projects added yet. Add some from your <Link to="/dashboard" className="text-electric">dashboard</Link>.</p>
+              </Card>
+            ) : (
+              <div className="mt-5 space-y-3">
+                {projectList.map((p) => (
+                  <Card key={p.id}>
+                    <p className="font-display font-semibold">{p.title}</p>
+                    {p.description && <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {recentActivity.length > 0 && (
+            <div>
+              <h2 className="text-2xl font-semibold">Growth Timeline</h2>
+              <ol className="mt-5 space-y-0 border-l-2 border-electric/20 pl-6">
+                {recentActivity.map((g, i) => (
+                  <li key={i} className="relative pb-6">
+                    <span className="absolute -left-[31px] top-1 h-3 w-3 rounded-full border-2 border-background bg-electric" />
+                    <p className="font-mono text-xs text-muted-foreground">{new Date(g.at).toLocaleDateString()}</p>
+                    <p className="mt-0.5">{g.text}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </div>
+
+        <aside className="space-y-5">
+          <Card className="bg-muted/50">
+            <p className="flex items-start gap-2 text-sm text-muted-foreground">
+              <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+              {twin.visibility === "public"
+                ? "This profile is visible to employers."
+                : "This profile is private — only you can see it. Change this from your dashboard."}
+            </p>
+          </Card>
+        </aside>
+      </Section>
+    </>
+  );
+}
+
+function SampleProfile() {
   return (
     <>
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
@@ -31,7 +222,10 @@ function Profile() {
         <div className="relative mx-auto max-w-7xl px-5 py-12 md:py-16">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-mono text-xs text-ink-muted">metatwin.app/<span className="text-ink-foreground">victorious</span></p>
-            <SampleTag />
+            <div className="flex items-center gap-3">
+              <Link to="/dashboard" className="text-xs text-ink-muted underline-offset-4 hover:text-ink-foreground hover:underline">Owner view →</Link>
+              <SampleTag />
+            </div>
           </div>
           <div className="mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
             <SampleAvatar initials={person.initials} className="h-64 w-52 rounded-3xl text-5xl shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64" />
