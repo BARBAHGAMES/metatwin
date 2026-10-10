@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, MapPin, Target, Lock, Bot, Briefcase, UserPlus } from "lucide-react";
+import { ArrowRight, MapPin, Target, Lock, Bot, Briefcase, UserPlus, Sparkles, Search, Handshake } from "lucide-react";
 import { toast } from "sonner";
 import { aiEmployees, capabilities, growth, person, projects } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
@@ -9,7 +9,7 @@ import { AITeam } from "@/components/AITeam";
 import { CareerGraph } from "@/components/CareerGraph";
 import { Button } from "@/components/ui/button";
 import sampleProfilePhoto from "@/assets/sample-profile.png";
-import { Card, SampleAvatar, SampleTag, Section, StatusBadge } from "@/components/site";
+import { Card, HeroBackdrop, SampleAvatar, SampleTag, Section, StatusBadge } from "@/components/site";
 import { Reveal } from "@/components/Reveal";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import type { Status } from "@/lib/data";
@@ -17,7 +17,7 @@ import type { Status } from "@/lib/data";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "My MetaTwin · Victorious Kibaki" },
+      { title: "My MetaTwin · Your AI Digital Twin for Opportunities" },
       { name: "description", content: "Explore a sample MetaTwin profile: capabilities, projects, evidence and growth over time." },
       { property: "og:title", content: "My MetaTwin · Victorious Kibaki" },
       { property: "og:description", content: "Proven capability plus a supervised team of AI employees." },
@@ -219,9 +219,39 @@ function SampleProfile() {
   return (
     <>
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
+        <HeroBackdrop />
+        <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-24">
+          <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Your MetaTwin</p>
+          <h1 className="hero-rise-delay-1 mt-4 max-w-4xl text-4xl font-semibold md:text-6xl">Your digital twin. Working for you, 24/7.</h1>
+          <p className="hero-rise-delay-1 mt-5 max-w-2xl text-lg text-ink-muted">A MetaTwin is the AI version of you. It presents your proven skills to the world and searches for jobs, projects, gigs and collaborations that fit what you can actually do. It does this while you learn, build and sleep.</p>
+          <div className="hero-rise-delay-2 mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {([
+              [Sparkles, "Presents your capability", "Your skills, projects and evidence, in one live record instead of a static CV."],
+              [Search, "Searches for opportunities", "Scans jobs, projects and gigs that match your proven capabilities."],
+              [Handshake, "Makes the introduction", "Puts you, and your AI team, in front of the people looking to hire."],
+              [Bot, "Brings your AI team", "Comes with AI employees you supervise, so you're hired as a team."],
+            ] as const).map(([I, t, d]) => (
+              <div key={t} className="rounded-2xl border border-ink-foreground/10 bg-ink/60 p-5 backdrop-blur">
+                <I className="h-5 w-5 text-electric" />
+                <p className="mt-3 font-semibold">{t}</p>
+                <p className="mt-1 text-sm text-ink-muted">{d}</p>
+              </div>
+            ))}
+          </div>
+          <div className="hero-rise-delay-2 mt-10 flex flex-wrap gap-3">
+            <Button asChild variant="hero"><Link to="/build">Build Your MetaTwin <ArrowRight /></Link></Button>
+            <Button asChild variant="heroOutline"><a href="#example">See Victorious's MetaTwin</a></Button>
+          </div>
+        </div>
+      </section>
+
+      <Section className="pb-0 md:pb-0">
+        <p id="example" className="scroll-mt-24 font-mono text-xs uppercase tracking-[0.2em] text-electric">Example · What a MetaTwin looks like</p>
+      </Section>
+      <section className="relative mx-auto mt-4 max-w-7xl overflow-hidden rounded-3xl bg-gradient-ink text-ink-foreground md:mx-5 xl:mx-auto">
         <div className="absolute inset-0 opacity-50"><CareerGraph /></div>
         <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/30" aria-hidden />
-        <div className="relative mx-auto max-w-7xl px-5 py-12 md:py-16">
+        <div className="relative px-5 py-12 md:px-10 md:py-14">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-mono text-xs text-ink-muted">metatwin.app/<span className="text-ink-foreground">victorious</span></p>
             <div className="flex items-center gap-3">
@@ -229,13 +259,13 @@ function SampleProfile() {
               <SampleTag />
             </div>
           </div>
-          <div className="hero-rise mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
+          <div className="mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
             <img src={sampleProfilePhoto} alt={person.name} width={928} height={1152} className="h-64 w-52 shrink-0 rounded-3xl object-cover shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64" />
             <div className="min-w-0">
               <span className="inline-flex items-center gap-2 rounded-full border border-electric/40 bg-electric/10 px-3 py-1 text-xs text-electric">
                 <Bot className="h-3.5 w-3.5" /> Human + {aiEmployees.length} AI employees
               </span>
-              <h1 className="mt-4 text-4xl font-semibold md:text-6xl">{person.name}</h1>
+              <h2 className="mt-4 text-4xl font-semibold md:text-5xl">{person.name}</h2>
               <p className="mt-2 text-lg text-ink-muted">{person.headline}</p>
               <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-muted"><MapPin className="h-4 w-4" />{person.location} · Open to gigs, internships & collaborations</p>
               <p className="mt-5 max-w-2xl text-ink-foreground/90">{person.intro}</p>

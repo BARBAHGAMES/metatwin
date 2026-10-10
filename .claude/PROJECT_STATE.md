@@ -150,4 +150,18 @@ Did not port the Lovable project's `vitest.config.ts` / `src/test/` scaffold or 
 
 `CONTACT_PLACEHOLDER` (`#contact-placeholder`) is still a dead link in both the Lovable source and here — flagged as a known gap, not fixed, since there's no real contact destination yet.
 
-Verified: `tsc --noEmit` clean, `npm run build` clean, `check-grants` clean (79 files scanned, up from 77), `/pricing` + 3 other routes smoke-tested at 200 via `vite dev` with no console errors. **Not yet deployed.**
+Verified: `tsc --noEmit` clean, `npm run build` clean, `check-grants` clean (79 files scanned, up from 77), `/pricing` + 3 other routes smoke-tested at 200 via `vite dev` with no console errors. **Deployed** — version `5ace9c32-bde9-43f6-96e0-e0b9db4f9bc3`.
+
+## New "My MetaTwin" (/profile) vision hero, synced from Lovable (2026-10-11)
+
+Andrew edited `/profile` in the Lovable project (same one as the pricing sync, `48ea735b-...`) in response to his own brief: "my metatwin hero section needs to sell the vision of what a metatwin is — your digital twin is your ai version of you selling your capabilities to the world." Pulled the change via `get_diff` on that Lovable message and the full updated `src/routes/profile.tsx`.
+
+Lovable's `/profile` has no real/fake branching (it's a static preview with no auth), so the new hero only makes sense applied to our **`SampleProfile`** branch (the public, logged-out "Victorious Kibaki" example) — not `RealProfile` (an authenticated user viewing their own actual twin doesn't need a sales pitch explaining what a MetaTwin is). Same real-vs-fictional judgment call pattern as the earlier `/profile` wiring decision.
+
+Change, in `SampleProfile()`:
+- New top-of-page hero (using the shared `HeroBackdrop` component instead of a hand-rolled `CareerGraph` + gradient div): "Your digital twin. Working for you, 24/7." — explains what a MetaTwin does in plain terms, a 4-up feature grid (Presents your capability / Searches for opportunities / Makes the introduction / Brings your AI team), and two CTAs: "Build Your MetaTwin" (→ `/build`) and "See Victorious's MetaTwin" (anchor-scrolls to the existing example below).
+- The pre-existing sample-profile hero (photo, name, stats, Hire/Connect/Follow buttons) now sits below an "Example · What a MetaTwin looks like" label, inside a slightly restyled rounded-3xl framed card (unchanged content, just demoted from the page's lead section to a supporting example) — and its `<h1>` became an `<h2>` since the page now has one `<h1>` (the new top hero's).
+- Page `<head>` title updated to "My MetaTwin · Your AI Digital Twin for Opportunities" (kept the existing `og:title`/`og:description` as-is, matching Lovable's own asymmetric choice there).
+- Added `hero-rise`/`hero-rise-delay-1`/`hero-rise-delay-2` to the new top hero's content (Lovable's source has no entrance animation there at all) to match this site's established above-the-fold convention; the demoted example section keeps no animation, same as Lovable.
+
+Verified: `tsc --noEmit` clean, `npm run build` clean, `check-grants` clean, `/`, `/profile`, `/dashboard` smoke-tested at 200 via `vite dev` with no console errors. **Not yet deployed.**
