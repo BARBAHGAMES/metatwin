@@ -13,7 +13,7 @@ export function ProfileMockup() {
           <span className="h-2.5 w-2.5 rounded-full bg-border" />
           <span className="h-2.5 w-2.5 rounded-full bg-border" />
           <span className="h-2.5 w-2.5 rounded-full bg-border" />
-          <span className="ml-3 truncate font-mono text-[11px] text-muted-foreground">metatwin.app/alex-morgan</span>
+          <span className="ml-3 truncate font-mono text-[11px] text-muted-foreground">metatwin.app/victorious</span>
         </div>
         <div className="grid gap-4 p-5 sm:grid-cols-[1.1fr_1fr]">
           <div className="space-y-4">
