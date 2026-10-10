@@ -24,16 +24,20 @@
 - Verification email: intentionally left as Supabase Auth's own built-in "Confirm signup" flow, meant to be sent through Custom SMTP configured in the Supabase dashboard with Resend's SMTP credentials — **not configured yet**, blocked on the Resend domain below.
 - `.env` has real `SUPABASE_URL` / `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` filled in. `SUPABASE_SERVICE_ROLE_KEY` is blank — MCP tools never expose it; copy it from the Supabase dashboard (Project Settings → API) into `.env` to run `check-grants`/`check-migrations-sync` locally.
 
+## Deployed (2026-10-10)
+
+**MetaTwin is live** at https://metatwin.metaglobetechnologies.co.ke — verified `200 OK` with the expected security headers. Deployed via `npm run deploy` run directly by Andrew (Claude Code's own auto-mode classifier blocks production deploys — did not attempt to route around it; Andrew ran it himself after being asked). Custom domain + SSL cert were created automatically by Cloudflare on deploy. Current Worker version: `fb1013eb-02d3-444c-9aa5-76b642e94b34`.
+
+Secrets set on the live Worker (`wrangler secret put`, piped from a temp file, never echoed): `RESEND_API_KEY` (scoped sending-only, restricted to the `metaglobetechnologies.co.ke` domain in Resend), `SUPABASE_WEBHOOK_SECRET`.
+
 ## Blocked
 
 1. **Supabase Auth Custom SMTP not configured yet** — no MCP tool exposes Auth SMTP settings; needs to be done by hand in the Supabase dashboard (Authentication → Settings → SMTP), using Resend's SMTP credentials for `metaglobetechnologies.co.ke`.
-2. **`SUPABASE_SERVICE_ROLE_KEY` still blank** — not set as a `wrangler secret` yet, so the deployed Worker's `supabaseAdmin` paths (the new-user webhook) will throw until Andrew pastes it into `.env` and it gets set as a secret.
+2. **`SUPABASE_SERVICE_ROLE_KEY` still blank** — not set as a `wrangler secret` yet, so the deployed Worker's `supabaseAdmin` paths (the new-user webhook) will throw until Andrew pastes it into `.env` (from Supabase dashboard → Project Settings → API) and it gets set as a secret too.
 
 ## In progress / next up
 
-- `npm install`, `npm run typecheck`, `npm run build` all verified passing this session (see "Done this session").
-- First deploy + custom domain **blocked by Claude Code's own auto-mode safety classifier** ("Production Deploy") — `npm run deploy` needs to be run by Andrew directly from his machine (secrets/env already in place; see `.env`). Did not attempt to route around this.
-- **Design**: Andrew is having Lovable produce the look & feel (design system / mockups) — explicitly NOT replacing this app. Claude implements that design into this repo's existing TanStack Start routes/components once Andrew shares Lovable's output; the Supabase schema, auth, and deploy pipeline built this session stay as-is.
+- **Design**: Andrew is having Lovable produce the look & feel (design system / mockups) — explicitly NOT replacing this app. Claude implements that design into this repo's existing TanStack Start routes/components once Andrew shares Lovable's output; the Supabase schema, auth, and deploy pipeline stay as-is.
 - Configure Supabase Auth Custom SMTP (Resend) once able.
-- Configure the `auth.users` INSERT Database Webhook in the Supabase dashboard pointing at `/api/webhooks/new-user`, once `SUPABASE_SERVICE_ROLE_KEY` is set.
+- Set `SUPABASE_SERVICE_ROLE_KEY` as a `wrangler secret`, then configure the `auth.users` INSERT Database Webhook in the Supabase dashboard pointing at `/api/webhooks/new-user`.
 - Product work beyond the scaffold: UI for `skills`/`competencies`/`courses`/`projects`/`assessments` (dashboard currently only covers the `twins` profile row), the parental-consent flow for under-18 students, and seeding `opportunities`.
