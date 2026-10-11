@@ -145,6 +145,8 @@ export function Footer() {
           <Link to="/how-it-works" className="block hover:text-ink-foreground">How It Works</Link>
           <Link to="/pricing" className="block hover:text-ink-foreground">Pricing</Link>
           <Link to="/about" className="block hover:text-ink-foreground">About</Link>
+          <Link to="/privacy" className="block hover:text-ink-foreground">Privacy Policy</Link>
+          <Link to="/terms" className="block hover:text-ink-foreground">Terms of Service</Link>
         </div>
       </div>
       {!showsRealData && (
