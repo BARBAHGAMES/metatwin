@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, HeroBackdrop } from "@/components/site";
+import { OAuthButtons } from "@/components/OAuthButtons";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -122,6 +123,8 @@ function SignupPage() {
               {submitting ? "Creating account..." : <>Create my MetaTwin <Sparkles /></>}
             </Button>
           </form>
+          <div className="mt-5"><OAuthButtons /></div>
+          <p className="mt-3 text-center text-xs text-muted-foreground">Signing up with Google or GitHub skips the form above — you'll confirm your age in one quick step after.</p>
         </Card>
         <p className="mt-6 text-center text-sm text-ink-muted">
           Already have a MetaTwin? <Link to="/login" className="text-electric">Log in</Link>

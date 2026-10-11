@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, HeroBackdrop } from "@/components/site";
+import { OAuthButtons } from "@/components/OAuthButtons";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -69,6 +70,7 @@ function LoginPage() {
               {submitting ? "Logging in..." : <>Log in <ArrowRight /></>}
             </Button>
           </form>
+          <div className="mt-5"><OAuthButtons /></div>
         </Card>
         <p className="mt-6 text-center text-sm text-ink-muted">
           New to MetaTwin? <Link to="/signup" className="text-electric">Build your MetaTwin</Link>

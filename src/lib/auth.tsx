@@ -21,6 +21,7 @@ type AuthCtx = {
     emailRedirectTo?: string,
   ) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
+  signInWithOAuth: (provider: "google" | "github") => Promise<string | null>;
   resetPassword: (email: string) => Promise<string | null>;
   // True after the user opens a password-recovery email link (Supabase fires
   // PASSWORD_RECOVERY and signs them in on a temporary session).
@@ -96,6 +97,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   }
 
+  // Google/GitHub sign-in is additive, not a replacement for email/password.
+  // A new OAuth account carries no birth_year/is_adult_declared metadata, so
+  // handle_new_user() creates its twin with is_adult = false — AdultGate
+  // (shown on /dashboard) asks for the one-time declaration, same as any
+  // pre-existing account with no declaration.
+  async function signInWithOAuth(provider: "google" | "github"): Promise<string | null> {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/dashboard` },
+    });
+    return error?.message ?? null;
+  }
+
   async function resetPassword(email: string): Promise<string | null> {
     // The redirect URL must be in Supabase Auth -> URL Configuration -> Redirect URLs.
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -111,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, resetPassword, passwordRecovery, updatePassword }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, signInWithOAuth, resetPassword, passwordRecovery, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );
