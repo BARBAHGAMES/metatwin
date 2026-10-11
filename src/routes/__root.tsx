@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { Header, Footer } from "@/components/site";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/auth";
+import { CursorGlow } from "@/components/CursorGlow";
 
 function NotFoundComponent() {
   return (
@@ -130,6 +131,7 @@ function RootComponent() {
           </main>
           <Footer />
         </div>
+        <CursorGlow />
         <Toaster />
       </AuthProvider>
     </QueryClientProvider>

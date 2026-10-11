@@ -237,7 +237,7 @@ export function Section({ children, className }: { children: ReactNode; classNam
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-2xl border bg-card p-6 shadow-card", className)}>{children}</div>;
+  return <div className={cn("reveal-card rounded-2xl border bg-card p-6 shadow-card transition-shadow duration-300 hover:shadow-glow", className)}>{children}</div>;
 }
 
 // Stand-in for a profile photo on sample/demo content — avoids shipping a

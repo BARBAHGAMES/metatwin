@@ -220,3 +220,35 @@
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
+
+/* ===== Angelic cursor glow ===== */
+.cursor-halo {
+  position: fixed; left: 0; top: 0; z-index: 70; pointer-events: none; opacity: 0;
+  width: 520px; height: 520px; margin: -260px 0 0 -260px; border-radius: 9999px;
+  background: radial-gradient(circle, color-mix(in oklab, var(--electric-soft) 6%, transparent) 0%, color-mix(in oklab, var(--electric) 2%, transparent) 30%, transparent 65%);
+  mix-blend-mode: normal; transition: opacity .4s ease; will-change: transform;
+}
+.cursor-halo::after {
+  content: ""; position: absolute; inset: 235px; border-radius: 9999px;
+  background: radial-gradient(circle, color-mix(in oklab, white 10%, transparent), transparent 70%);
+  filter: blur(6px);
+}
+@media (pointer: coarse) { .cursor-halo { display: none; } }
+
+.reveal-card, .glow-card { position: relative; isolation: isolate; }
+.reveal-card::before, .glow-card::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; z-index: -1;
+  opacity: 0; transition: opacity .35s ease;
+  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--electric) 3%, transparent), transparent 60%);
+}
+.reveal-card::after, .glow-card::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; padding: 1px; opacity: 0; transition: opacity .35s ease;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), color-mix(in oklab, var(--electric) 20%, transparent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.reveal-card:hover::before, .reveal-card:hover::after, .glow-card:hover::before, .glow-card:hover::after { opacity: 1; }
+@keyframes halo-breathe { 0%,100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.06); } }
+@media (prefers-reduced-motion: no-preference) {
+  .cursor-halo::after { animation: halo-breathe 3.6s ease-in-out infinite; }
+  .reveal-card:hover::after, .glow-card:hover::after { animation: halo-breathe 3.6s ease-in-out infinite; }
+}
