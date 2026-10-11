@@ -1,0 +1,36 @@
+name: CI
+
+# Checks only: typecheck, lint, unit tests, production build. This workflow never
+# deploys and holds no secrets. Deploys stay manual (`npm run deploy`, which also
+# runs the grant and migration-sync guards against the live database).
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+        env:
+          # Placeholders so the build can run without secrets; this artifact is never deployed.
+          SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
