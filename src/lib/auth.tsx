@@ -22,6 +22,10 @@ type AuthCtx = {
   ) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<string | null>;
+  // True after the user opens a password-recovery email link (Supabase fires
+  // PASSWORD_RECOVERY and signs them in on a temporary session).
+  passwordRecovery: boolean;
+  updatePassword: (password: string) => Promise<string | null>;
 };
 
 const AuthContext = createContext<AuthCtx | null>(null);
@@ -30,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -40,7 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
+      if (event === "SIGNED_OUT") setPasswordRecovery(false);
       setSession(session);
       setUser(session?.user ?? null);
     });
@@ -90,12 +97,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function resetPassword(email: string): Promise<string | null> {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    // The redirect URL must be in Supabase Auth -> URL Configuration -> Redirect URLs.
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    return error?.message ?? null;
+  }
+
+  async function updatePassword(password: string): Promise<string | null> {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (!error) setPasswordRecovery(false);
     return error?.message ?? null;
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, resetPassword }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, resetPassword, passwordRecovery, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { validateBirthYear } from "@/lib/adult";
+import { MIN_PASSWORD_LENGTH } from "@/lib/limits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,10 +87,10 @@ function SignupPage() {
                 id="password"
                 type="password"
                 required
-                minLength={6}
+                minLength={MIN_PASSWORD_LENGTH}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
+                placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
               />
             </div>
             <div className="space-y-1.5">

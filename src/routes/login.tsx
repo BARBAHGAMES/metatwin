@@ -64,6 +64,7 @@ function LoginPage() {
                 placeholder="••••••••"
               />
             </div>
+            <p className="text-right text-sm"><Link to="/reset-password" className="text-electric">Forgot password?</Link></p>
             <Button type="submit" variant="hero" className="w-full" disabled={submitting}>
               {submitting ? "Logging in..." : <>Log in <ArrowRight /></>}
             </Button>

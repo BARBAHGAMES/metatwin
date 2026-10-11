@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { aiEmployees, capabilities, growth, person, projects } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { safeHref } from "@/lib/url";
+import { LoadError } from "@/components/LoadError";
 import { supabase } from "@/integrations/supabase/client";
 import { AITeam } from "@/components/AITeam";
 import { CareerGraph } from "@/components/CareerGraph";
@@ -18,10 +19,10 @@ import type { Status } from "@/lib/data";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "My MetaTwin · Your AI Digital Twin for Opportunities" },
-      { name: "description", content: "Explore a sample MetaTwin profile: capabilities, projects, evidence and growth over time." },
-      { property: "og:title", content: "My MetaTwin · Victorious Kibaki" },
-      { property: "og:description", content: "Proven capability plus a supervised team of AI employees." },
+      { title: "My MetaTwin · Your Digital Twin for Opportunities" },
+      { name: "description", content: "Your MetaTwin: capabilities, projects, evidence and growth over time. Sign in to see yours, or explore a fictional sample." },
+      { property: "og:title", content: "MetaTwin · Your verified digital twin" },
+      { property: "og:description", content: "A living record of capabilities, projects and evidence." },
     ],
   }),
   component: Profile,
@@ -64,6 +65,8 @@ function RealProfile({ userId }: { userId: string }) {
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +90,13 @@ function RealProfile({ userId }: { userId: string }) {
       if (compsRes.error) console.error("[profile] load competencies failed:", compsRes.error.message);
       if (projectsRes.error) console.error("[profile] load projects failed:", projectsRes.error.message);
       if (evidenceRes.error) console.error("[profile] load evidence failed:", evidenceRes.error.message);
+      // A failed load must not render as an empty profile (it reads as lost data).
+      if ([twinRes, compsRes, projectsRes, evidenceRes].some((r) => r.error)) {
+        setLoadError(true);
+        setFetching(false);
+        return;
+      }
+      setLoadError(false);
       setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private" });
       setCompetencies((compsRes.data as unknown as Competency[] | null) ?? []);
       setProjectList((projectsRes.data as Project[] | null) ?? []);
@@ -97,7 +107,18 @@ function RealProfile({ userId }: { userId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, reloadKey]);
+
+  if (loadError) {
+    return (
+      <LoadError
+        onRetry={() => {
+          setFetching(true);
+          setReloadKey((k) => k + 1);
+        }}
+      />
+    );
+  }
 
   if (fetching || !twin) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
 

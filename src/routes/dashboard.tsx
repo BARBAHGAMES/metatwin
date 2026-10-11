@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AdultGate } from "@/components/AdultGate";
 import { LINK_ERROR, isHttpUrl, safeHref } from "@/lib/url";
+import { LIMITS, validateStudyYear } from "@/lib/limits";
+import { LoadError } from "@/components/LoadError";
 import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -78,6 +80,7 @@ function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const [projectDialog, setProjectDialog] = useState(false);
   const [projectForm, setProjectForm] = useState({ title: "", description: "" });
@@ -113,6 +116,14 @@ function Dashboard() {
     if (compsRes.error) console.error("[dashboard] load competencies failed:", compsRes.error.message);
     if (projectsRes.error) console.error("[dashboard] load projects failed:", projectsRes.error.message);
     if (evidenceRes.error) console.error("[dashboard] load evidence failed:", evidenceRes.error.message);
+
+    // A failed load must not render as an empty account (it reads as lost data).
+    if ([twinRes, skillsRes, compsRes, projectsRes, evidenceRes].some((r) => r.error)) {
+      setLoadError(true);
+      setFetching(false);
+      return;
+    }
+    setLoadError(false);
 
     setTwin(
       (twinRes.data as Twin | null) ?? {
@@ -200,6 +211,18 @@ function Dashboard() {
     setEvidenceForm({ title: "", link: "", note: "" });
     setEvidenceDialog(false);
     loadAll(user.id);
+  }
+
+  if (loadError) {
+    return (
+      <LoadError
+        onRetry={() => {
+          if (!user) return;
+          setFetching(true);
+          loadAll(user.id);
+        }}
+      />
+    );
   }
 
   if (authLoading || fetching || !twin) {
@@ -374,11 +397,11 @@ function Dashboard() {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="project-title">Title</Label>
-              <Input id="project-title" value={projectForm.title} onChange={(e) => setProjectForm({ ...projectForm, title: e.target.value })} placeholder="e.g. AquaLoop Greywater Filter" />
+              <Input id="project-title" maxLength={LIMITS.projectTitle} value={projectForm.title} onChange={(e) => setProjectForm({ ...projectForm, title: e.target.value })} placeholder="e.g. AquaLoop Greywater Filter" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="project-description">Description</Label>
-              <Textarea id="project-description" rows={3} value={projectForm.description} onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })} placeholder="What is it, and what's your role?" />
+              <Textarea id="project-description" rows={3} maxLength={LIMITS.projectDescription} value={projectForm.description} onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })} placeholder="What is it, and what's your role?" />
             </div>
           </div>
           <DialogFooter><Button onClick={addProject} disabled={saving || !projectForm.title.trim()}>Save</Button></DialogFooter>
@@ -432,6 +455,7 @@ function Dashboard() {
               <Label htmlFor="evidence-title">Title</Label>
               <Input
                 id="evidence-title"
+                maxLength={LIMITS.evidenceTitle}
                 value={evidenceForm.title}
                 onChange={(e) => setEvidenceForm({ ...evidenceForm, title: e.target.value })}
                 placeholder="e.g. AquaLoop v3 pilot results"
@@ -451,6 +475,7 @@ function Dashboard() {
               <Label htmlFor="evidence-note">Note (optional)</Label>
               <Textarea
                 id="evidence-note"
+                maxLength={LIMITS.evidenceNote}
                 rows={2}
                 value={evidenceForm.note}
                 onChange={(e) => setEvidenceForm({ ...evidenceForm, note: e.target.value })}
@@ -471,6 +496,11 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    const yearError = validateStudyYear(form.year);
+    if (yearError) {
+      toast.error(yearError);
+      return;
+    }
     setSaving(true);
     // is_adult is server-controlled (declare_adult RPC) — never sent from here.
     const { error } = await supabase.from("twins").upsert(
@@ -498,24 +528,26 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
     <div className="mt-4 grid gap-4 sm:grid-cols-2">
       <div className="space-y-1.5">
         <Label>Name</Label>
-        <Input value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <Input maxLength={LIMITS.name} value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       </div>
       <div className="space-y-1.5">
         <Label>Headline</Label>
-        <Input value={form.headline ?? ""} onChange={(e) => setForm({ ...form, headline: e.target.value })} />
+        <Input maxLength={LIMITS.headline} value={form.headline ?? ""} onChange={(e) => setForm({ ...form, headline: e.target.value })} />
       </div>
       <div className="space-y-1.5">
         <Label>Institution</Label>
-        <Input value={form.institution ?? ""} onChange={(e) => setForm({ ...form, institution: e.target.value })} />
+        <Input maxLength={LIMITS.institution} value={form.institution ?? ""} onChange={(e) => setForm({ ...form, institution: e.target.value })} />
       </div>
       <div className="space-y-1.5">
         <Label>Programme</Label>
-        <Input value={form.programme ?? ""} onChange={(e) => setForm({ ...form, programme: e.target.value })} />
+        <Input maxLength={LIMITS.programme} value={form.programme ?? ""} onChange={(e) => setForm({ ...form, programme: e.target.value })} />
       </div>
       <div className="space-y-1.5">
         <Label>Year</Label>
         <Input
           type="number"
+          min={LIMITS.studyYearMin}
+          max={LIMITS.studyYearMax}
           value={form.year ?? ""}
           onChange={(e) => setForm({ ...form, year: e.target.value ? Number(e.target.value) : null })}
         />
