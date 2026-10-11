@@ -4,6 +4,7 @@ import { ArrowRight, MapPin, Target, Lock, Bot, Briefcase, UserPlus, Sparkles, S
 import { toast } from "sonner";
 import { aiEmployees, capabilities, growth, person, projects } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
+import { safeHref } from "@/lib/url";
 import { supabase } from "@/integrations/supabase/client";
 import { AITeam } from "@/components/AITeam";
 import { CareerGraph } from "@/components/CareerGraph";
@@ -176,17 +177,18 @@ function RealProfile({ userId }: { userId: string }) {
                               </div>
                               {items.length > 0 && (
                                 <ul className="mt-2 space-y-1 border-t pt-2">
-                                  {items.map((e) =>
-                                    e.link ? (
+                                  {items.map((e) => {
+                                    const href = safeHref(e.link);
+                                    return href ? (
                                       <li key={e.id}>
-                                        <a href={e.link} target="_blank" rel="noreferrer" className="text-xs text-electric hover:underline">
+                                        <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs text-electric hover:underline">
                                           {e.title}
                                         </a>
                                       </li>
                                     ) : (
                                       <li key={e.id} className="text-xs text-muted-foreground">{e.title}</li>
-                                    ),
-                                  )}
+                                    );
+                                  })}
                                 </ul>
                               )}
                             </div>

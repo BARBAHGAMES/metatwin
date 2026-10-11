@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AdultGate } from "@/components/AdultGate";
+import { LINK_ERROR, isHttpUrl, safeHref } from "@/lib/url";
 import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -176,12 +177,17 @@ function Dashboard() {
 
   async function addEvidence() {
     if (!user || !evidenceCompetencyId || !evidenceForm.title.trim()) return;
+    const link = evidenceForm.link.trim();
+    if (link && !isHttpUrl(link)) {
+      toast.error(LINK_ERROR);
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.from("evidence").insert({
       twin_id: user.id,
       competency_id: evidenceCompetencyId,
       title: evidenceForm.title.trim(),
-      link: evidenceForm.link.trim() || null,
+      link: link || null,
       note: evidenceForm.note.trim() || null,
     });
     setSaving(false);
@@ -311,17 +317,18 @@ function Dashboard() {
                     </div>
                     {items.length > 0 && (
                       <ul className="mt-2 space-y-1 border-t pt-2">
-                        {items.map((e) =>
-                          e.link ? (
+                        {items.map((e) => {
+                          const href = safeHref(e.link);
+                          return href ? (
                             <li key={e.id}>
-                              <a href={e.link} target="_blank" rel="noreferrer" className="text-xs text-electric hover:underline">
+                              <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs text-electric hover:underline">
                                 {e.title}
                               </a>
                             </li>
                           ) : (
                             <li key={e.id} className="text-xs text-muted-foreground">{e.title}</li>
-                          ),
-                        )}
+                          );
+                        })}
                       </ul>
                     )}
                   </li>
