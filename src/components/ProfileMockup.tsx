@@ -6,7 +6,7 @@ import { MessageSquare, Sparkles, Target, FileCheck2 } from "lucide-react";
 export function ProfileMockup() {
   const caps = capabilities.slice(0, 4);
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <div className="absolute -inset-6 rounded-[2rem] bg-gradient-electric opacity-25 blur-3xl" aria-hidden />
       <div className="relative overflow-hidden rounded-2xl border border-ink-foreground/10 bg-card text-card-foreground shadow-2xl">
         <div className="flex items-center gap-1.5 border-b bg-muted px-4 py-2.5">
@@ -16,7 +16,7 @@ export function ProfileMockup() {
           <span className="ml-3 truncate font-mono text-[11px] text-muted-foreground">metatwin.app/victorious</span>
         </div>
         <div className="grid gap-4 p-5 sm:grid-cols-[1.1fr_1fr]">
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <div className="flex items-center gap-3">
               <img src={sampleProfilePhoto} alt={person.name} className="h-12 w-12 shrink-0 rounded-xl object-cover object-top" />
               <div className="min-w-0">
@@ -41,7 +41,7 @@ export function ProfileMockup() {
               <p className="mt-1 text-xs text-muted-foreground">"Clear progression between revisions. Tolerancing is well documented."</p>
             </div>
           </div>
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <div>
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Featured project</p>
               <div className="rounded-lg border p-3">
