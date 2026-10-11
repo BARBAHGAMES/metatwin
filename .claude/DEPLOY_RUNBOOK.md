@@ -1,4 +1,4 @@
-# Deploy runbook — branch `claude/p1-5-public-profile`
+# Deploy runbook — branch `claude/p1-5-public-profile` (or `claude/p2-8-real-data`, which includes it plus P2-8)
 
 For a **local desktop Claude Code session** in the `metatwin` folder (where `wrangler login` is active).
 Andrew has explicitly asked for this deploy to go to production. Read `.claude/PROJECT_STATE.md` first.
@@ -55,3 +55,12 @@ the age step and land on the gate screen.
 
 Worker: `npx wrangler rollback --name metatwin` (previous version). The database changes are additive/safe with the old
 UI, so no DB rollback is needed.
+
+## Extra smoke checks if deploying `claude/p2-8-real-data`
+
+- Signed in: `/projects` shows "My projects"; `/projects/<your project id>` shows a Journey built from real dates;
+  `/journey` shows one timeline per project; `/capability/3d-modelling` shows YOUR evidence
+  (and `/capability/3d-modelling?example=1` shows the fictional showcase).
+- Dashboard: "Opportunities for you" shows the empty state ("No opportunities have been added yet") — expected, the
+  table is intentionally empty until real opportunities are added.
+- Signed out: `/projects`, `/journey`, `/capability/3d-modelling` still show the tagged fictional examples.

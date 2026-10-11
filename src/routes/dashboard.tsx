@@ -16,6 +16,7 @@ import { AdultGate } from "@/components/AdultGate";
 import { LINK_ERROR, isHttpUrl, safeHref } from "@/lib/url";
 import { LIMITS, validateStudyYear } from "@/lib/limits";
 import { LoadError } from "@/components/LoadError";
+import { fetchMyOpportunityMatches, type OpportunityMatch } from "@/lib/real-data";
 import { HANDLE_HELP, normalizeHandle, publicProfilePath, validateHandle } from "@/lib/public-profile";
 import type { Status } from "@/lib/data";
 
@@ -91,6 +92,10 @@ function Dashboard() {
   const [capabilitySkillId, setCapabilitySkillId] = useState("");
   const [evidenceDialog, setEvidenceDialog] = useState(false);
   const [evidenceCompetencyId, setEvidenceCompetencyId] = useState("");
+  const [evidenceProjectId, setEvidenceProjectId] = useState("");
+  const [matches, setMatches] = useState<OpportunityMatch[]>([]);
+  const [matchesState, setMatchesState] = useState<"loading" | "error" | "ready">("loading");
+  const [matchesReload, setMatchesReload] = useState(0);
   const [evidenceForm, setEvidenceForm] = useState({ title: "", link: "", note: "" });
   const [saving, setSaving] = useState(false);
 
@@ -153,6 +158,30 @@ function Dashboard() {
     if (user) loadAll(user.id);
   }, [user]);
 
+  // Opportunity matches are scored on the server from the student's own
+  // capabilities, so refresh them when the capability count changes.
+  const isAdult = twin?.is_adult ?? false;
+  const capabilityCount = competencies.length;
+  const evidenceSignature = competencies.map((c) => c.evidence_count).join(",");
+  useEffect(() => {
+    if (!user || !isAdult) return;
+    let cancelled = false;
+    setMatchesState("loading");
+    fetchMyOpportunityMatches()
+      .then((m) => {
+        if (cancelled) return;
+        setMatches(m);
+        setMatchesState("ready");
+      })
+      .catch((e) => {
+        console.error("[dashboard] load opportunity matches failed:", e);
+        if (!cancelled) setMatchesState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, isAdult, capabilityCount, evidenceSignature, matchesReload]);
+
   async function addProject() {
     if (!user || !projectForm.title.trim()) return;
     setSaving(true);
@@ -202,6 +231,7 @@ function Dashboard() {
     const { error } = await supabase.from("evidence").insert({
       twin_id: user.id,
       competency_id: evidenceCompetencyId,
+      project_id: evidenceProjectId || null,
       title: evidenceForm.title.trim(),
       link: link || null,
       note: evidenceForm.note.trim() || null,
@@ -213,6 +243,7 @@ function Dashboard() {
     }
     toast.success("Evidence recorded.");
     setEvidenceCompetencyId("");
+    setEvidenceProjectId("");
     setEvidenceForm({ title: "", link: "", note: "" });
     setEvidenceDialog(false);
     loadAll(user.id);
@@ -380,6 +411,54 @@ function Dashboard() {
         </div>
 
         <Card className="mt-5">
+          <h3 className="font-semibold">Opportunities for you</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Matches compare the skills an opportunity asks for with your capabilities. Evidence-backed skills count fully; self-reported
+            ones count half. A match is a starting point, not a prediction.
+          </p>
+          {matchesState === "loading" && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
+          {matchesState === "error" && (
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+              <span className="text-muted-foreground">We couldn't load opportunities.</span>
+              <Button type="button" variant="outline" size="sm" onClick={() => setMatchesReload((k) => k + 1)}>Try again</Button>
+            </div>
+          )}
+          {matchesState === "ready" && matches.length === 0 && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              No opportunities have been added yet. When partners add them, the ones that fit your capabilities will appear here.
+            </p>
+          )}
+          {matchesState === "ready" && matches.length > 0 && (
+            <ul className="mt-4 space-y-3">
+              {matches.map((m) => {
+                const href = safeHref(m.url);
+                return (
+                  <li key={m.id} className="rounded-lg border p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium">{m.title}</p>
+                        {m.org_name && <p className="text-xs text-muted-foreground">{m.org_name}</p>}
+                      </div>
+                      <span className="shrink-0 rounded-full bg-electric-soft px-2.5 py-0.5 text-xs font-semibold text-accent-foreground">
+                        {m.score === null ? "No skills listed" : `${m.score}% match`}
+                      </span>
+                    </div>
+                    {m.description && <p className="mt-2 text-sm text-muted-foreground">{m.description}</p>}
+                    {(m.matched_skills.length > 0 || m.missing_skills.length > 0) && (
+                      <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
+                        {m.matched_skills.map((n) => <span key={`y-${n}`} className="rounded-md bg-status-evidence-bg px-2 py-0.5 text-status-evidence">✓ {n}</span>)}
+                        {m.missing_skills.map((n) => <span key={`n-${n}`} className="rounded-md bg-muted px-2 py-0.5 text-muted-foreground">+ {n}</span>)}
+                      </div>
+                    )}
+                    {href && <a href={href} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-electric hover:underline">View opportunity</a>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="mt-5">
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-semibold">Profile</h3>
             <Button
@@ -456,6 +535,22 @@ function Dashboard() {
                 ))}
               </select>
             </div>
+            {projects.length > 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="evidence-project">Related project (optional)</Label>
+                <select
+                  id="evidence-project"
+                  value={evidenceProjectId}
+                  onChange={(e) => setEvidenceProjectId(e.target.value)}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="">None</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="evidence-title">Title</Label>
               <Input

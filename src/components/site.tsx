@@ -116,8 +116,13 @@ export function Footer() {
   const { user } = useAuth();
   // The "fictional demonstration data" line is true on marketing/sample pages
   // but false where a real student's data is shown.
+  // Signed-in students see their own data on these pages (examples there carry
+  // their own "Fictional sample data" tag).
+  const realDataPaths = ["/profile", "/projects", "/journey", "/capability"];
   const showsRealData =
-    pathname.startsWith("/t/") || pathname.startsWith("/dashboard") || (pathname === "/profile" && !!user);
+    pathname.startsWith("/t/") ||
+    pathname.startsWith("/dashboard") ||
+    (!!user && realDataPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`)));
   return (
     <footer className="bg-ink text-ink-muted">
       <div className="mx-auto grid max-w-7xl gap-8 px-5 py-14 md:grid-cols-[1.5fr_1fr_1fr]">

@@ -302,18 +302,21 @@ export type Database = {
           created_at: string;
           id: string;
           name: string;
+          slug: string;
         };
         Insert: {
           category?: string | null;
           created_at?: string;
           id?: string;
           name: string;
+          slug: string;
         };
         Update: {
           category?: string | null;
           created_at?: string;
           id?: string;
           name?: string;
+          slug?: string;
         };
         Relationships: [];
       };
@@ -373,6 +376,21 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      get_my_opportunity_matches: {
+        Args: never;
+        Returns: {
+          description: string | null;
+          evidence_backed_count: number;
+          id: string;
+          matched_skills: string[];
+          missing_skills: string[];
+          org_name: string | null;
+          required_count: number;
+          score: number | null;
+          title: string;
+          url: string | null;
+        }[];
+      };
       get_public_profile: {
         Args: { p_handle: string };
         Returns: Json;
