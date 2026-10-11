@@ -617,20 +617,32 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
     }
     setSaving(true);
     // is_adult is server-controlled (declare_adult RPC) — never sent from here.
-    const { error } = await supabase.from("twins").upsert(
-      {
-        id: twin.id,
-        name: form.name,
-        institution: form.institution,
-        programme: form.programme,
-        year: form.year,
-        headline: form.headline,
-        visibility: form.visibility,
-        handle: handle || null,
-        public_show_evidence_details: form.public_show_evidence_details,
-      },
-      { onConflict: "id" },
-    );
+    const payload = {
+      name: form.name,
+      institution: form.institution,
+      programme: form.programme,
+      year: form.year,
+      headline: form.headline,
+      visibility: form.visibility,
+      handle: handle || null,
+      public_show_evidence_details: form.public_show_evidence_details,
+    };
+    // A plain UPDATE, not upsert: upsert compiles to INSERT ... ON CONFLICT DO
+    // UPDATE, and Postgres fires guard_twin_protected_columns()'s BEFORE INSERT
+    // branch (which force-resets is_adult/birth_year) and validates
+    // twins_public_requires_adult against that tentative row BEFORE the
+    // conflict/update path even runs — so going public always failed for every
+    // existing adult user. The twins row always exists by the time this form
+    // renders (handle_new_user creates it on signup); insert only as a fallback.
+    const { data: updated, error: updateError } = await supabase
+      .from("twins")
+      .update(payload)
+      .eq("id", twin.id)
+      .select("id");
+    let error = updateError;
+    if (!error && (!updated || updated.length === 0)) {
+      ({ error } = await supabase.from("twins").insert({ id: twin.id, ...payload }));
+    }
     setSaving(false);
     if (error) {
       toast.error(error.code === "23505" ? "That handle is already taken. Try another." : error.message);
