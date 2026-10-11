@@ -287,3 +287,26 @@ Both GitHub and Google sign-in verified fully working end-to-end live (authorize
 **Deployed this round**: commits `d15f900`, `49eab13`, `bd05370`, `f6a9522` on `main`; Worker versions `3c54ef4f...`, `2d3ad0b9...`, (privacy/terms) and `2f4894bc-0d8d-4e40-bc5e-dbbb3a47f60e` (verification meta tag) — latest live version is `2f4894bc-0d8d-4e40-bc5e-dbbb3a47f60e`.
 
 **Still outstanding from `PILOT_READINESS.md`**: Supabase Pro upgrade and leaked-password protection — both deliberately deferred (Andrew: stay on free plan for now), not forgotten.
+
+## Production deploy: hero images, Lovable Home/About sync, helix logo + cursor glow (2026-10-11)
+
+Andrew explicitly approved a production deploy via a runbook (`git checkout main && git pull`, read CLAUDE.md/PROJECT_STATE.md/DEPLOY_RUNBOOK.md, verify `wrangler whoami`, verify `.env`, `npm ci` + `tsc --noEmit` + `lint` + `vitest run`, `npm run deploy`, smoke test, update this file). Note: `.claude/DEPLOY_RUNBOOK.md` is now stale (references the long-since-merged `claude/p1-5-public-profile` branch) — this session's checklist came from Andrew's own runbook message, not that file.
+
+**What shipped, on top of everything already live:**
+- Commit `ea0bc1c` — photo hero backgrounds (`hero-*.jpg`, `hero-drift` CSS) wired into every `PageHero`/`HeroBackdrop` call site across the whole site, replacing the old `CareerGraph`-only decoration; pulled Lovable's reworked Home hero copy ("Your CV lists skills. Your MetaTwin brings a workforce.") and a full About-page rewrite (Kenya's-first-AI-workforce positioning, Mission/Vision, AI-employee disclaimer) after auditing every other page on Lovable for copy drift and finding none elsewhere.
+- Commit `ea2a553` — fixed `hero-about.jpg`/`hero-pricing.jpg`: the first pull had grabbed them before Andrew updated those two images on Lovable; re-verified every hero image against Lovable's live asset hashes and only those two were stale.
+- Commits `522a4ce` + `78b06e0` (from the concurrent desktop/cloud session, pulled in via `git pull`) — new helix wordmark logo (header + footer), a real `public/favicon.png` (there was no `public/` dir before, so every page 404'd on the favicon), `public/robots.txt`, and the Lovable cursor-glow effect (`CursorGlow.tsx` + `.cursor-halo`/`.reveal-card` CSS — a mouse-following halo + card spotlight, fine-pointer only, off under `prefers-reduced-motion`).
+- Commit `35fe329` (same concurrent session) — security regression suite extended for the onboarding fields (`kenya_cities`/`universities`/`twins.first_name` etc.) and FK indexes on `twins.city_id`/`twins.university_id`.
+
+**Pre-deploy gates, all clean:** `npm ci` (hit the known `lightningcss-win32-x64-msvc.node` EPERM lock — fixed the same way as before, `rm -rf node_modules` then re-`npm ci`), `tsc --noEmit`, `eslint .`, `vitest run` (58/58 — the "close timed out after 10000ms" message afterward is a harmless Vite-server teardown quirk, not a test failure).
+
+**Deployed** — `npm run deploy` ran clean (predeploy `check-grants`/`check-migrations-sync` passed silently). **Worker version `80e9b3b5-5fdb-41f2-a4d3-2161bcf8bab2`**, deployed 2026-10-11T14:12 UTC, confirmed via `wrangler deployments list --name metatwin`. Latest commit on `main`: `35fe329`.
+
+**Smoke test — all PASS, with evidence:**
+- Helix logo in header and footer — confirmed by screenshot, both locations.
+- Favicon — `<link rel="icon" href=".../favicon.png">` present in the DOM; `curl` confirms `200 image/png`.
+- Cursor glow on desktop — `document.querySelector('.cursor-halo')` present with `opacity: 1` and a live `transform: translate3d(...)` tracking the pointer while hovering a card.
+- `/signup` shows "Year of birth" + the 18+ checkbox — confirmed by screenshot.
+- `/login` has "Forgot password?" — confirmed by screenshot.
+- Public profile privacy toggle — created a disposable test user (admin API), declared adult via `declare_adult()`, set a public handle: `/t/<handle>` rendered the profile correctly. Set `visibility: 'private'`: `get_public_profile()` RPC returned `null` and the live page showed "This MetaTwin isn't available." Test user deleted after.
+- `/about` footer still shows "Prototype · All people, projects and reviews shown are fictional demonstration data."; `/dashboard` (checked while signed in as a second disposable test user, since it redirects to `/login` when signed out) does not — confirmed by screenshot of both. Both test users and all scratch scripts/state files were deleted/removed after.
