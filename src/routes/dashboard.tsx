@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AdultGate } from "@/components/AdultGate";
 import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -32,6 +33,7 @@ type Twin = {
   year: number | null;
   headline: string | null;
   visibility: "private" | "public";
+  is_adult: boolean;
 };
 
 type Skill = { id: string; name: string; category: string | null };
@@ -91,7 +93,7 @@ function Dashboard() {
 
   async function loadAll(userId: string) {
     const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes] = await Promise.all([
-      supabase.from("twins").select("id, name, institution, programme, year, headline, visibility").eq("id", userId).maybeSingle(),
+      supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, is_adult").eq("id", userId).maybeSingle(),
       supabase.from("skills").select("id, name, category").order("name"),
       supabase
         .from("competencies")
@@ -120,6 +122,7 @@ function Dashboard() {
         year: null,
         headline: null,
         visibility: "private",
+        is_adult: false,
       },
     );
     setSkills((skillsRes.data as Skill[] | null) ?? []);
@@ -195,6 +198,10 @@ function Dashboard() {
 
   if (authLoading || fetching || !twin) {
     return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  }
+
+  if (!twin.is_adult) {
+    return <AdultGate onDeclared={() => user && loadAll(user.id)} />;
   }
 
   const availableSkillsForCapability = skills.filter((s) => !competencies.some((c) => c.skill_id === s.id));
@@ -455,7 +462,19 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
 
   async function save() {
     setSaving(true);
-    const { error } = await supabase.from("twins").upsert({ ...form, id: twin.id }, { onConflict: "id" });
+    // is_adult is server-controlled (declare_adult RPC) — never sent from here.
+    const { error } = await supabase.from("twins").upsert(
+      {
+        id: twin.id,
+        name: form.name,
+        institution: form.institution,
+        programme: form.programme,
+        year: form.year,
+        headline: form.headline,
+        visibility: form.visibility,
+      },
+      { onConflict: "id" },
+    );
     setSaving(false);
     if (error) {
       toast.error(error.message);

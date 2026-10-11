@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { UNDER_18_MESSAGE } from "@/lib/adult";
 import type { User, Session } from "@supabase/supabase-js";
 
 type SignUpResult =
@@ -13,7 +14,12 @@ type AuthCtx = {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<string | null>;
-  signUp: (email: string, password: string, emailRedirectTo?: string) => Promise<SignUpResult>;
+  signUp: (
+    email: string,
+    password: string,
+    birthYear: number,
+    emailRedirectTo?: string,
+  ) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<string | null>;
 };
@@ -57,14 +63,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signUp(
     email: string,
     password: string,
+    birthYear: number,
     emailRedirectTo?: string,
   ): Promise<SignUpResult> {
+    // The handle_new_user trigger reads these (and rejects an under-18 year).
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: emailRedirectTo ? { emailRedirectTo } : undefined,
+      options: { data: { birth_year: birthYear, is_adult_declared: true }, emailRedirectTo },
     });
-    if (error) return { outcome: "error", message: error.message };
+    if (error) {
+      // The trigger's rejection surfaces as a generic database error; the form
+      // already blocks a declared under-18 year, so this is a backstop.
+      const message = /database error/i.test(error.message)
+        ? `We couldn't create your account. ${UNDER_18_MESSAGE} If you're 18 or older, try again.`
+        : error.message;
+      return { outcome: "error", message };
+    }
     if (data.session) return { outcome: "signed_in" };
     if (data.user && data.user.identities?.length === 0) return { outcome: "already_registered" };
     return { outcome: "confirm" };

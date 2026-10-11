@@ -319,10 +319,12 @@ export type Database = {
       };
       twins: {
         Row: {
+          birth_year: number | null;
           created_at: string;
           headline: string | null;
           id: string;
           institution: string | null;
+          is_adult: boolean;
           name: string | null;
           parental_consent_at: string | null;
           programme: string | null;
@@ -331,10 +333,12 @@ export type Database = {
           year: number | null;
         };
         Insert: {
+          birth_year?: number | null;
           created_at?: string;
           headline?: string | null;
           id: string;
           institution?: string | null;
+          is_adult?: boolean;
           name?: string | null;
           parental_consent_at?: string | null;
           programme?: string | null;
@@ -343,10 +347,12 @@ export type Database = {
           year?: number | null;
         };
         Update: {
+          birth_year?: number | null;
           created_at?: string;
           headline?: string | null;
           id?: string;
           institution?: string | null;
+          is_adult?: boolean;
           name?: string | null;
           parental_consent_at?: string | null;
           programme?: string | null;
@@ -361,6 +367,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      declare_adult: {
+        Args: { p_birth_year: number };
+        Returns: undefined;
+      };
       introspect_applied_migrations: {
         Args: never;
         Returns: {
