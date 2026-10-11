@@ -20,6 +20,7 @@ declare
   q0 int; q1 int;
   prof jsonb;
   n int;
+  city uuid; uni uuid;
 begin
   ------------------------------------------------------------------ signups
   -- under-18 declaration is rejected at signup
@@ -181,6 +182,64 @@ begin
     select 1 from pg_policies where schemaname = 'public'
       and (coalesce(qual,'') ~* 'auth\.uid\(\)' and coalesce(qual,'') !~* 'select\s+auth\.uid\(\)')
   ), 'RLS policies must use (select auth.uid())';
+
+  ------------------------------------------------------------ onboarding fields + reference tables
+  select id into city from public.kenya_cities order by name limit 1;
+  select id into uni from public.universities order by name limit 1;
+  assert city is not null and uni is not null, 'reference tables must be seeded';
+
+  -- anyone can read the reference lists; nobody on the client can write them
+  set local role anon;
+  select count(*) into n from public.kenya_cities;   assert n > 0, 'anon can read cities';
+  select count(*) into n from public.universities;   assert n > 0, 'anon can read universities';
+  blocked := false; begin insert into public.kenya_cities (name) values ('Atlantis'); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not write cities';
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  blocked := false; begin insert into public.universities (name) values ('Fake University'); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'students must not add universities';
+  blocked := false; begin update public.kenya_cities set name = 'Hacked' where id = city; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'students must not edit cities';
+
+  -- the owner can save valid onboarding values (max-length boundary values included)
+  update public.twins set city_id = city, university_id = uni, education_status = 'in_university',
+    first_name = repeat('f', 60), last_name = 'Otieno', bio = repeat('b', 500) where id = a;
+  reset role;
+  assert (select city_id = city and university_id = uni and education_status = 'in_university' and char_length(bio) = 500
+          from public.twins where id = a), 'onboarding fields must save for the owner';
+
+  -- invalid references and values are rejected
+  set local role authenticated;
+  blocked := false; begin update public.twins set city_id = gen_random_uuid() where id = a; exception when foreign_key_violation then blocked := true; end;
+  assert blocked, 'unknown city id must be rejected (FK)';
+  blocked := false; begin update public.twins set university_id = gen_random_uuid() where id = a; exception when foreign_key_violation then blocked := true; end;
+  assert blocked, 'unknown university id must be rejected (FK)';
+  blocked := false; begin update public.twins set education_status = 'astronaut' where id = a; exception when check_violation then blocked := true; end;
+  assert blocked, 'education_status must be one of the allowed values';
+  blocked := false; begin update public.twins set first_name = repeat('f', 61) where id = a; exception when check_violation then blocked := true; end;
+  assert blocked, 'first_name length limit (60)';
+  blocked := false; begin update public.twins set bio = repeat('b', 501) where id = a; exception when check_violation then blocked := true; end;
+  assert blocked, 'bio length limit (500)';
+  reset role;
+
+  -- another student cannot write A's onboarding fields (RLS hides the row from the update)
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.twins set city_id = city, bio = 'defaced' where id = a;
+  get diagnostics n = row_count;
+  assert n = 0, 'student B must not be able to update student A''s twin';
+  reset role;
+  assert (select bio is distinct from 'defaced' from public.twins where id = a), 'A''s bio must be untouched by B';
+
+  -- reference tables are read-only for every client role; FK indexes exist
+  assert not exists (
+    select 1 from unnest(array['kenya_cities','universities']) t(tbl),
+         unnest(array['insert','update','delete','truncate']) p(priv)
+    where has_table_privilege('anon', 'public.' || t.tbl, p.priv) or has_table_privilege('authenticated', 'public.' || t.tbl, p.priv)
+  ), 'reference tables must be read-only for all client roles';
+  assert exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'twins_city_id_idx'), 'twins.city_id FK index';
+  assert exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'twins_university_id_idx'), 'twins.university_id FK index';
 
   raise exception 'ALL PASS (rolled back)';
 exception
