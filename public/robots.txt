@@ -1,0 +1,8 @@
+# MetaTwin: marketing pages are public; account pages are not worth crawling.
+# Student public profiles (/t/<handle>) are shareable by link and carry a
+# "noindex, nofollow" meta tag, so they are deliberately NOT disallowed here
+# (a crawler must be able to fetch the page to see the noindex).
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /reset-password

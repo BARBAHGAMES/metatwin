@@ -30,6 +30,8 @@ export function Logo() {
       <img
         src={metatwinLogo}
         alt="MetaTwin"
+        width={1201}
+        height={336}
         className="h-10 w-auto shrink-0 sm:h-12"
       />
     </Link>
