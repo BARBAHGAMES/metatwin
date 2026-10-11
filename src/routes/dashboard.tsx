@@ -52,6 +52,15 @@ type Project = {
   created_at: string;
 };
 
+type Evidence = {
+  id: string;
+  competency_id: string;
+  title: string;
+  link: string | null;
+  note: string | null;
+  created_at: string;
+};
+
 function competencyStatus(c: Competency): Status {
   return c.evidence_count > 0 ? "evidence" : "self";
 }
@@ -64,6 +73,7 @@ function Dashboard() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [fetching, setFetching] = useState(true);
 
   const [projectDialog, setProjectDialog] = useState(false);
@@ -72,6 +82,7 @@ function Dashboard() {
   const [capabilitySkillId, setCapabilitySkillId] = useState("");
   const [evidenceDialog, setEvidenceDialog] = useState(false);
   const [evidenceCompetencyId, setEvidenceCompetencyId] = useState("");
+  const [evidenceForm, setEvidenceForm] = useState({ title: "", link: "", note: "" });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -79,7 +90,7 @@ function Dashboard() {
   }, [authLoading, user, navigate]);
 
   async function loadAll(userId: string) {
-    const [twinRes, skillsRes, compsRes, projectsRes] = await Promise.all([
+    const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes] = await Promise.all([
       supabase.from("twins").select("id, name, institution, programme, year, headline, visibility").eq("id", userId).maybeSingle(),
       supabase.from("skills").select("id, name, category").order("name"),
       supabase
@@ -88,11 +99,17 @@ function Dashboard() {
         .eq("twin_id", userId)
         .order("updated_at", { ascending: false }),
       supabase.from("projects").select("id, title, description, created_at").eq("twin_id", userId).order("created_at", { ascending: false }),
+      supabase
+        .from("evidence")
+        .select("id, competency_id, title, link, note, created_at")
+        .eq("twin_id", userId)
+        .order("created_at", { ascending: false }),
     ]);
     if (twinRes.error) console.error("[dashboard] load twin failed:", twinRes.error.message);
     if (skillsRes.error) console.error("[dashboard] load skills failed:", skillsRes.error.message);
     if (compsRes.error) console.error("[dashboard] load competencies failed:", compsRes.error.message);
     if (projectsRes.error) console.error("[dashboard] load projects failed:", projectsRes.error.message);
+    if (evidenceRes.error) console.error("[dashboard] load evidence failed:", evidenceRes.error.message);
 
     setTwin(
       (twinRes.data as Twin | null) ?? {
@@ -108,6 +125,7 @@ function Dashboard() {
     setSkills((skillsRes.data as Skill[] | null) ?? []);
     setCompetencies((compsRes.data as unknown as Competency[] | null) ?? []);
     setProjects((projectsRes.data as Project[] | null) ?? []);
+    setEvidence((evidenceRes.data as Evidence[] | null) ?? []);
     setFetching(false);
   }
 
@@ -155,14 +173,15 @@ function Dashboard() {
   }
 
   async function addEvidence() {
-    if (!user || !evidenceCompetencyId) return;
-    const target = competencies.find((c) => c.id === evidenceCompetencyId);
-    if (!target) return;
+    if (!user || !evidenceCompetencyId || !evidenceForm.title.trim()) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("competencies")
-      .update({ evidence_count: target.evidence_count + 1, updated_at: new Date().toISOString() })
-      .eq("id", evidenceCompetencyId);
+    const { error } = await supabase.from("evidence").insert({
+      twin_id: user.id,
+      competency_id: evidenceCompetencyId,
+      title: evidenceForm.title.trim(),
+      link: evidenceForm.link.trim() || null,
+      note: evidenceForm.note.trim() || null,
+    });
     setSaving(false);
     if (error) {
       toast.error(error.message);
@@ -170,6 +189,7 @@ function Dashboard() {
     }
     toast.success("Evidence recorded.");
     setEvidenceCompetencyId("");
+    setEvidenceForm({ title: "", link: "", note: "" });
     setEvidenceDialog(false);
     loadAll(user.id);
   }
@@ -185,11 +205,14 @@ function Dashboard() {
   );
 
   const recentActivity = [
-    ...competencies.map((c) => ({
-      at: c.updated_at,
-      text: `${c.skills?.name ?? "A capability"} — ${c.evidence_count > 0 ? "evidence added" : "self-reported"}`,
-    })),
+    ...competencies
+      .filter((c) => c.evidence_count === 0)
+      .map((c) => ({ at: c.updated_at, text: `${c.skills?.name ?? "A capability"} — self-reported` })),
     ...projects.map((p) => ({ at: p.created_at, text: `Started project: ${p.title}` })),
+    ...evidence.map((e) => {
+      const skillName = competencies.find((c) => c.id === e.competency_id)?.skills?.name;
+      return { at: e.created_at, text: `${e.title}${skillName ? ` — evidence for ${skillName}` : ""}` };
+    }),
   ]
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     .slice(0, 5);
@@ -272,12 +295,32 @@ function Dashboard() {
           <Card>
             <h3 className="font-semibold">Your capabilities</h3>
             <ul className="mt-3 space-y-2">
-              {competencies.map((c) => (
-                <li key={c.id} className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
-                  <span className="truncate">{c.skills?.name ?? "Unknown skill"}</span>
-                  <StatusBadge status={competencyStatus(c)} />
-                </li>
-              ))}
+              {competencies.map((c) => {
+                const items = evidence.filter((e) => e.competency_id === c.id);
+                return (
+                  <li key={c.id} className="rounded-lg border px-3 py-2 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate">{c.skills?.name ?? "Unknown skill"}</span>
+                      <StatusBadge status={competencyStatus(c)} />
+                    </div>
+                    {items.length > 0 && (
+                      <ul className="mt-2 space-y-1 border-t pt-2">
+                        {items.map((e) =>
+                          e.link ? (
+                            <li key={e.id}>
+                              <a href={e.link} target="_blank" rel="noreferrer" className="text-xs text-electric hover:underline">
+                                {e.title}
+                              </a>
+                            </li>
+                          ) : (
+                            <li key={e.id} className="text-xs text-muted-foreground">{e.title}</li>
+                          ),
+                        )}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
               {competencies.length === 0 && <li className="text-xs text-muted-foreground">No capabilities added yet.</li>}
             </ul>
           </Card>
@@ -354,22 +397,53 @@ function Dashboard() {
       <Dialog open={evidenceDialog} onOpenChange={setEvidenceDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>Add evidence</DialogTitle></DialogHeader>
-          <div className="space-y-1.5">
-            <Label htmlFor="evidence-select">Supports capability</Label>
-            <select
-              id="evidence-select"
-              value={evidenceCompetencyId}
-              onChange={(e) => setEvidenceCompetencyId(e.target.value)}
-              className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-            >
-              <option value="">Choose…</option>
-              {competencies.map((c) => (
-                <option key={c.id} value={c.id}>{c.skills?.name ?? "Unknown skill"}</option>
-              ))}
-            </select>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="evidence-select">Supports capability</Label>
+              <select
+                id="evidence-select"
+                value={evidenceCompetencyId}
+                onChange={(e) => setEvidenceCompetencyId(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="">Choose…</option>
+                {competencies.map((c) => (
+                  <option key={c.id} value={c.id}>{c.skills?.name ?? "Unknown skill"}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="evidence-title">Title</Label>
+              <Input
+                id="evidence-title"
+                value={evidenceForm.title}
+                onChange={(e) => setEvidenceForm({ ...evidenceForm, title: e.target.value })}
+                placeholder="e.g. AquaLoop v3 pilot results"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="evidence-link">Link (optional)</Label>
+              <Input
+                id="evidence-link"
+                type="url"
+                value={evidenceForm.link}
+                onChange={(e) => setEvidenceForm({ ...evidenceForm, link: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="evidence-note">Note (optional)</Label>
+              <Textarea
+                id="evidence-note"
+                rows={2}
+                value={evidenceForm.note}
+                onChange={(e) => setEvidenceForm({ ...evidenceForm, note: e.target.value })}
+                placeholder="What does this show, and what was your role?"
+              />
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground">Evidence file attachments aren't built yet — this records that evidence exists and moves the capability to Evidence Added.</p>
-          <DialogFooter><Button onClick={addEvidence} disabled={saving || !evidenceCompetencyId}>Save</Button></DialogFooter>
+          <p className="text-xs text-muted-foreground">File attachments aren't built yet — link to where the evidence already lives (Drive, GitHub, a write-up, etc).</p>
+          <DialogFooter><Button onClick={addEvidence} disabled={saving || !evidenceCompetencyId || !evidenceForm.title.trim()}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

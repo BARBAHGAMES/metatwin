@@ -51,6 +51,7 @@ type Competency = {
   skills: { name: string; category: string | null } | null;
 };
 type Project = { id: string; title: string; description: string | null; created_at: string };
+type Evidence = { id: string; competency_id: string; title: string; link: string | null; note: string | null; created_at: string };
 
 function competencyStatus(c: Competency): Status {
   return c.evidence_count > 0 ? "evidence" : "self";
@@ -60,12 +61,13 @@ function RealProfile({ userId }: { userId: string }) {
   const [twin, setTwin] = useState<Twin | null>(null);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [projectList, setProjectList] = useState<Project[]>([]);
+  const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [twinRes, compsRes, projectsRes] = await Promise.all([
+      const [twinRes, compsRes, projectsRes, evidenceRes] = await Promise.all([
         supabase.from("twins").select("id, name, institution, programme, year, headline, visibility").eq("id", userId).maybeSingle(),
         supabase
           .from("competencies")
@@ -73,14 +75,21 @@ function RealProfile({ userId }: { userId: string }) {
           .eq("twin_id", userId)
           .order("updated_at", { ascending: false }),
         supabase.from("projects").select("id, title, description, created_at").eq("twin_id", userId).order("created_at", { ascending: false }),
+        supabase
+          .from("evidence")
+          .select("id, competency_id, title, link, note, created_at")
+          .eq("twin_id", userId)
+          .order("created_at", { ascending: false }),
       ]);
       if (cancelled) return;
       if (twinRes.error) console.error("[profile] load twin failed:", twinRes.error.message);
       if (compsRes.error) console.error("[profile] load competencies failed:", compsRes.error.message);
       if (projectsRes.error) console.error("[profile] load projects failed:", projectsRes.error.message);
+      if (evidenceRes.error) console.error("[profile] load evidence failed:", evidenceRes.error.message);
       setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private" });
       setCompetencies((compsRes.data as unknown as Competency[] | null) ?? []);
       setProjectList((projectsRes.data as Project[] | null) ?? []);
+      setEvidence((evidenceRes.data as Evidence[] | null) ?? []);
       setFetching(false);
     }
     load();
@@ -95,8 +104,14 @@ function RealProfile({ userId }: { userId: string }) {
   const evidenceCount = competencies.filter((c) => c.evidence_count > 0).length;
   const initials = (twin.name ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
   const recentActivity = [
-    ...competencies.map((c) => ({ at: c.updated_at, text: `${c.skills?.name ?? "A capability"} — ${c.evidence_count > 0 ? "evidence added" : "self-reported"}` })),
+    ...competencies
+      .filter((c) => c.evidence_count === 0)
+      .map((c) => ({ at: c.updated_at, text: `${c.skills?.name ?? "A capability"} — self-reported` })),
     ...projectList.map((p) => ({ at: p.created_at, text: `Started project: ${p.title}` })),
+    ...evidence.map((e) => {
+      const skillName = competencies.find((c) => c.id === e.competency_id)?.skills?.name;
+      return { at: e.created_at, text: `${e.title}${skillName ? ` — evidence for ${skillName}` : ""}` };
+    }),
   ]
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     .slice(0, 6);
@@ -151,14 +166,32 @@ function RealProfile({ userId }: { userId: string }) {
                     <div key={g}>
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{g}</p>
                       <div className="grid gap-3 sm:grid-cols-2">
-                        {competencies.filter((c) => c.skills?.category === g).map((c) => (
-                          <div key={c.id} className="rounded-xl border bg-card p-4 transition-shadow duration-200 hover:shadow-card">
-                            <div className="flex items-start justify-between gap-2">
-                              <p className="font-medium">{c.skills?.name ?? "Unknown skill"}</p>
-                              <StatusBadge status={competencyStatus(c)} />
+                        {competencies.filter((c) => c.skills?.category === g).map((c) => {
+                          const items = evidence.filter((e) => e.competency_id === c.id);
+                          return (
+                            <div key={c.id} className="rounded-xl border bg-card p-4 transition-shadow duration-200 hover:shadow-card">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="font-medium">{c.skills?.name ?? "Unknown skill"}</p>
+                                <StatusBadge status={competencyStatus(c)} />
+                              </div>
+                              {items.length > 0 && (
+                                <ul className="mt-2 space-y-1 border-t pt-2">
+                                  {items.map((e) =>
+                                    e.link ? (
+                                      <li key={e.id}>
+                                        <a href={e.link} target="_blank" rel="noreferrer" className="text-xs text-electric hover:underline">
+                                          {e.title}
+                                        </a>
+                                      </li>
+                                    ) : (
+                                      <li key={e.id} className="text-xs text-muted-foreground">{e.title}</li>
+                                    ),
+                                  )}
+                                </ul>
+                              )}
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}

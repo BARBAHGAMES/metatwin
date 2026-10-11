@@ -6,7 +6,7 @@ import { statusMeta, type Status } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { CareerGraph } from "@/components/CareerGraph";
 import { useAuth } from "@/lib/auth";
-import metatwinLogo from "@/assets/metatwin-logo.png";
+import metatwinLogo from "@/assets/metatwin-logo-dark.png";
 
 export function HeroBackdrop() {
   return (
@@ -17,12 +17,14 @@ export function HeroBackdrop() {
   );
 }
 
-export function Logo({ light = false }: { light?: boolean }) {
+export function Logo() {
   return (
     <Link to="/" className="flex items-center">
-      <span className={cn("inline-flex items-center rounded-lg", light && "bg-card px-2.5 py-1.5 shadow-sm")}>
-        <img src={metatwinLogo} alt="MetaTwin" className="h-6 w-auto shrink-0 sm:h-7" />
-      </span>
+      <img
+        src={metatwinLogo}
+        alt="MetaTwin"
+        className="h-10 w-auto shrink-0 sm:h-12"
+      />
     </Link>
   );
 }
@@ -42,7 +44,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-ink-foreground/10 bg-ink/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
-        <Logo light />
+        <Logo />
         <nav className="hidden items-center gap-1 lg:flex">
           {nav.map((n) => (
             <Link
@@ -114,7 +116,7 @@ export function Footer() {
     <footer className="bg-ink text-ink-muted">
       <div className="mx-auto grid max-w-7xl gap-8 px-5 py-14 md:grid-cols-[1.5fr_1fr_1fr]">
         <div>
-          <Logo light />
+          <Logo />
           <p className="mt-4 max-w-sm text-sm">
             The Future of the CV. Don't just tell the world what you can do — show the evidence.
           </p>
