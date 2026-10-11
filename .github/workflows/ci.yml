@@ -1,8 +1,8 @@
 name: CI
 
-# Checks only: typecheck, lint, unit tests, production build. This workflow never
-# deploys and holds no secrets. Deploys stay manual (`npm run deploy`, which also
-# runs the grant and migration-sync guards against the live database).
+# Checks only: typecheck, lint, unit tests, production build, content-drift. This
+# workflow never deploys and holds no secrets. Deploys stay manual (`npm run deploy`,
+# which also runs the grant, migration-sync, and content-drift guards).
 on:
   push:
   pull_request:
@@ -39,3 +39,8 @@ jobs:
         run: npm run lint
       - name: Unit tests
         run: npm test
+      - name: Content drift
+        # Catches page copy silently disappearing (a bad merge, a stale asset
+        # sync, etc.) that still compiles and lints clean. Not a blocker for
+        # deliberate content changes — see scripts/check-content-drift.mjs.
+        run: npm run check-content-drift
