@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Card, HeroBackdrop, StatusBadge } from "@/components/site";
 import { statusMeta, type Status } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/build")({
@@ -217,7 +218,7 @@ function Build() {
             {step < steps.length - 1 ? (
               <Button variant="hero" onClick={() => setStep(step + 1)} disabled={!canNext}>Continue <ArrowRight /></Button>
             ) : (
-              <Button variant="hero" onClick={() => setDone(true)}><Sparkles /> Create my MetaTwin</Button>
+              <Button variant="hero" onClick={() => setDone(true)}><Sparkles /> Preview my MetaTwin</Button>
             )}
           </div>
         </Card>
@@ -260,14 +261,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function Done({ name, caps, evs, vis }: { name: string; caps: Cap[]; evs: Ev[]; vis: Visibility }) {
+  const { user } = useAuth();
   const counts = (Object.keys(statusMeta) as Status[]).map((s) => [s, caps.filter((c) => c.status === s).length] as const);
   return (
     <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
       <HeroBackdrop />
       <div className="relative mx-auto max-w-3xl px-5 py-20 text-center">
         <div className="pop-in mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-electric shadow-glow"><Check className="h-8 w-8" /></div>
-        <h1 className="hero-rise mt-6 text-4xl font-semibold md:text-5xl">Your MetaTwin is live, {name.split(" ")[0]}.</h1>
-        <p className="hero-rise-delay-1 mt-4 text-ink-muted">{caps.length} capabilities · {evs.length} evidence items · visibility: {vis}. Keep adding evidence as you learn and build — your record grows with you.</p>
+        <h1 className="hero-rise mt-6 text-4xl font-semibold md:text-5xl">{name.trim() ? `Here's your MetaTwin preview, ${name.trim().split(" ")[0]}.` : "Here's your MetaTwin preview."}</h1>
+        <p className="hero-rise-delay-1 mt-4 text-ink-muted">{caps.length} capabilities · {evs.length} evidence items · visibility: {vis}. This is what your record could look like once you add real evidence.</p>
         <div className="mt-8 flex flex-wrap justify-center gap-2">{counts.map(([s, n]) => <span key={s} className="flex items-center gap-2"><StatusBadge status={s} /><span className="font-mono text-sm">{n}</span></span>)}</div>
         <div className="mt-10 grid gap-3 text-left sm:grid-cols-3">
           {[
@@ -277,10 +279,18 @@ function Done({ name, caps, evs, vis }: { name: string; caps: Cap[]; evs: Ev[]; 
           ].map(([t, d]) => <div key={t} className="rounded-xl border border-ink-foreground/10 bg-ink-soft p-4"><p className="font-medium">{t}</p><p className="mt-1 text-xs text-ink-muted">{d}</p></div>)}
         </div>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
-          <Button asChild variant="hero" size="lg"><Link to="/dashboard">Go to my dashboard <ArrowRight /></Link></Button>
-          <Button asChild variant="heroOutline" size="lg"><Link to="/profile">See an example profile</Link></Button>
+          {user ? (
+            <Button asChild variant="hero" size="lg"><Link to="/dashboard">Go to my dashboard <ArrowRight /></Link></Button>
+          ) : (
+            <>
+              <Button asChild variant="hero" size="lg"><Link to="/signup">Create my account to save it <ArrowRight /></Link></Button>
+              <Button asChild variant="heroOutline" size="lg"><Link to="/login">I already have an account</Link></Button>
+            </>
+          )}
         </div>
-        <p className="mt-8 text-xs text-ink-muted">Prototype — nothing has been saved.</p>
+        <p className="mt-8 text-xs text-ink-muted">
+          This was a preview — nothing has been saved and no account was created. {user ? "Add your capabilities, projects and evidence from your dashboard." : "Create a free account to build your real MetaTwin."}
+        </p>
       </div>
     </div>
   );

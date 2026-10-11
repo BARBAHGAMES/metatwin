@@ -6,12 +6,18 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { aiEmployees } from "@/lib/data";
 import { Button } from "@/components/ui/button";
-import { Card, HeroBackdrop, Section, StatusBadge } from "@/components/site";
+import { Card, HeroBackdrop, PreviewTag, Section, StatusBadge } from "@/components/site";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AdultGate } from "@/components/AdultGate";
+import { LINK_ERROR, isHttpUrl, safeHref } from "@/lib/url";
+import { LIMITS, validateStudyYear } from "@/lib/limits";
+import { LoadError } from "@/components/LoadError";
+import { fetchMyOpportunityMatches, type OpportunityMatch } from "@/lib/real-data";
+import { HANDLE_HELP, normalizeHandle, publicProfilePath, validateHandle } from "@/lib/public-profile";
 import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -32,6 +38,9 @@ type Twin = {
   year: number | null;
   headline: string | null;
   visibility: "private" | "public";
+  is_adult: boolean;
+  handle: string | null;
+  public_show_evidence_details: boolean;
 };
 
 type Skill = { id: string; name: string; category: string | null };
@@ -75,6 +84,7 @@ function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const [projectDialog, setProjectDialog] = useState(false);
   const [projectForm, setProjectForm] = useState({ title: "", description: "" });
@@ -82,6 +92,10 @@ function Dashboard() {
   const [capabilitySkillId, setCapabilitySkillId] = useState("");
   const [evidenceDialog, setEvidenceDialog] = useState(false);
   const [evidenceCompetencyId, setEvidenceCompetencyId] = useState("");
+  const [evidenceProjectId, setEvidenceProjectId] = useState("");
+  const [matches, setMatches] = useState<OpportunityMatch[]>([]);
+  const [matchesState, setMatchesState] = useState<"loading" | "error" | "ready">("loading");
+  const [matchesReload, setMatchesReload] = useState(0);
   const [evidenceForm, setEvidenceForm] = useState({ title: "", link: "", note: "" });
   const [saving, setSaving] = useState(false);
 
@@ -91,7 +105,7 @@ function Dashboard() {
 
   async function loadAll(userId: string) {
     const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes] = await Promise.all([
-      supabase.from("twins").select("id, name, institution, programme, year, headline, visibility").eq("id", userId).maybeSingle(),
+      supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, is_adult, handle, public_show_evidence_details").eq("id", userId).maybeSingle(),
       supabase.from("skills").select("id, name, category").order("name"),
       supabase
         .from("competencies")
@@ -111,6 +125,14 @@ function Dashboard() {
     if (projectsRes.error) console.error("[dashboard] load projects failed:", projectsRes.error.message);
     if (evidenceRes.error) console.error("[dashboard] load evidence failed:", evidenceRes.error.message);
 
+    // A failed load must not render as an empty account (it reads as lost data).
+    if ([twinRes, skillsRes, compsRes, projectsRes, evidenceRes].some((r) => r.error)) {
+      setLoadError(true);
+      setFetching(false);
+      return;
+    }
+    setLoadError(false);
+
     setTwin(
       (twinRes.data as Twin | null) ?? {
         id: userId,
@@ -120,6 +142,9 @@ function Dashboard() {
         year: null,
         headline: null,
         visibility: "private",
+        is_adult: false,
+        handle: null,
+        public_show_evidence_details: false,
       },
     );
     setSkills((skillsRes.data as Skill[] | null) ?? []);
@@ -132,6 +157,30 @@ function Dashboard() {
   useEffect(() => {
     if (user) loadAll(user.id);
   }, [user]);
+
+  // Opportunity matches are scored on the server from the student's own
+  // capabilities, so refresh them when the capability count changes.
+  const isAdult = twin?.is_adult ?? false;
+  const capabilityCount = competencies.length;
+  const evidenceSignature = competencies.map((c) => c.evidence_count).join(",");
+  useEffect(() => {
+    if (!user || !isAdult) return;
+    let cancelled = false;
+    setMatchesState("loading");
+    fetchMyOpportunityMatches()
+      .then((m) => {
+        if (cancelled) return;
+        setMatches(m);
+        setMatchesState("ready");
+      })
+      .catch((e) => {
+        console.error("[dashboard] load opportunity matches failed:", e);
+        if (!cancelled) setMatchesState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, isAdult, capabilityCount, evidenceSignature, matchesReload]);
 
   async function addProject() {
     if (!user || !projectForm.title.trim()) return;
@@ -159,7 +208,6 @@ function Dashboard() {
       twin_id: user.id,
       skill_id: capabilitySkillId,
       level: 1,
-      evidence_count: 0,
     });
     setSaving(false);
     if (error) {
@@ -174,12 +222,18 @@ function Dashboard() {
 
   async function addEvidence() {
     if (!user || !evidenceCompetencyId || !evidenceForm.title.trim()) return;
+    const link = evidenceForm.link.trim();
+    if (link && !isHttpUrl(link)) {
+      toast.error(LINK_ERROR);
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.from("evidence").insert({
       twin_id: user.id,
       competency_id: evidenceCompetencyId,
+      project_id: evidenceProjectId || null,
       title: evidenceForm.title.trim(),
-      link: evidenceForm.link.trim() || null,
+      link: link || null,
       note: evidenceForm.note.trim() || null,
     });
     setSaving(false);
@@ -189,13 +243,30 @@ function Dashboard() {
     }
     toast.success("Evidence recorded.");
     setEvidenceCompetencyId("");
+    setEvidenceProjectId("");
     setEvidenceForm({ title: "", link: "", note: "" });
     setEvidenceDialog(false);
     loadAll(user.id);
   }
 
+  if (loadError) {
+    return (
+      <LoadError
+        onRetry={() => {
+          if (!user) return;
+          setFetching(true);
+          loadAll(user.id);
+        }}
+      />
+    );
+  }
+
   if (authLoading || fetching || !twin) {
     return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  }
+
+  if (!twin.is_adult) {
+    return <AdultGate onDeclared={() => user && loadAll(user.id)} />;
   }
 
   const availableSkillsForCapability = skills.filter((s) => !competencies.some((c) => c.skill_id === s.id));
@@ -233,9 +304,12 @@ function Dashboard() {
         </div>
       </section>
       <Section className="py-10 md:py-12">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gradient-ink p-4 text-ink-foreground">
-          <p className="flex items-center gap-2 text-sm"><Bot className="h-4 w-4 text-electric" /> Your AI team: {aiEmployees.map((a) => `${a.name} (${a.role})`).join(" · ")}</p>
-          <span className="text-xs text-ink-muted">{aiEmployees.filter((a) => a.status !== "Idle").length} working now</span>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gradient-ink p-4 text-ink-foreground">
+          <p className="flex items-center gap-2 text-sm"><Bot className="h-4 w-4 text-electric" /> AI team concept: {aiEmployees.map((a) => `${a.name} (${a.role})`).join(" · ")}</p>
+          <div className="flex items-center gap-2">
+            <PreviewTag />
+            <span className="text-xs text-ink-muted">Illustration only — no AI is working on your behalf yet.</span>
+          </div>
         </div>
 
         {!twin.name && (
@@ -305,17 +379,18 @@ function Dashboard() {
                     </div>
                     {items.length > 0 && (
                       <ul className="mt-2 space-y-1 border-t pt-2">
-                        {items.map((e) =>
-                          e.link ? (
+                        {items.map((e) => {
+                          const href = safeHref(e.link);
+                          return href ? (
                             <li key={e.id}>
-                              <a href={e.link} target="_blank" rel="noreferrer" className="text-xs text-electric hover:underline">
+                              <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs text-electric hover:underline">
                                 {e.title}
                               </a>
                             </li>
                           ) : (
                             <li key={e.id} className="text-xs text-muted-foreground">{e.title}</li>
-                          ),
-                        )}
+                          );
+                        })}
                       </ul>
                     )}
                   </li>
@@ -336,6 +411,54 @@ function Dashboard() {
         </div>
 
         <Card className="mt-5">
+          <h3 className="font-semibold">Opportunities for you</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Matches compare the skills an opportunity asks for with your capabilities. Evidence-backed skills count fully; self-reported
+            ones count half. A match is a starting point, not a prediction.
+          </p>
+          {matchesState === "loading" && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
+          {matchesState === "error" && (
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+              <span className="text-muted-foreground">We couldn't load opportunities.</span>
+              <Button type="button" variant="outline" size="sm" onClick={() => setMatchesReload((k) => k + 1)}>Try again</Button>
+            </div>
+          )}
+          {matchesState === "ready" && matches.length === 0 && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              No opportunities have been added yet. When partners add them, the ones that fit your capabilities will appear here.
+            </p>
+          )}
+          {matchesState === "ready" && matches.length > 0 && (
+            <ul className="mt-4 space-y-3">
+              {matches.map((m) => {
+                const href = safeHref(m.url);
+                return (
+                  <li key={m.id} className="rounded-lg border p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium">{m.title}</p>
+                        {m.org_name && <p className="text-xs text-muted-foreground">{m.org_name}</p>}
+                      </div>
+                      <span className="shrink-0 rounded-full bg-electric-soft px-2.5 py-0.5 text-xs font-semibold text-accent-foreground">
+                        {m.score === null ? "No skills listed" : `${m.score}% match`}
+                      </span>
+                    </div>
+                    {m.description && <p className="mt-2 text-sm text-muted-foreground">{m.description}</p>}
+                    {(m.matched_skills.length > 0 || m.missing_skills.length > 0) && (
+                      <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
+                        {m.matched_skills.map((n) => <span key={`y-${n}`} className="rounded-md bg-status-evidence-bg px-2 py-0.5 text-status-evidence">✓ {n}</span>)}
+                        {m.missing_skills.map((n) => <span key={`n-${n}`} className="rounded-md bg-muted px-2 py-0.5 text-muted-foreground">+ {n}</span>)}
+                      </div>
+                    )}
+                    {href && <a href={href} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-electric hover:underline">View opportunity</a>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="mt-5">
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-semibold">Profile</h3>
             <Button
@@ -344,7 +467,7 @@ function Dashboard() {
               className="px-0"
             >
               <Link to="/profile">
-                Preview public profile page <ArrowRight className="h-3.5 w-3.5" />
+                Preview my profile page <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </Button>
           </div>
@@ -358,11 +481,11 @@ function Dashboard() {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="project-title">Title</Label>
-              <Input id="project-title" value={projectForm.title} onChange={(e) => setProjectForm({ ...projectForm, title: e.target.value })} placeholder="e.g. AquaLoop Greywater Filter" />
+              <Input id="project-title" maxLength={LIMITS.projectTitle} value={projectForm.title} onChange={(e) => setProjectForm({ ...projectForm, title: e.target.value })} placeholder="e.g. AquaLoop Greywater Filter" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="project-description">Description</Label>
-              <Textarea id="project-description" rows={3} value={projectForm.description} onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })} placeholder="What is it, and what's your role?" />
+              <Textarea id="project-description" rows={3} maxLength={LIMITS.projectDescription} value={projectForm.description} onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })} placeholder="What is it, and what's your role?" />
             </div>
           </div>
           <DialogFooter><Button onClick={addProject} disabled={saving || !projectForm.title.trim()}>Save</Button></DialogFooter>
@@ -412,10 +535,27 @@ function Dashboard() {
                 ))}
               </select>
             </div>
+            {projects.length > 0 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="evidence-project">Related project (optional)</Label>
+                <select
+                  id="evidence-project"
+                  value={evidenceProjectId}
+                  onChange={(e) => setEvidenceProjectId(e.target.value)}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="">None</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="evidence-title">Title</Label>
               <Input
                 id="evidence-title"
+                maxLength={LIMITS.evidenceTitle}
                 value={evidenceForm.title}
                 onChange={(e) => setEvidenceForm({ ...evidenceForm, title: e.target.value })}
                 placeholder="e.g. AquaLoop v3 pilot results"
@@ -435,6 +575,7 @@ function Dashboard() {
               <Label htmlFor="evidence-note">Note (optional)</Label>
               <Textarea
                 id="evidence-note"
+                maxLength={LIMITS.evidenceNote}
                 rows={2}
                 value={evidenceForm.note}
                 onChange={(e) => setEvidenceForm({ ...evidenceForm, note: e.target.value })}
@@ -453,13 +594,58 @@ function Dashboard() {
 function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
   const [form, setForm] = useState(twin);
   const [saving, setSaving] = useState(false);
+  const publicBase = typeof window === "undefined" ? "" : window.location.origin;
 
   async function save() {
+    const yearError = validateStudyYear(form.year);
+    if (yearError) {
+      toast.error(yearError);
+      return;
+    }
+    const handle = normalizeHandle(form.handle ?? "");
+    const isPublic = form.visibility === "public";
+    if (handle || isPublic) {
+      const handleError = validateHandle(handle);
+      if (handleError) {
+        toast.error(isPublic && !handle ? "Choose a handle to make your profile public." : handleError);
+        return;
+      }
+    }
+    if (isPublic && !form.name?.trim()) {
+      toast.error("Add your name before making your profile public.");
+      return;
+    }
     setSaving(true);
-    const { error } = await supabase.from("twins").upsert({ ...form, id: twin.id }, { onConflict: "id" });
+    // is_adult is server-controlled (declare_adult RPC) — never sent from here.
+    const payload = {
+      name: form.name,
+      institution: form.institution,
+      programme: form.programme,
+      year: form.year,
+      headline: form.headline,
+      visibility: form.visibility,
+      handle: handle || null,
+      public_show_evidence_details: form.public_show_evidence_details,
+    };
+    // A plain UPDATE, not upsert: upsert compiles to INSERT ... ON CONFLICT DO
+    // UPDATE, and Postgres fires guard_twin_protected_columns()'s BEFORE INSERT
+    // branch (which force-resets is_adult/birth_year) and validates
+    // twins_public_requires_adult against that tentative row BEFORE the
+    // conflict/update path even runs — so going public always failed for every
+    // existing adult user. The twins row always exists by the time this form
+    // renders (handle_new_user creates it on signup); insert only as a fallback.
+    const { data: updated, error: updateError } = await supabase
+      .from("twins")
+      .update(payload)
+      .eq("id", twin.id)
+      .select("id");
+    let error = updateError;
+    if (!error && (!updated || updated.length === 0)) {
+      ({ error } = await supabase.from("twins").insert({ id: twin.id, ...payload }));
+    }
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(error.code === "23505" ? "That handle is already taken. Try another." : error.message);
       return;
     }
     toast.success("Profile saved.");
@@ -470,36 +656,95 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
     <div className="mt-4 grid gap-4 sm:grid-cols-2">
       <div className="space-y-1.5">
         <Label>Name</Label>
-        <Input value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <Input maxLength={LIMITS.name} value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       </div>
       <div className="space-y-1.5">
         <Label>Headline</Label>
-        <Input value={form.headline ?? ""} onChange={(e) => setForm({ ...form, headline: e.target.value })} />
+        <Input maxLength={LIMITS.headline} value={form.headline ?? ""} onChange={(e) => setForm({ ...form, headline: e.target.value })} />
       </div>
       <div className="space-y-1.5">
         <Label>Institution</Label>
-        <Input value={form.institution ?? ""} onChange={(e) => setForm({ ...form, institution: e.target.value })} />
+        <Input maxLength={LIMITS.institution} value={form.institution ?? ""} onChange={(e) => setForm({ ...form, institution: e.target.value })} />
       </div>
       <div className="space-y-1.5">
         <Label>Programme</Label>
-        <Input value={form.programme ?? ""} onChange={(e) => setForm({ ...form, programme: e.target.value })} />
+        <Input maxLength={LIMITS.programme} value={form.programme ?? ""} onChange={(e) => setForm({ ...form, programme: e.target.value })} />
       </div>
       <div className="space-y-1.5">
         <Label>Year</Label>
         <Input
           type="number"
+          min={LIMITS.studyYearMin}
+          max={LIMITS.studyYearMax}
           value={form.year ?? ""}
           onChange={(e) => setForm({ ...form, year: e.target.value ? Number(e.target.value) : null })}
         />
       </div>
-      <label className="flex items-center gap-2 self-end pb-2 text-sm">
-        <input
-          type="checkbox"
-          checked={form.visibility === "public"}
-          onChange={(e) => setForm({ ...form, visibility: e.target.checked ? "public" : "private" })}
-        />
-        Visible to employers
-      </label>
+      <div className="space-y-4 rounded-xl border bg-muted/30 p-4 sm:col-span-2">
+        <div>
+          <h4 className="font-semibold">Public profile</h4>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Optional. Your profile is private unless you turn this on. When public, anyone with your link can view it.
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="profile-handle">Your link</Label>
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-sm text-muted-foreground">{publicBase}/t/</span>
+            <Input
+              id="profile-handle"
+              maxLength={30}
+              value={form.handle ?? ""}
+              onChange={(e) => setForm({ ...form, handle: e.target.value.toLowerCase() })}
+              placeholder="your-name"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">{HANDLE_HELP}</p>
+        </div>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={form.visibility === "public"}
+            onChange={(e) => setForm({ ...form, visibility: e.target.checked ? "public" : "private" })}
+          />
+          <span>Make my profile public</span>
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={form.public_show_evidence_details}
+            onChange={(e) => setForm({ ...form, public_show_evidence_details: e.target.checked })}
+          />
+          <span>Also show my evidence links, evidence notes and project links</span>
+        </label>
+        <p className="text-xs text-muted-foreground">
+          The public page shows your name, headline, institution, programme, capabilities, evidence titles and projects. It never
+          shows your email, birth year or year of study.
+        </p>
+        {twin.visibility === "public" && twin.handle && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-background p-3 text-sm">
+            <span className="min-w-0 truncate font-mono text-xs">{publicBase}{publicProfilePath(twin.handle)}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard
+                  ?.writeText(`${publicBase}${publicProfilePath(twin.handle!)}`)
+                  .then(() => toast.success("Link copied."))
+                  .catch(() => toast.error("Couldn't copy — select the link and copy it manually."));
+              }}
+            >
+              Copy link
+            </Button>
+            <Button asChild type="button" variant="link" size="sm" className="px-0">
+              <a href={publicProfilePath(twin.handle)} target="_blank" rel="noopener noreferrer">View public page</a>
+            </Button>
+          </div>
+        )}
+      </div>
       <div className="sm:col-span-2">
         <Button onClick={save} disabled={saving}>{saving ? "Saving..." : "Save profile"}</Button>
       </div>

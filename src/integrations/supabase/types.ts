@@ -302,54 +302,69 @@ export type Database = {
           created_at: string;
           id: string;
           name: string;
+          slug: string;
         };
         Insert: {
           category?: string | null;
           created_at?: string;
           id?: string;
           name: string;
+          slug: string;
         };
         Update: {
           category?: string | null;
           created_at?: string;
           id?: string;
           name?: string;
+          slug?: string;
         };
         Relationships: [];
       };
       twins: {
         Row: {
+          birth_year: number | null;
           created_at: string;
+          handle: string | null;
           headline: string | null;
           id: string;
           institution: string | null;
+          is_adult: boolean;
           name: string | null;
           parental_consent_at: string | null;
           programme: string | null;
+          public_show_evidence_details: boolean;
           updated_at: string;
           visibility: string;
           year: number | null;
         };
         Insert: {
+          birth_year?: number | null;
           created_at?: string;
+          handle?: string | null;
           headline?: string | null;
           id: string;
           institution?: string | null;
+          is_adult?: boolean;
           name?: string | null;
           parental_consent_at?: string | null;
           programme?: string | null;
+          public_show_evidence_details?: boolean;
           updated_at?: string;
           visibility?: string;
           year?: number | null;
         };
         Update: {
+          birth_year?: number | null;
           created_at?: string;
+          handle?: string | null;
           headline?: string | null;
           id?: string;
           institution?: string | null;
+          is_adult?: boolean;
           name?: string | null;
           parental_consent_at?: string | null;
           programme?: string | null;
+          public_show_evidence_details?: boolean;
           updated_at?: string;
           visibility?: string;
           year?: number | null;
@@ -361,6 +376,29 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      get_my_opportunity_matches: {
+        Args: never;
+        Returns: {
+          description: string | null;
+          evidence_backed_count: number;
+          id: string;
+          matched_skills: string[];
+          missing_skills: string[];
+          org_name: string | null;
+          required_count: number;
+          score: number | null;
+          title: string;
+          url: string | null;
+        }[];
+      };
+      get_public_profile: {
+        Args: { p_handle: string };
+        Returns: Json;
+      };
+      declare_adult: {
+        Args: { p_birth_year: number };
+        Returns: undefined;
+      };
       introspect_applied_migrations: {
         Args: never;
         Returns: {

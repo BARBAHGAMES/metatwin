@@ -3,6 +3,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { validateBirthYear } from "@/lib/adult";
+import { MIN_PASSWORD_LENGTH } from "@/lib/limits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,13 +22,26 @@ function SignupPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+  const [confirmedAdult, setConfirmedAdult] = useState(false);
+  const [ageError, setAgeError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const age = validateBirthYear(birthYear);
+    if ("error" in age) {
+      setAgeError(age.error);
+      return;
+    }
+    if (!confirmedAdult) {
+      setAgeError("Please confirm you are 18 or older.");
+      return;
+    }
+    setAgeError(null);
     setSubmitting(true);
     const redirectTo = `${window.location.origin}/login`;
-    const result = await signUp(email, password, redirectTo);
+    const result = await signUp(email, password, age.year, redirectTo);
     setSubmitting(false);
     switch (result.outcome) {
       case "error":
@@ -72,12 +87,37 @@ function SignupPage() {
                 id="password"
                 type="password"
                 required
-                minLength={6}
+                minLength={MIN_PASSWORD_LENGTH}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
+                placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
               />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="birth-year">Year of birth</Label>
+              <Input
+                id="birth-year"
+                type="number"
+                inputMode="numeric"
+                required
+                min={1900}
+                max={new Date().getFullYear()}
+                value={birthYear}
+                onChange={(e) => setBirthYear(e.target.value)}
+                placeholder="e.g. 2003"
+              />
+              <p className="text-xs text-muted-foreground">We store only your birth year, not your full date of birth.</p>
+            </div>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={confirmedAdult}
+                onChange={(e) => setConfirmedAdult(e.target.checked)}
+              />
+              <span>I confirm I am 18 or older. MetaTwin is for students aged 18+ for now.</span>
+            </label>
+            {ageError && <p role="alert" className="text-sm text-destructive">{ageError}</p>}
             <Button type="submit" variant="hero" className="w-full" disabled={submitting}>
               {submitting ? "Creating account..." : <>Create my MetaTwin <Sparkles /></>}
             </Button>

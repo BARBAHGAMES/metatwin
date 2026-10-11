@@ -1,8 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FileCheck2, Users, User } from "lucide-react";
 import { capBySlug, projects, type Discipline, type Stage } from "@/lib/data";
-import { PageHero, Section } from "@/components/site";
+import { Card, PageHero, Section } from "@/components/site";
+import { Button } from "@/components/ui/button";
+import { LoadError } from "@/components/LoadError";
+import { useAuth } from "@/lib/auth";
+import { fetchMyProjects, formatDate, type EvidenceRow, type MyProject } from "@/lib/real-data";
 import { Reveal } from "@/components/Reveal";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +33,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   );
 }
 
-function Projects() {
+function SampleProjects() {
   const [d, setD] = useState<Discipline | "All">("All");
   const [s, setS] = useState<Stage | "All">("All");
   const list = projects.filter((p) => (d === "All" || p.discipline === d) && (s === "All" || p.stage === s));
@@ -72,6 +76,91 @@ function Projects() {
           ))}
           {list.length === 0 && <p className="text-muted-foreground">No projects match these filters.</p>}
         </Reveal>
+      </Section>
+    </>
+  );
+}
+
+function Projects() {
+  const { user, loading } = useAuth();
+  // While auth is resolving, render the examples so server and first client render match.
+  if (!user || loading) return <SampleProjects />;
+  return <SignedInProjects userId={user.id} />;
+}
+
+function SignedInProjects({ userId }: { userId: string }) {
+  const [showExamples, setShowExamples] = useState(false);
+  const [state, setState] = useState<"loading" | "error" | "ready">("loading");
+  const [projects, setProjects] = useState<MyProject[]>([]);
+  const [evidence, setEvidence] = useState<EvidenceRow[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setState("loading");
+    fetchMyProjects(userId)
+      .then((d) => {
+        if (cancelled) return;
+        setProjects(d.projects);
+        setEvidence(d.evidence);
+        setState("ready");
+      })
+      .catch((e) => {
+        console.error("[projects] load failed:", e);
+        if (!cancelled) setState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, reloadKey]);
+
+  if (showExamples) {
+    return (
+      <>
+        <div className="mx-auto max-w-7xl px-5 pt-6">
+          <button onClick={() => setShowExamples(false)} className="cursor-pointer text-sm text-electric hover:underline">← Back to my projects</button>
+        </div>
+        <SampleProjects />
+      </>
+    );
+  }
+  if (state === "error") return <LoadError onRetry={() => setReloadKey((k) => k + 1)} />;
+  if (state === "loading") return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+
+  return (
+    <>
+      <PageHero eyebrow="My projects" title="The work you've documented.">
+        Each project shows when it started and the evidence you've attached along the way.
+      </PageHero>
+      <Section className="py-10 md:py-12">
+        {projects.length === 0 ? (
+          <Card className="flex flex-col items-start gap-3 border-dashed">
+            <p className="text-sm text-muted-foreground">You haven't added any projects yet.</p>
+            <Button asChild variant="hero"><Link to="/dashboard">Add a project from your dashboard</Link></Button>
+          </Card>
+        ) : (
+          <ul className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {projects.map((p) => {
+              const count = evidence.filter((e) => e.project_id === p.id).length;
+              return (
+                <li key={p.id}>
+                  <Link to="/projects/$id" params={{ id: p.id }} className="group flex h-full flex-col rounded-2xl border bg-card p-6 shadow-card transition hover:-translate-y-0.5 hover:border-electric/50">
+                    <p className="font-mono text-xs uppercase tracking-wider text-electric">Started {formatDate(p.created_at)}</p>
+                    <h3 className="mt-3 text-xl font-semibold group-hover:text-electric">{p.title}</h3>
+                    {p.description && <p className="mt-2 flex-1 text-sm text-muted-foreground">{p.description}</p>}
+                    <p className="mt-4 flex items-center gap-1.5 border-t pt-4 text-xs text-muted-foreground">
+                      <FileCheck2 className="h-4 w-4 text-electric" /> {count} linked evidence {count === 1 ? "item" : "items"}
+                    </p>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <p className="mt-8 text-xs text-muted-foreground">
+          Want to see what a fully documented project looks like?{" "}
+          <button onClick={() => setShowExamples(true)} className="cursor-pointer text-electric hover:underline">Browse fictional examples</button>.
+        </p>
       </Section>
     </>
   );

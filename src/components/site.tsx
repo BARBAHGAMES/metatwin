@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -112,6 +112,17 @@ export function Header() {
 }
 
 export function Footer() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { user } = useAuth();
+  // The "fictional demonstration data" line is true on marketing/sample pages
+  // but false where a real student's data is shown.
+  // Signed-in students see their own data on these pages (examples there carry
+  // their own "Fictional sample data" tag).
+  const realDataPaths = ["/profile", "/projects", "/journey", "/capability"];
+  const showsRealData =
+    pathname.startsWith("/t/") ||
+    pathname.startsWith("/dashboard") ||
+    (!!user && realDataPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`)));
   return (
     <footer className="bg-ink text-ink-muted">
       <div className="mx-auto grid max-w-7xl gap-8 px-5 py-14 md:grid-cols-[1.5fr_1fr_1fr]">
@@ -136,9 +147,11 @@ export function Footer() {
           <Link to="/about" className="block hover:text-ink-foreground">About</Link>
         </div>
       </div>
-      <div className="border-t border-ink-foreground/10 px-5 py-5 text-center text-xs">
-        Prototype · All people, projects and reviews shown are fictional demonstration data.
-      </div>
+      {!showsRealData && (
+        <div className="border-t border-ink-foreground/10 px-5 py-5 text-center text-xs">
+          Prototype · All people, projects and reviews shown are fictional demonstration data.
+        </div>
+      )}
     </footer>
   );
 }
@@ -158,6 +171,17 @@ export function StatusBadge({ status, className }: { status: Status; className?:
     <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium", styles[status], className)}>
       <span className={cn("h-1.5 w-1.5 rounded-full", dot[status])} />
       {statusMeta[status].label}
+    </span>
+  );
+}
+
+// For features shown on REAL accounts that are not built yet. Unlike
+// SampleTag (fictional data on marketing pages), this says the feature itself
+// is a preview, so a student never reads it as something working for them.
+export function PreviewTag({ children = "Preview · coming soon" }: { children?: string }) {
+  return (
+    <span className="inline-flex items-center rounded-md border border-dashed border-electric/50 bg-electric/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-electric">
+      {children}
     </span>
   );
 }

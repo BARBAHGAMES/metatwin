@@ -6,7 +6,7 @@ import { CareerGraph } from "@/components/CareerGraph";
 import sampleProfilePhoto from "@/assets/sample-profile.png";
 import { Card, Section, StatusBadge } from "@/components/site";
 import { Reveal } from "@/components/Reveal";
-import { capBySlug, person, statusMeta, type Status } from "@/lib/data";
+import { capBySlug, statusMeta, type Status } from "@/lib/data";
 
 export const Route = createFileRoute("/")({
   head: () => ({

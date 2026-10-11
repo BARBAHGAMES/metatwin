@@ -1,31 +1,137 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ArrowLeft, FileCheck2, MessageSquare } from "lucide-react";
-import { capBySlug, projectById } from "@/lib/data";
+import { capBySlug, projectById, type Project } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
+import { buildProjectTimeline, fetchMyProject, formatDate, isUuid } from "@/lib/real-data";
+import { safeHref } from "@/lib/url";
+import { LoadError } from "@/components/LoadError";
 import { Card, PageHero, SampleTag, Section, StatusBadge } from "@/components/site";
 import { Journey } from "@/components/Journey";
 import { Reveal } from "@/components/Reveal";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/projects/$id")({
+  // A sample id shows the fictional showcase project. A uuid is a real project,
+  // loaded client-side for its signed-in owner (RLS: owner-only).
   loader: ({ params }) => {
-    const project = projectById(params.id);
-    if (!project) throw notFound();
+    const project = projectById(params.id) ?? null;
+    if (!project && !isUuid(params.id)) throw notFound();
     return { project };
   },
-  head: ({ loaderData }) => ({
-    meta: [
-      { title: `${loaderData?.project.title ?? "Project"} · MetaTwin` },
-      { name: "description", content: loaderData?.project.description ?? "" },
-      { property: "og:title", content: `${loaderData?.project.title} · MetaTwin` },
-      { property: "og:description", content: loaderData?.project.description ?? "" },
-    ],
-  }),
+  head: ({ loaderData }) => {
+    const title = loaderData?.project?.title ?? "Project";
+    const description = loaderData?.project?.description ?? "A project and the evidence behind it.";
+    return {
+      meta: [
+        { title: `${title} · MetaTwin` },
+        { name: "description", content: description },
+        { property: "og:title", content: `${title} · MetaTwin` },
+        { property: "og:description", content: description },
+      ],
+    };
+  },
   notFoundComponent: () => <Section><p>Project not found. <Link to="/projects" className="text-electric">All projects</Link></p></Section>,
   component: ProjectPage,
 });
 
 function ProjectPage() {
-  const { project: p } = Route.useLoaderData();
+  const { project } = Route.useLoaderData();
+  const { id } = Route.useParams();
+  const { user, loading } = useAuth();
+  if (project) return <SampleProject p={project} />;
+  if (loading) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  if (!user) {
+    return (
+      <Section>
+        <p>Log in to view your project. <Link to="/login" className="text-electric">Log in</Link></p>
+      </Section>
+    );
+  }
+  return <RealProject userId={user.id} projectId={id} />;
+}
+
+function RealProject({ userId, projectId }: { userId: string; projectId: string }) {
+  const [state, setState] = useState<"loading" | "error" | "ready">("loading");
+  const [data, setData] = useState<Awaited<ReturnType<typeof fetchMyProject>>>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setState("loading");
+    fetchMyProject(userId, projectId)
+      .then((d) => {
+        if (cancelled) return;
+        setData(d);
+        setState("ready");
+      })
+      .catch((e) => {
+        console.error("[project] load failed:", e);
+        if (!cancelled) setState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, projectId, reloadKey]);
+
+  if (state === "error") return <LoadError onRetry={() => setReloadKey((k) => k + 1)} />;
+  if (state === "loading") return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  if (!data) {
+    return (
+      <Section>
+        <p>We couldn't find this project in your MetaTwin. <Link to="/projects" className="text-electric">Back to my projects</Link></p>
+      </Section>
+    );
+  }
+
+  const { project: p, evidence } = data;
+  const artifact = safeHref(p.artifact_url);
+  return (
+    <>
+      <PageHero eyebrow={`My project · Started ${formatDate(p.created_at)}`} title={p.title}>
+        {p.description && <p>{p.description}</p>}
+      </PageHero>
+      <Section className="grid gap-8 lg:grid-cols-[1fr_320px]">
+        <div className="min-w-0 space-y-10">
+          <Link to="/projects" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> My projects</Link>
+          <div>
+            <h2 className="text-2xl font-semibold">Journey</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Built from the dates you actually added things.</p>
+            <div className="mt-6"><Journey steps={buildProjectTimeline(p, evidence)} /></div>
+          </div>
+        </div>
+        <aside className="space-y-5">
+          {artifact && (
+            <Card>
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Project link</p>
+              <a href={artifact} target="_blank" rel="noopener noreferrer" className="mt-2 block break-all text-sm text-electric hover:underline">{artifact}</a>
+            </Card>
+          )}
+          <Card>
+            <h3 className="font-semibold">Evidence for this project</h3>
+            {evidence.length === 0 ? (
+              <p className="mt-2 text-sm text-muted-foreground">No evidence linked yet. When you add evidence from your dashboard, choose this project under "Related project".</p>
+            ) : (
+              <ul className="mt-3 space-y-2 text-sm">
+                {evidence.map((e) => {
+                  const href = safeHref(e.link);
+                  return (
+                    <li key={e.id} className="flex items-start gap-2">
+                      <FileCheck2 className="mt-0.5 h-4 w-4 shrink-0 text-electric" />
+                      {href ? <a href={href} target="_blank" rel="noopener noreferrer" className="text-electric hover:underline">{e.title}</a> : <span>{e.title}</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+        </aside>
+      </Section>
+    </>
+  );
+}
+
+function SampleProject({ p }: { p: Project }) {
   return (
     <>
       <PageHero eyebrow={`${p.discipline} · ${p.stage}`} title={p.title}>

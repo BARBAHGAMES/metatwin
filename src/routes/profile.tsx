@@ -4,6 +4,8 @@ import { ArrowRight, MapPin, Target, Lock, Bot, Briefcase, UserPlus, Sparkles, S
 import { toast } from "sonner";
 import { aiEmployees, capabilities, growth, person, projects } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
+import { safeHref } from "@/lib/url";
+import { LoadError } from "@/components/LoadError";
 import { supabase } from "@/integrations/supabase/client";
 import { AITeam } from "@/components/AITeam";
 import { CareerGraph } from "@/components/CareerGraph";
@@ -17,10 +19,10 @@ import type { Status } from "@/lib/data";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "My MetaTwin · Your AI Digital Twin for Opportunities" },
-      { name: "description", content: "Explore a sample MetaTwin profile: capabilities, projects, evidence and growth over time." },
-      { property: "og:title", content: "My MetaTwin · Victorious Kibaki" },
-      { property: "og:description", content: "Proven capability plus a supervised team of AI employees." },
+      { title: "My MetaTwin · Your Digital Twin for Opportunities" },
+      { name: "description", content: "Your MetaTwin: capabilities, projects, evidence and growth over time. Sign in to see yours, or explore a fictional sample." },
+      { property: "og:title", content: "MetaTwin · Your verified digital twin" },
+      { property: "og:description", content: "A living record of capabilities, projects and evidence." },
     ],
   }),
   component: Profile,
@@ -42,6 +44,7 @@ type Twin = {
   year: number | null;
   headline: string | null;
   visibility: "private" | "public";
+  handle: string | null;
 };
 type Competency = {
   id: string;
@@ -63,12 +66,14 @@ function RealProfile({ userId }: { userId: string }) {
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       const [twinRes, compsRes, projectsRes, evidenceRes] = await Promise.all([
-        supabase.from("twins").select("id, name, institution, programme, year, headline, visibility").eq("id", userId).maybeSingle(),
+        supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, handle").eq("id", userId).maybeSingle(),
         supabase
           .from("competencies")
           .select("id, level, evidence_count, updated_at, skills(name, category)")
@@ -86,7 +91,14 @@ function RealProfile({ userId }: { userId: string }) {
       if (compsRes.error) console.error("[profile] load competencies failed:", compsRes.error.message);
       if (projectsRes.error) console.error("[profile] load projects failed:", projectsRes.error.message);
       if (evidenceRes.error) console.error("[profile] load evidence failed:", evidenceRes.error.message);
-      setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private" });
+      // A failed load must not render as an empty profile (it reads as lost data).
+      if ([twinRes, compsRes, projectsRes, evidenceRes].some((r) => r.error)) {
+        setLoadError(true);
+        setFetching(false);
+        return;
+      }
+      setLoadError(false);
+      setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private", handle: null });
       setCompetencies((compsRes.data as unknown as Competency[] | null) ?? []);
       setProjectList((projectsRes.data as Project[] | null) ?? []);
       setEvidence((evidenceRes.data as Evidence[] | null) ?? []);
@@ -96,7 +108,18 @@ function RealProfile({ userId }: { userId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, reloadKey]);
+
+  if (loadError) {
+    return (
+      <LoadError
+        onRetry={() => {
+          setFetching(true);
+          setReloadKey((k) => k + 1);
+        }}
+      />
+    );
+  }
 
   if (fetching || !twin) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
 
@@ -176,17 +199,18 @@ function RealProfile({ userId }: { userId: string }) {
                               </div>
                               {items.length > 0 && (
                                 <ul className="mt-2 space-y-1 border-t pt-2">
-                                  {items.map((e) =>
-                                    e.link ? (
+                                  {items.map((e) => {
+                                    const href = safeHref(e.link);
+                                    return href ? (
                                       <li key={e.id}>
-                                        <a href={e.link} target="_blank" rel="noreferrer" className="text-xs text-electric hover:underline">
+                                        <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs text-electric hover:underline">
                                           {e.title}
                                         </a>
                                       </li>
                                     ) : (
                                       <li key={e.id} className="text-xs text-muted-foreground">{e.title}</li>
-                                    ),
-                                  )}
+                                    );
+                                  })}
                                 </ul>
                               )}
                             </div>
@@ -237,9 +261,16 @@ function RealProfile({ userId }: { userId: string }) {
           <Card className="bg-muted/50">
             <p className="flex items-start gap-2 text-sm text-muted-foreground">
               <Lock className="mt-0.5 h-4 w-4 shrink-0" />
-              {twin.visibility === "public"
-                ? "This profile is visible to employers."
-                : "This profile is private — only you can see it. Change this from your dashboard."}
+              {twin.visibility === "public" && twin.handle ? (
+                <span>
+                  Your profile is public. Anyone with your link can view it:{" "}
+                  <Link to="/t/$handle" params={{ handle: twin.handle }} className="text-electric underline-offset-4 hover:underline">
+                    /t/{twin.handle}
+                  </Link>
+                </span>
+              ) : (
+                "This profile is private — only you can see it. You can share a public page from your dashboard."
+              )}
             </p>
           </Card>
         </aside>
