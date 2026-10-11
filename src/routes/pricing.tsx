@@ -43,7 +43,12 @@ function Pricing() {
   const pkg = teamPackages.find((p) => p.id === size)!;
   return (
     <>
-      <PageHero image={heroImg} eyebrow="Pricing" title="Your next opportunity starts with what you can prove.">
+      <PageHero
+        image={heroImg}
+        imageClassName="object-[68%_40%] sm:object-[68%_40%]"
+        eyebrow="Pricing"
+        title="Your next opportunity starts with what you can prove."
+      >
         MetaTwin helps you build a record of your skills, projects, achievements, and contributions. Start with your individual profile or bring your team together to document what you're building.
       </PageHero>
 

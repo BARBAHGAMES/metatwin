@@ -21,9 +21,16 @@ export function HeroBackdrop({
         <img
           src={image}
           alt=""
-          width={1920}
-          height={1088}
-          className={cn("hero-drift absolute inset-0 h-full w-full object-cover object-right opacity-80", imageClassName)}
+          width={1600}
+          height={907}
+          // Hero backdrops are always above the fold and are usually the
+          // page's LCP element — fetch them before lower-priority assets.
+          fetchPriority="high"
+          decoding="async"
+          className={cn(
+            "hero-drift absolute inset-0 h-full w-full object-cover object-center opacity-80 sm:object-right-top",
+            imageClassName,
+          )}
         />
       )}
       <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/10" />
@@ -38,8 +45,8 @@ export function Logo() {
       <img
         src={metatwinLogo}
         alt="MetaTwin"
-        width={1201}
-        height={336}
+        width={600}
+        height={168}
         className="h-10 w-auto shrink-0 sm:h-12"
       />
     </Link>

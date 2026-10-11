@@ -40,7 +40,12 @@ function SampleProjects() {
   const list = projects.filter((p) => (d === "All" || p.discipline === d) && (s === "All" || p.stage === s));
   return (
     <>
-      <PageHero image={heroImg} eyebrow="Explore Capabilities" title="Real work. Clear contribution. Visible evidence.">
+      <PageHero
+        image={heroImg}
+        imageClassName="object-[62%_58%] sm:object-[62%_58%]"
+        eyebrow="Explore Capabilities"
+        title="Real work. Clear contribution. Visible evidence."
+      >
         Every project shows what was built, who did what, and which capabilities it demonstrates. All examples are fictional.
       </PageHero>
       <Section className="py-10 md:py-12">
@@ -130,7 +135,12 @@ function SignedInProjects({ userId }: { userId: string }) {
 
   return (
     <>
-      <PageHero image={heroImg} eyebrow="My projects" title="The work you've documented.">
+      <PageHero
+        image={heroImg}
+        imageClassName="object-[62%_58%] sm:object-[62%_58%]"
+        eyebrow="My projects"
+        title="The work you've documented."
+      >
         Each project shows when it started and the evidence you've attached along the way.
       </PageHero>
       <Section className="py-10 md:py-12">
