@@ -29,11 +29,11 @@ function Home() {
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
         <HeroBackdrop image={heroImg} />
         <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 md:py-24 lg:grid-cols-[1fr_1.05fr]">
-          <div>
+          <div className="min-w-0">
             <p className="hero-rise inline-flex items-center gap-2 rounded-full border border-ink-foreground/15 bg-ink-foreground/5 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-electric">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-electric" /> The Future of the CV
             </p>
-            <h1 className="hero-rise-delay-1 mt-5 text-4xl font-semibold leading-[1.08] md:text-6xl">
+            <h1 className="hero-rise-delay-1 mt-5 max-w-xl text-4xl font-semibold leading-[1.08] md:text-6xl">
               Your CV lists skills. <span className="text-gradient-electric">Your MetaTwin brings a workforce.</span>
             </h1>
             <p className="hero-rise-delay-1 mt-6 max-w-xl text-lg text-ink-muted">
@@ -113,7 +113,7 @@ function Home() {
       <section className="border-y bg-card">
         <Section>
           <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:items-center">
-            <div>
+            <div className="min-w-0">
               <h2 className="text-3xl font-semibold md:text-4xl">Your Story Doesn't End at Your CV.</h2>
               <p className="mt-4 text-muted-foreground">
                 Instead of rewriting a CV whenever you gain experience, you keep adding new evidence to an evolving record. Your MetaTwin develops as you do.
@@ -135,7 +135,7 @@ function Home() {
       <Reveal>
         <Section>
           <div className="grid gap-10 lg:grid-cols-2">
-          <div>
+          <div className="min-w-0">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">Proof of capability</p>
             <h2 className="mt-3 text-3xl font-semibold md:text-4xl">Skills Are Claims. Evidence Makes Them Credible.</h2>
             <p className="mt-4 text-muted-foreground">Every capability in MetaTwin carries a clear evidence relationship and an honest status. Not everything is verified — and MetaTwin never pretends it is. There is no universal score.</p>
@@ -172,7 +172,7 @@ function Home() {
         <Reveal>
         <Section>
           <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <div>
+            <div className="min-w-0">
               <h2 className="text-3xl font-semibold md:text-4xl">Make Your Capabilities Discoverable.</h2>
               <p className="mt-4 text-ink-muted">A structured capability record helps you present relevant evidence when exploring career opportunities, projects and collaborations, mentorship, practical experience, further learning, and innovation and entrepreneurship.</p>
               <p className="mt-6 flex items-start gap-2 text-sm text-ink-muted"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-electric" /> Private by default. Your profile is never public just because it exists — you choose what to share, and with whom.</p>

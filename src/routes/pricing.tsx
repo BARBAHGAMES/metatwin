@@ -148,7 +148,7 @@ function Pricing() {
             </div>
 
             <div className="mt-14 grid gap-8 lg:grid-cols-[1.2fr_1fr]">
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-2xl font-semibold">Compare team packages</h2>
                 <div className="mt-5 overflow-x-auto rounded-2xl border bg-card">
                   <table className="w-full min-w-[520px] text-sm">

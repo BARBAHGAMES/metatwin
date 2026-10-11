@@ -374,7 +374,7 @@ function Dashboard() {
         </div>
 
         <div className="mt-5 grid gap-5 lg:grid-cols-2">
-          <Card>
+          <Card className="min-w-0">
             <h3 className="font-semibold">Your capabilities</h3>
             <ul className="mt-3 space-y-2">
               {competencies.map((c) => {
@@ -407,7 +407,7 @@ function Dashboard() {
               {competencies.length === 0 && <li className="text-xs text-muted-foreground">No capabilities added yet.</li>}
             </ul>
           </Card>
-          <Card>
+          <Card className="min-w-0">
             <h3 className="font-semibold">Recent activity</h3>
             <ul className="mt-3 space-y-2 text-sm">
               {recentActivity.map((a, i) => (
