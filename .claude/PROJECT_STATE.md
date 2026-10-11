@@ -11,6 +11,16 @@
 - **Cloudflare access**: Andrew ran `wrangler login` himself on 2026-10-10 (OAuth, full account access on the "Barbah Games" Cloudflare account — broader than the scoped-token plan originally discussed, but his explicit choice). Claude runs deploys and manages the custom domain/DNS directly through this login — but always says what it's about to do first, every time, before touching DNS or production.
 - **GitHub**: repo created under the `BARBAHGAMES` org (matches where `barbah-games-platform` lives), private.
 
+## Fix list (started 2026-10-11)
+
+Goal: pilot cohort live (HIT, ~50-100 real students, activated twins = >=1 evidence-backed capability). Decisions: **18+ only for now** (store `is_adult` + birth year only, no full DOB); public profile = student-shareable `/t/<handle>` page replacing the "Visible to employers" toggle; AI team shown on real dashboards labelled as a preview.
+
+Order: P0-1 evidence integrity, P0-2 18+ + block client writes to `parental_consent_at`, P0-3 reject non-http(s) links, P0-4 welcome email only after confirmation, P1-5 public profile page, P1-6 label AI team preview, P1-7 error states/password reset/validation, P2-8 real data on /capability /projects /journey + seed opportunities, P2-9 pilot readiness (Supabase Pro, Custom SMTP, tests, CI).
+
+**P0-1 DONE (migration `20261011061431_evidence_integrity_composite_fks_and_count_guard`).** Evidence now has composite FKs `(competency_id, twin_id)` / `(project_id, twin_id)` so it can only reference the owner's own rows; `competencies.evidence_count` is forced to 0 on insert and ignored on direct update (only the evidence sync trigger, trigger depth >= 2, changes it); sync trigger also handles moving evidence between competencies. Exploits reproduced on live before the fix and confirmed blocked after (rolled-back transactions). **Not verified live:** the evidence DELETE decrement path (the Supabase MCP gates DELETE/DROP statements behind a confirmation that timed out). Applied via the Supabase SQL editor, then registered in `supabase_migrations.schema_migrations` by hand with the same version so `check-migrations-sync` matches. Dashboard no longer sends `evidence_count`.
+
+Tooling gotcha: the Supabase MCP `execute_sql`/`apply_migration` time out at 60s on destructive statements (DELETE, DROP); run those in the SQL editor and register the version manually.
+
 ## Done this session
 
 - Local repo at `C:\Users\14048\OneDrive\Desktop\metatwin`, scaffolded as a TanStack Start + Cloudflare Worker app (same conventions as `barbah-games-platform`: `npm run deploy` only, `check-grants.mjs` / `check-migrations-sync.mjs` as predeploy guardrails, table-wide `GRANT SELECT` convention, `<version>_<name>.sql` migration files written to match exactly what `apply_migration` applied).

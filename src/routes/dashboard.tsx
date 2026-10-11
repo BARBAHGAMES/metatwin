@@ -159,7 +159,6 @@ function Dashboard() {
       twin_id: user.id,
       skill_id: capabilitySkillId,
       level: 1,
-      evidence_count: 0,
     });
     setSaving(false);
     if (error) {
