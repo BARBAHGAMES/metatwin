@@ -164,18 +164,18 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "evidence_competency_id_fkey";
-            columns: ["competency_id"];
+            foreignKeyName: "evidence_competency_owner_fkey";
+            columns: ["competency_id", "twin_id"];
             isOneToOne: false;
             referencedRelation: "competencies";
-            referencedColumns: ["id"];
+            referencedColumns: ["id", "twin_id"];
           },
           {
-            foreignKeyName: "evidence_project_id_fkey";
-            columns: ["project_id"];
+            foreignKeyName: "evidence_project_owner_fkey";
+            columns: ["project_id", "twin_id"];
             isOneToOne: false;
             referencedRelation: "projects";
-            referencedColumns: ["id"];
+            referencedColumns: ["id", "twin_id"];
           },
           {
             foreignKeyName: "evidence_twin_id_fkey";
@@ -185,6 +185,21 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      kenya_cities: {
+        Row: {
+          id: string;
+          name: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+        };
+        Relationships: [];
       };
       matches: {
         Row: {
@@ -322,52 +337,103 @@ export type Database = {
       };
       twins: {
         Row: {
+          bio: string | null;
           birth_year: number | null;
+          city_id: string | null;
           created_at: string;
+          education_status: string | null;
+          first_name: string | null;
           handle: string | null;
           headline: string | null;
           id: string;
           institution: string | null;
           is_adult: boolean;
+          last_name: string | null;
           name: string | null;
           parental_consent_at: string | null;
           programme: string | null;
           public_show_evidence_details: boolean;
+          university_id: string | null;
           updated_at: string;
           visibility: string;
           year: number | null;
         };
         Insert: {
+          bio?: string | null;
           birth_year?: number | null;
+          city_id?: string | null;
           created_at?: string;
+          education_status?: string | null;
+          first_name?: string | null;
           handle?: string | null;
           headline?: string | null;
           id: string;
           institution?: string | null;
           is_adult?: boolean;
+          last_name?: string | null;
           name?: string | null;
           parental_consent_at?: string | null;
           programme?: string | null;
           public_show_evidence_details?: boolean;
+          university_id?: string | null;
           updated_at?: string;
           visibility?: string;
           year?: number | null;
         };
         Update: {
+          bio?: string | null;
           birth_year?: number | null;
+          city_id?: string | null;
           created_at?: string;
+          education_status?: string | null;
+          first_name?: string | null;
           handle?: string | null;
           headline?: string | null;
           id?: string;
           institution?: string | null;
           is_adult?: boolean;
+          last_name?: string | null;
           name?: string | null;
           parental_consent_at?: string | null;
           programme?: string | null;
           public_show_evidence_details?: boolean;
+          university_id?: string | null;
           updated_at?: string;
           visibility?: string;
           year?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "twins_city_id_fkey";
+            columns: ["city_id"];
+            isOneToOne: false;
+            referencedRelation: "kenya_cities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "twins_university_id_fkey";
+            columns: ["university_id"];
+            isOneToOne: false;
+            referencedRelation: "universities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      universities: {
+        Row: {
+          id: string;
+          location: string | null;
+          name: string;
+        };
+        Insert: {
+          id?: string;
+          location?: string | null;
+          name: string;
+        };
+        Update: {
+          id?: string;
+          location?: string | null;
+          name?: string;
         };
         Relationships: [];
       };
@@ -376,29 +442,23 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      declare_adult: { Args: { p_birth_year: number }; Returns: undefined };
       get_my_opportunity_matches: {
         Args: never;
         Returns: {
-          description: string | null;
+          description: string;
           evidence_backed_count: number;
           id: string;
           matched_skills: string[];
           missing_skills: string[];
-          org_name: string | null;
+          org_name: string;
           required_count: number;
-          score: number | null;
+          score: number;
           title: string;
-          url: string | null;
+          url: string;
         }[];
       };
-      get_public_profile: {
-        Args: { p_handle: string };
-        Returns: Json;
-      };
-      declare_adult: {
-        Args: { p_birth_year: number };
-        Returns: undefined;
-      };
+      get_public_profile: { Args: { p_handle: string }; Returns: Json };
       introspect_applied_migrations: {
         Args: never;
         Returns: {
@@ -414,6 +474,7 @@ export type Database = {
           column_name: string;
         }[];
       };
+      twin_is_adult: { Args: { p_twin_id: string }; Returns: boolean };
     };
     Enums: {
       [_ in never]: never;

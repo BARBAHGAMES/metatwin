@@ -3,9 +3,12 @@
 // the UI matching maxLength attributes and friendly messages.
 export const LIMITS = {
   name: 100,
+  firstName: 60,
+  lastName: 60,
   headline: 160,
   institution: 120,
   programme: 120,
+  bio: 500,
   studyYearMin: 1,
   studyYearMax: 10,
   projectTitle: 120,

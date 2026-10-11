@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AdultGate } from "@/components/AdultGate";
+import { CompleteProfileGate } from "@/components/CompleteProfileGate";
 import { LINK_ERROR, isHttpUrl, safeHref } from "@/lib/url";
 import { LIMITS, validateStudyYear } from "@/lib/limits";
 import { LoadError } from "@/components/LoadError";
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/dashboard")({
 type Twin = {
   id: string;
   name: string | null;
+  first_name: string | null;
   institution: string | null;
   programme: string | null;
   year: number | null;
@@ -105,7 +107,7 @@ function Dashboard() {
 
   async function loadAll(userId: string) {
     const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes] = await Promise.all([
-      supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, is_adult, handle, public_show_evidence_details").eq("id", userId).maybeSingle(),
+      supabase.from("twins").select("id, name, first_name, institution, programme, year, headline, visibility, is_adult, handle, public_show_evidence_details").eq("id", userId).maybeSingle(),
       supabase.from("skills").select("id, name, category").order("name"),
       supabase
         .from("competencies")
@@ -137,6 +139,7 @@ function Dashboard() {
       (twinRes.data as Twin | null) ?? {
         id: userId,
         name: null,
+        first_name: null,
         institution: null,
         programme: null,
         year: null,
@@ -267,6 +270,10 @@ function Dashboard() {
 
   if (!twin.is_adult) {
     return <AdultGate onDeclared={() => user && loadAll(user.id)} />;
+  }
+
+  if (!twin.first_name) {
+    return <CompleteProfileGate twinId={twin.id} onCompleted={() => user && loadAll(user.id)} />;
   }
 
   const availableSkillsForCapability = skills.filter((s) => !competencies.some((c) => c.skill_id === s.id));
