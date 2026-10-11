@@ -82,6 +82,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "author", content: "MetaGlobe Technologies Ltd" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      // Google Search Console site-ownership verification, for the Google OAuth consent-screen branding review.
+      { name: "google-site-verification", content: "CpyGCWovvZKFWDM-JSXpZZLOIfPA5iA_RrteYU3Te6A" },
     ],
     links: [
       {
