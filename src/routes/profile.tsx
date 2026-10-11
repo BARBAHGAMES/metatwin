@@ -139,8 +139,18 @@ function RealProfile({ userId }: { userId: string }) {
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     .slice(0, 6);
 
+  const isEmpty = !twin.name && competencies.length === 0 && projectList.length === 0;
+
   return (
     <>
+      <VisionHero signedIn />
+      <ExampleShowcase />
+
+      <Section className="pb-0 md:pb-0">
+        <p className="scroll-mt-24 font-mono text-xs uppercase tracking-[0.2em] text-electric">
+          {isEmpty ? "Now build yours" : "Your real MetaTwin"}
+        </p>
+      </Section>
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
         <div className="absolute inset-0 opacity-50"><CareerGraph /></div>
         <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/30" aria-hidden />
@@ -279,36 +289,49 @@ function RealProfile({ userId }: { userId: string }) {
   );
 }
 
-function SampleProfile() {
+function VisionHero({ signedIn }: { signedIn: boolean }) {
+  return (
+    <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
+      <HeroBackdrop />
+      <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-24">
+        <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Your MetaTwin</p>
+        <h1 className="hero-rise-delay-1 mt-4 max-w-4xl text-4xl font-semibold leading-tight md:text-6xl">Your digital twin. Working for you, 24/7.</h1>
+        <p className="hero-rise-delay-1 mt-5 max-w-2xl text-lg text-ink-muted">A MetaTwin is the AI version of you. It presents your proven skills to the world and searches for jobs, projects, gigs and collaborations that fit what you can actually do. It does this while you learn, build and sleep.</p>
+        <div className="hero-rise-delay-2 mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {([
+            [Sparkles, "Presents your capability", "Your skills, projects and evidence, in one live record instead of a static CV."],
+            [Search, "Searches for opportunities", "Scans jobs, projects and gigs that match your proven capabilities."],
+            [Handshake, "Makes the introduction", "Puts you, and your AI team, in front of the people looking to hire."],
+            [Bot, "Brings your AI team", "Comes with AI employees you supervise, so you're hired as a team."],
+          ] as const).map(([I, t, d]) => (
+            <div key={t} className="rounded-2xl border border-ink-foreground/10 bg-ink/60 p-5 backdrop-blur">
+              <I className="h-5 w-5 text-electric" />
+              <p className="mt-3 font-semibold">{t}</p>
+              <p className="mt-1 text-sm text-ink-muted">{d}</p>
+            </div>
+          ))}
+        </div>
+        <div className="hero-rise-delay-2 mt-10 flex flex-wrap gap-3">
+          {signedIn ? (
+            <>
+              <Button asChild variant="hero"><Link to="/dashboard">Edit your MetaTwin <ArrowRight /></Link></Button>
+              <Button asChild variant="heroOutline"><a href="#example">See an example MetaTwin</a></Button>
+            </>
+          ) : (
+            <>
+              <Button asChild variant="hero"><Link to="/build">Build Your MetaTwin <ArrowRight /></Link></Button>
+              <Button asChild variant="heroOutline"><a href="#example">See Victorious's MetaTwin</a></Button>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ExampleShowcase() {
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
-        <HeroBackdrop />
-        <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-24">
-          <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Your MetaTwin</p>
-          <h1 className="hero-rise-delay-1 mt-4 max-w-4xl text-4xl font-semibold leading-tight md:text-6xl">Your digital twin. Working for you, 24/7.</h1>
-          <p className="hero-rise-delay-1 mt-5 max-w-2xl text-lg text-ink-muted">A MetaTwin is the AI version of you. It presents your proven skills to the world and searches for jobs, projects, gigs and collaborations that fit what you can actually do. It does this while you learn, build and sleep.</p>
-          <div className="hero-rise-delay-2 mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {([
-              [Sparkles, "Presents your capability", "Your skills, projects and evidence, in one live record instead of a static CV."],
-              [Search, "Searches for opportunities", "Scans jobs, projects and gigs that match your proven capabilities."],
-              [Handshake, "Makes the introduction", "Puts you, and your AI team, in front of the people looking to hire."],
-              [Bot, "Brings your AI team", "Comes with AI employees you supervise, so you're hired as a team."],
-            ] as const).map(([I, t, d]) => (
-              <div key={t} className="rounded-2xl border border-ink-foreground/10 bg-ink/60 p-5 backdrop-blur">
-                <I className="h-5 w-5 text-electric" />
-                <p className="mt-3 font-semibold">{t}</p>
-                <p className="mt-1 text-sm text-ink-muted">{d}</p>
-              </div>
-            ))}
-          </div>
-          <div className="hero-rise-delay-2 mt-10 flex flex-wrap gap-3">
-            <Button asChild variant="hero"><Link to="/build">Build Your MetaTwin <ArrowRight /></Link></Button>
-            <Button asChild variant="heroOutline"><a href="#example">See Victorious's MetaTwin</a></Button>
-          </div>
-        </div>
-      </section>
-
       <Section className="pb-0 md:pb-0">
         <p id="example" className="scroll-mt-24 font-mono text-xs uppercase tracking-[0.2em] text-electric">Example · What a MetaTwin looks like</p>
       </Section>
@@ -354,6 +377,15 @@ function SampleProfile() {
       <Section className="pb-0 md:pb-0">
         <AITeam owner={person.name} />
       </Section>
+    </>
+  );
+}
+
+function SampleProfile() {
+  return (
+    <>
+      <VisionHero signedIn={false} />
+      <ExampleShowcase />
 
       <Section className="grid gap-8 lg:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-12">
