@@ -24,7 +24,7 @@ export function AITeam({ owner }: { owner: string }) {
               Hire {first}, and you get proven capability <strong className="text-ink-foreground">plus a team of {aiEmployees.length} AI employees</strong> — directed and supervised by {first}.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
             {[["1", "Human lead"], [String(aiEmployees.length), "AI employees"], ["24/7", "Capacity"]].map(([v, l]) => (
               <div key={l} className="rounded-xl border border-ink-foreground/10 bg-ink-soft px-4 py-3">
                 <p className="font-display text-xl font-semibold text-gradient-electric">{v}</p>

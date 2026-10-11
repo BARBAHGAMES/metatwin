@@ -95,14 +95,17 @@ function Build() {
         <div className="relative mx-auto max-w-7xl px-5 py-10">
           <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Build Your MetaTwin</p>
           <h1 className="hero-rise-delay-1 mt-3 text-3xl font-semibold md:text-4xl">Don't just tell the world. Show the evidence.</h1>
-          <ol className="mt-8 grid grid-cols-5 gap-2">
+          <p className="mt-6 text-xs font-medium text-ink-muted sm:hidden">
+            Step {step + 1} of {steps.length} · <span className="text-ink-foreground">{steps[step]!.t}</span>
+          </p>
+          <ol className="mt-2 grid grid-cols-5 gap-2 sm:mt-8">
             {steps.map((s, i) => (
               <li key={s.t}>
                 <button disabled={i > step} onClick={() => setStep(i)} className="w-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2 disabled:cursor-not-allowed">
                   <div className={cn("h-1 rounded-full", i <= step ? "bg-gradient-electric" : "bg-ink-foreground/15")} />
                   <p className={cn("mt-2 flex items-center gap-1.5 text-xs font-medium sm:text-sm", i <= step ? "text-ink-foreground" : "text-ink-muted")}>
                     {i < step ? <Check className="h-3.5 w-3.5 shrink-0 text-electric" /> : <s.i className="hidden h-3.5 w-3.5 shrink-0 sm:block" />}
-                    <span className="truncate">{s.t}</span>
+                    <span className="hidden truncate sm:inline">{s.t}</span>
                   </p>
                   <p className="hidden text-xs text-ink-muted md:block">{s.d}</p>
                 </button>
@@ -131,7 +134,7 @@ function Build() {
               <Head t="Add your capabilities" d="Start with what you can do. Every new capability begins as Self-Reported — you'll back it with evidence next." />
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Input value={capDraft.name} onChange={(e) => setCapDraft({ ...capDraft, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addCap(capDraft.name)} placeholder="Type a capability…" />
-                <select value={capDraft.group} onChange={(e) => setCapDraft({ ...capDraft, group: e.target.value })} className="h-9 rounded-md border bg-background px-3 text-sm">
+                <select value={capDraft.group} onChange={(e) => setCapDraft({ ...capDraft, group: e.target.value })} className="h-11 rounded-md border bg-background px-3 text-sm">
                   {groups.map((g) => <option key={g}>{g}</option>)}
                 </select>
                 <Button onClick={() => addCap(capDraft.name)}><Plus /> Add</Button>
@@ -162,10 +165,10 @@ function Build() {
               <div className="grid gap-4 rounded-xl border bg-muted/40 p-5 sm:grid-cols-2">
                 <Field label="Evidence title"><Input value={ev.title} onChange={(e) => setEv({ ...ev, title: e.target.value })} placeholder="e.g. Filter housing v3 model" /></Field>
                 <Field label="Type">
-                  <select value={ev.type} onChange={(e) => setEv({ ...ev, type: e.target.value })} className="h-9 w-full rounded-md border bg-background px-3 text-sm">{evTypes.map((t) => <option key={t}>{t}</option>)}</select>
+                  <select value={ev.type} onChange={(e) => setEv({ ...ev, type: e.target.value })} className="h-11 w-full rounded-md border bg-background px-3 text-sm">{evTypes.map((t) => <option key={t}>{t}</option>)}</select>
                 </Field>
                 <Field label="Supports capability">
-                  <select value={ev.cap} onChange={(e) => setEv({ ...ev, cap: e.target.value })} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                  <select value={ev.cap} onChange={(e) => setEv({ ...ev, cap: e.target.value })} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
                     <option value="">Choose…</option>{caps.map((c) => <option key={c.name}>{c.name}</option>)}
                   </select>
                 </Field>

@@ -509,7 +509,7 @@ function Dashboard() {
               id="capability-select"
               value={capabilitySkillId}
               onChange={(e) => setCapabilitySkillId(e.target.value)}
-              className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              className="h-11 w-full rounded-md border bg-background px-3 text-sm"
             >
               <option value="">Choose…</option>
               {availableSkillsForCapability.map((s) => (
@@ -535,7 +535,7 @@ function Dashboard() {
                 id="evidence-select"
                 value={evidenceCompetencyId}
                 onChange={(e) => setEvidenceCompetencyId(e.target.value)}
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                className="h-11 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="">Choose…</option>
                 {competencies.map((c) => (
@@ -550,7 +550,7 @@ function Dashboard() {
                   id="evidence-project"
                   value={evidenceProjectId}
                   onChange={(e) => setEvidenceProjectId(e.target.value)}
-                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                  className="h-11 w-full rounded-md border bg-background px-3 text-sm"
                 >
                   <option value="">None</option>
                   {projects.map((p) => (

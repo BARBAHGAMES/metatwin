@@ -134,7 +134,7 @@ export function CompleteProfileGate({ twinId, onCompleted }: { twinId: string; o
               value={cityId}
               onChange={(e) => setCityId(e.target.value)}
               disabled={loadingLists}
-              className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              className="h-11 w-full rounded-md border bg-background px-3 text-sm"
             >
               <option value="">Choose a city…</option>
               {cities.map((c) => (
@@ -169,7 +169,7 @@ export function CompleteProfileGate({ twinId, onCompleted }: { twinId: string; o
                 value={universityId}
                 onChange={(e) => setUniversityId(e.target.value)}
                 disabled={loadingLists}
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                className="h-11 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="">Choose your university…</option>
                 {universities.map((u) => (
