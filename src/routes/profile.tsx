@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AITeam } from "@/components/AITeam";
 import { CareerGraph } from "@/components/CareerGraph";
 import { Button } from "@/components/ui/button";
-import sampleProfilePhoto from "@/assets/sample-profile.png";
+import sampleProfilePhoto from "@/assets/sample-profile.jpg";
 import { Card, HeroBackdrop, SampleAvatar, SampleTag, Section, StatusBadge } from "@/components/site";
 import { Reveal } from "@/components/Reveal";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -348,7 +348,7 @@ function ExampleShowcase() {
             </div>
           </div>
           <div className="mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
-            <img src={sampleProfilePhoto} alt={person.name} width={928} height={1152} className="h-64 w-52 shrink-0 rounded-3xl object-cover shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64" />
+            <img src={sampleProfilePhoto} alt={person.name} width={700} height={869} className="h-64 w-52 shrink-0 rounded-3xl object-cover shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64" />
             <div className="min-w-0">
               <span className="inline-flex items-center gap-2 rounded-full border border-electric/40 bg-electric/10 px-3 py-1 text-xs text-electric">
                 <Bot className="h-3.5 w-3.5" /> Human + {aiEmployees.length} AI employees

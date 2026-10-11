@@ -3,7 +3,7 @@ import heroImg from "@/assets/hero-home.jpg";
 import { ArrowRight, Layers, FileCheck2, TrendingUp, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProfileMockup } from "@/components/ProfileMockup";
-import sampleProfilePhoto from "@/assets/sample-profile.png";
+import sampleProfilePhoto from "@/assets/sample-profile.jpg";
 import { Card, HeroBackdrop, Section, StatusBadge } from "@/components/site";
 import { Reveal } from "@/components/Reveal";
 import { capBySlug, statusMeta, type Status } from "@/lib/data";

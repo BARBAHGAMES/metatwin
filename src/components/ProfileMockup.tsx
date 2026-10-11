@@ -1,5 +1,5 @@
 import { capabilities, person, projects } from "@/lib/data";
-import sampleProfilePhoto from "@/assets/sample-profile.png";
+import sampleProfilePhoto from "@/assets/sample-profile.jpg";
 import { StatusBadge } from "@/components/site";
 import { MessageSquare, Sparkles, Target, FileCheck2 } from "lucide-react";
 
