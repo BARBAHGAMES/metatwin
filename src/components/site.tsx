@@ -6,6 +6,7 @@ import { statusMeta, type Status } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { CareerGraph } from "@/components/CareerGraph";
 import { useAuth } from "@/lib/auth";
+import metatwinLogo from "@/assets/metatwin-logo.png";
 
 export function HeroBackdrop() {
   return (
@@ -18,20 +19,9 @@ export function HeroBackdrop() {
 
 export function Logo({ light = false }: { light?: boolean }) {
   return (
-    <Link to="/" className="flex items-center gap-2.5">
-      <svg viewBox="0 0 32 32" className="h-8 w-8 shrink-0" aria-hidden>
-        <defs>
-          <linearGradient id="mtg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="var(--electric)" />
-            <stop offset="1" stopColor="var(--violet)" />
-          </linearGradient>
-        </defs>
-        <circle cx="11" cy="16" r="8" fill="none" stroke="url(#mtg)" strokeWidth="2.5" />
-        <circle cx="21" cy="16" r="8" fill="none" stroke={light ? "var(--ink-foreground)" : "var(--ink)"} strokeWidth="2.5" strokeDasharray="3 2.5" />
-        <circle cx="16" cy="16" r="2.4" fill="url(#mtg)" />
-      </svg>
-      <span className={cn("font-display text-lg font-semibold tracking-tight", light ? "text-ink-foreground" : "text-foreground")}>
-        Meta<span className="text-gradient-electric">Twin</span>
+    <Link to="/" className="flex items-center">
+      <span className={cn("inline-flex items-center rounded-lg", light && "bg-card px-2.5 py-1.5 shadow-sm")}>
+        <img src={metatwinLogo} alt="MetaTwin" className="h-6 w-auto shrink-0 sm:h-7" />
       </span>
     </Link>
   );

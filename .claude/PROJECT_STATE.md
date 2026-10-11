@@ -177,4 +177,14 @@ Andrew then asked to "make the website mobile friendly." **Tooling note:** `mcp_
 - **Fixed: mobile nav toggle touch target too small.** The hamburger `<button>` in `Header` (`src/components/site.tsx`) had no padding — just a bare 24px icon, well under the 44×44px minimum touch-target guideline. Added `p-2.5` (plus `cursor-pointer` and a focus-visible ring, consistent with the site's existing accessibility pattern) with `-mr-2` to keep it visually aligned with the header's right edge.
 - **Fixed: dialogs were edge-to-edge on phones.** The shared `DialogContent` primitive (`src/components/ui/dialog.tsx`, used by all three "Add project/capability/evidence" dialogs on `/dashboard`) was `w-full max-w-lg` — on a narrow viewport that's 100vw with zero side gutter, touching both screen edges. Changed to `w-[calc(100%-2rem)] max-w-lg` for a consistent 16px gutter on phones while leaving desktop sizing unchanged.
 
+Verified: `tsc --noEmit` clean, `npm run build` clean, `check-grants` clean. **Deployed** — version `7f03aa9c-1209-46b1-ae2c-c402cbd5a2d3`.
+
+## Real MetaTwin logo added (2026-10-11)
+
+Andrew dropped the official logo artwork into `src/assets/MetaTwin_logo_family_transparent_v2 (1).png` (renamed to `src/assets/metatwin-logo.png`) — a single flattened PNG lockup (1082×436px) combining the icon mark (a globe/orbit "M+T" monogram in black and gold) with a "META | TWIN" wordmark, on a transparent background.
+
+Replaced the old hand-drawn inline-SVG circle logo + CSS gradient text in `Logo()` (`src/components/site.tsx`) with this image. One judgment call: the artwork's icon and wordmark are both black, and the only two places `Logo` is used (`Header`, `Footer`) are both on the dark `bg-ink` surface — rendered directly, the black strokes would be nearly invisible against that background. Rather than inventing a "reversed" colorway that isn't the real brand asset, wrapped the image in a small `bg-card` (white) rounded plate so the logo always displays in its real, as-designed colors regardless of the surface behind it. Verified by screenshot — logo renders crisp and fully legible in the header on `localhost` dev.
+
+Did not touch `favicon.ico` / the browser tab icon — the supplied asset is a wide lockup (2.48:1), not a square icon crop, so using it as-is for a favicon would look wrong; would need a cropped square version if Andrew wants the tab icon updated too.
+
 Verified: `tsc --noEmit` clean, `npm run build` clean, `check-grants` clean. **Not yet deployed.**
