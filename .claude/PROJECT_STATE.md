@@ -37,6 +37,19 @@ Order: P0-1 evidence integrity, P0-2 18+ + block client writes to `parental_cons
 
 Tooling gotcha: the Supabase MCP `execute_sql`/`apply_migration` time out at 60s on destructive statements (DELETE, DROP); run those in the SQL editor and register the version manually.
 
+## P0-P2-9 deployed to production (2026-10-11, local Claude Code session)
+
+Everything above (P0-1 through P2-9) is now **live**. This session ran concurrently with the desktop/cloud session that did the P2-8/P2-9 work above (no local disk access there, so it applied migrations straight to the live DB via its own Supabase MCP connection while this session was mid-deploy) — the two reconciled cleanly:
+
+- Checked out `claude/p2-9-pilot-readiness` (the most complete branch: P1-5 through P2-9), since `claude/p1-5-public-profile` (deployed earlier this session) was missing P2-8/P2-9.
+- **Wrote local migration files for 4 migrations the other session had applied live but not yet committed** (`20261011071157_opportunity_matching_function_and_matches_lockdown`, `20261011071205_skill_slugs_backfill`, `20261011071215_skill_slugs_constraints`, `20261011072859_pilot_hardening_policies_indexes_grants`) — 3 pulled verbatim from `supabase_migrations.schema_migrations.statements`; confirmed byte-identical against the other session's own versions of those files once visible. `check-migrations-sync` is clean.
+- **Found and fixed a real, shipped-broken bug**: `ProfileEditor.save()` in `src/routes/dashboard.tsx` called `.upsert()`, which Postgres compiles to `INSERT ... ON CONFLICT DO UPDATE`. That fires `guard_twin_protected_columns()`'s `BEFORE INSERT` branch first (force-resetting `is_adult`/`birth_year` on the tentative row), and `twins_public_requires_adult` is validated against that tentative row *before* the conflict/update path even runs — so **no user, new or existing, could ever successfully make their profile public**, even genuinely adult ones. Reproduced twice (scripted, then via a clean mouse-driven browser pass) before touching code. Fix: `save()` now does a plain `.update().eq("id", twin.id)`, falling back to `.insert()` only if zero rows were affected (the twins row always exists by the time this form renders, via `handle_new_user` on signup). Verified against the live project with disposable test accounts both times (before the branch merge, and again after).
+- Ran the full `supabase/tests/security_regression.sql` suite live — `ALL PASS (rolled back)`.
+- `tsc --noEmit`, `vitest run` (58/58), `eslint` (clean — the long-standing `src/routes/index.tsx` unused-import error was fixed as part of the other session's P2-9 commit), `check-grants`, `check-migrations-sync` all clean.
+- Deployed, smoke-tested live (`/`, `/capability/3d-modelling`, `/projects`, `/journey` all 200; public-profile save/`get_public_profile` re-confirmed working on the live Worker).
+- Merged `claude/p2-9-pilot-readiness` into `main` (commit `32371c6`) and pushed. `main` is now the full P0–P2-9 state. Deployed Worker version: **`e47a8843-6b63-46cd-8045-55d2f81d320a`**.
+- **Still outstanding**: everything in `.claude/PILOT_READINESS.md`'s "Must do before inviting students" table (Supabase Pro upgrade, reset-password redirect URL, min password length 8, leaked-password protection, Custom SMTP) — all manual Supabase-dashboard steps only Andrew can do.
+
 ## Done this session
 
 - Local repo at `C:\Users\14048\OneDrive\Desktop\metatwin`, scaffolded as a TanStack Start + Cloudflare Worker app (same conventions as `barbah-games-platform`: `npm run deploy` only, `check-grants.mjs` / `check-migrations-sync.mjs` as predeploy guardrails, table-wide `GRANT SELECT` convention, `<version>_<name>.sql` migration files written to match exactly what `apply_migration` applied).
