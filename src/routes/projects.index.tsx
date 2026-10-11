@@ -42,7 +42,7 @@ function SampleProjects() {
     <>
       <PageHero
         image={heroImg}
-        imageClassName="object-[62%_58%] sm:object-[62%_58%]"
+        imageClassName="sm:object-[62%_58%]"
         eyebrow="Explore Capabilities"
         title="Real work. Clear contribution. Visible evidence."
       >
@@ -137,7 +137,7 @@ function SignedInProjects({ userId }: { userId: string }) {
     <>
       <PageHero
         image={heroImg}
-        imageClassName="object-[62%_58%] sm:object-[62%_58%]"
+        imageClassName="sm:object-[62%_58%]"
         eyebrow="My projects"
         title="The work you've documented."
       >

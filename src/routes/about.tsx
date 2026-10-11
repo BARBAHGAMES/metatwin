@@ -30,7 +30,7 @@ function About() {
     <>
       <PageHero
         image={heroImg}
-        imageClassName="hero-drift-soft object-top"
+        imageClassName="hero-drift-soft object-top sm:object-top"
         eyebrow="About MetaTwin · The Future of the CV"
         title={
           <>

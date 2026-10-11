@@ -45,7 +45,7 @@ function Pricing() {
     <>
       <PageHero
         image={heroImg}
-        imageClassName="object-[68%_40%] sm:object-[68%_40%]"
+        imageClassName="sm:object-[68%_40%]"
         eyebrow="Pricing"
         title="Your next opportunity starts with what you can prove."
       >

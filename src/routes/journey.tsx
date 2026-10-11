@@ -28,7 +28,7 @@ function SampleJourney() {
     <>
       <PageHero
         image={heroImg}
-        imageClassName="hero-drift-soft object-center opacity-100"
+        imageClassName="hero-drift-soft object-center opacity-100 sm:object-center"
         className="md:[&>div:last-child]:py-32"
         eyebrow="Development timeline"
         title="The Journey of Your Work"
@@ -92,7 +92,7 @@ function MyJourney({ userId }: { userId: string }) {
     <>
       <PageHero
         image={heroImg}
-        imageClassName="hero-drift-soft object-center opacity-100"
+        imageClassName="hero-drift-soft object-center opacity-100 sm:object-center"
         className="md:[&>div:last-child]:py-32"
         eyebrow="Development timeline"
         title="The journey of your work"
