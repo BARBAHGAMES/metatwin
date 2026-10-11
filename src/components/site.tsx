@@ -162,6 +162,17 @@ export function StatusBadge({ status, className }: { status: Status; className?:
   );
 }
 
+// For features shown on REAL accounts that are not built yet. Unlike
+// SampleTag (fictional data on marketing pages), this says the feature itself
+// is a preview, so a student never reads it as something working for them.
+export function PreviewTag({ children = "Preview · coming soon" }: { children?: string }) {
+  return (
+    <span className="inline-flex items-center rounded-md border border-dashed border-electric/50 bg-electric/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-electric">
+      {children}
+    </span>
+  );
+}
+
 export function SampleTag() {
   return (
     <span className="inline-flex items-center rounded-md border border-dashed border-electric/40 bg-electric-soft px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent-foreground">

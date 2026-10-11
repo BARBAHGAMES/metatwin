@@ -240,7 +240,7 @@ function RealProfile({ userId }: { userId: string }) {
             <p className="flex items-start gap-2 text-sm text-muted-foreground">
               <Lock className="mt-0.5 h-4 w-4 shrink-0" />
               {twin.visibility === "public"
-                ? "This profile is visible to employers."
+                ? "You've marked this profile public. Shareable public pages are coming soon — there is no employer access in this version."
                 : "This profile is private — only you can see it. Change this from your dashboard."}
             </p>
           </Card>

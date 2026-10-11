@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { aiEmployees } from "@/lib/data";
 import { Button } from "@/components/ui/button";
-import { Card, HeroBackdrop, Section, StatusBadge } from "@/components/site";
+import { Card, HeroBackdrop, PreviewTag, Section, StatusBadge } from "@/components/site";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -245,9 +245,12 @@ function Dashboard() {
         </div>
       </section>
       <Section className="py-10 md:py-12">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gradient-ink p-4 text-ink-foreground">
-          <p className="flex items-center gap-2 text-sm"><Bot className="h-4 w-4 text-electric" /> Your AI team: {aiEmployees.map((a) => `${a.name} (${a.role})`).join(" · ")}</p>
-          <span className="text-xs text-ink-muted">{aiEmployees.filter((a) => a.status !== "Idle").length} working now</span>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gradient-ink p-4 text-ink-foreground">
+          <p className="flex items-center gap-2 text-sm"><Bot className="h-4 w-4 text-electric" /> AI team concept: {aiEmployees.map((a) => `${a.name} (${a.role})`).join(" · ")}</p>
+          <div className="flex items-center gap-2">
+            <PreviewTag />
+            <span className="text-xs text-ink-muted">Illustration only — no AI is working on your behalf yet.</span>
+          </div>
         </div>
 
         {!twin.name && (
@@ -357,7 +360,7 @@ function Dashboard() {
               className="px-0"
             >
               <Link to="/profile">
-                Preview public profile page <ArrowRight className="h-3.5 w-3.5" />
+                Preview my profile page <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </Button>
           </div>
@@ -523,8 +526,11 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
           checked={form.visibility === "public"}
           onChange={(e) => setForm({ ...form, visibility: e.target.checked ? "public" : "private" })}
         />
-        Visible to employers
+        Make my profile public
       </label>
+      <p className="self-end pb-2 text-xs text-muted-foreground">
+        Shareable public profile links are coming soon. There is no employer access in this version.
+      </p>
       <div className="sm:col-span-2">
         <Button onClick={save} disabled={saving}>{saving ? "Saving..." : "Save profile"}</Button>
       </div>

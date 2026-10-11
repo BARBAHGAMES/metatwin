@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { projects } from "@/lib/data";
-import { Card, PageHero, Section } from "@/components/site";
+import { Card, PageHero, SampleTag, Section } from "@/components/site";
 import { Journey } from "@/components/Journey";
 
 export const Route = createFileRoute("/journey")({
@@ -25,7 +25,7 @@ function JourneyPage() {
       </PageHero>
       <Section className="grid gap-10 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">Sample journey</p>
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">Sample journey <SampleTag /></p>
           <h2 className="mb-8 text-2xl font-semibold">{p.title}</h2>
           <Journey steps={p.journey} />
         </div>
