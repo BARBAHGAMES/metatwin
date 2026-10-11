@@ -21,16 +21,21 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Lint
-        run: npm run lint
-      - name: Unit tests
-        run: npm test
       - name: Production build
+        # Runs first: `src/routeTree.gen.ts` is gitignored and only gets generated as a
+        # side effect of the TanStack Router Vite plugin running during `vite build` (or
+        # `vite dev`) — a fresh checkout has no such file, so Typecheck/Lint/Unit tests
+        # all need this step to have run first or they fail on "Cannot find module
+        # './routeTree.gen'" and the cascading type errors that follow from it.
         run: npm run build
         env:
           # Placeholders so the build can run without secrets; this artifact is never deployed.
           SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
