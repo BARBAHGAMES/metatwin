@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import heroImg from "@/assets/hero-project.jpg";
 import { useEffect, useState } from "react";
 import { ArrowLeft, FileCheck2, MessageSquare } from "lucide-react";
 import { capBySlug, projectById, type Project } from "@/lib/data";
@@ -88,7 +89,7 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
   const artifact = safeHref(p.artifact_url);
   return (
     <>
-      <PageHero eyebrow={`My project · Started ${formatDate(p.created_at)}`} title={p.title}>
+      <PageHero image={heroImg} eyebrow={`My project · Started ${formatDate(p.created_at)}`} title={p.title}>
         {p.description && <p>{p.description}</p>}
       </PageHero>
       <Section className="grid gap-8 lg:grid-cols-[1fr_320px]">
@@ -134,7 +135,7 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
 function SampleProject({ p }: { p: Project }) {
   return (
     <>
-      <PageHero eyebrow={`${p.discipline} · ${p.stage}`} title={p.title}>
+      <PageHero image={heroImg} eyebrow={`${p.discipline} · ${p.stage}`} title={p.title}>
         <p>{p.description}</p>
         <div className="mt-4"><SampleTag /></div>
       </PageHero>

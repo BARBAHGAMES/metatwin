@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import heroImg from "@/assets/hero-dashboard.jpg";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FolderPlus, FilePlus2, Layers, ArrowRight, Info, Bot } from "lucide-react";
@@ -298,7 +299,7 @@ function Dashboard() {
   return (
     <div className="bg-muted/40">
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
-        <HeroBackdrop />
+        <HeroBackdrop image={heroImg} />
         <div className="relative mx-auto flex max-w-7xl flex-col gap-4 px-5 py-14 md:flex-row md:items-end md:justify-between md:py-16">
           <div className="hero-rise">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">Owner view · Managing a MetaTwin</p>

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import heroImg from "@/assets/hero-journey.jpg";
 import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { projects } from "@/lib/data";
@@ -25,7 +26,13 @@ function SampleJourney() {
   const p = projects[0]!;
   return (
     <>
-      <PageHero eyebrow="Development timeline" title="The Journey of Your Work">
+      <PageHero
+        image={heroImg}
+        imageClassName="hero-drift-soft object-center opacity-100"
+        className="md:[&>div:last-child]:py-32"
+        eyebrow="Development timeline"
+        title="The Journey of Your Work"
+      >
         Idea → Initial Work → Evidence Added → Feedback → Revision → Demonstration → Outcome. MetaTwin records development over time, so feedback becomes visible improvement — and stronger evidence.
       </PageHero>
       <Section className="grid gap-10 lg:grid-cols-[1fr_320px]">
@@ -83,7 +90,13 @@ function MyJourney({ userId }: { userId: string }) {
 
   return (
     <>
-      <PageHero eyebrow="Development timeline" title="The journey of your work">
+      <PageHero
+        image={heroImg}
+        imageClassName="hero-drift-soft object-center opacity-100"
+        className="md:[&>div:last-child]:py-32"
+        eyebrow="Development timeline"
+        title="The journey of your work"
+      >
         MetaTwin records how each project develops over time, so progress becomes visible evidence. These timelines are built from the dates you actually added projects and evidence.
       </PageHero>
       <Section className="space-y-14">

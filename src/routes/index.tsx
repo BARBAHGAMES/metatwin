@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import heroImg from "@/assets/hero-home.jpg";
 import { ArrowRight, Layers, FileCheck2, TrendingUp, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProfileMockup } from "@/components/ProfileMockup";
-import { CareerGraph } from "@/components/CareerGraph";
 import sampleProfilePhoto from "@/assets/sample-profile.png";
-import { Card, Section, StatusBadge } from "@/components/site";
+import { Card, HeroBackdrop, Section, StatusBadge } from "@/components/site";
 import { Reveal } from "@/components/Reveal";
 import { capBySlug, statusMeta, type Status } from "@/lib/data";
 
@@ -27,18 +27,17 @@ function Home() {
   return (
     <>
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
-        <div className="absolute inset-0 opacity-70"><CareerGraph /></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/80 to-ink/20" aria-hidden />
+        <HeroBackdrop image={heroImg} />
         <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 md:py-24 lg:grid-cols-[1fr_1.05fr]">
           <div>
             <p className="hero-rise inline-flex items-center gap-2 rounded-full border border-ink-foreground/15 bg-ink-foreground/5 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-electric">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-electric" /> The age of capability
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-electric" /> The Future of the CV
             </p>
             <h1 className="hero-rise-delay-1 mt-5 text-4xl font-semibold leading-[1.08] md:text-6xl">
-              Your CV tells people what you've done. <span className="text-gradient-electric">MetaTwin shows them what you can do.</span>
+              Your CV lists skills. <span className="text-gradient-electric">Your MetaTwin brings a workforce.</span>
             </h1>
             <p className="hero-rise-delay-1 mt-6 max-w-xl text-lg text-ink-muted">
-              MetaTwin is your digital twin of capability—a living record of what you know, what you create, what you can demonstrate, and the evidence behind your work.
+              In the age of capability, everyone needs two things: proof of what they can do, and a team of AI employees working for them. MetaTwin puts both in one profile, so one hire brings a whole team.
             </p>
             <div className="hero-rise-delay-2 mt-8 flex flex-wrap gap-3">
               <Button asChild variant="hero" size="lg"><Link to="/build">Build Your MetaTwin <ArrowRight /></Link></Button>

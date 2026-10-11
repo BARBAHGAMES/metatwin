@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import heroImg from "@/assets/hero-pricing.jpg";
 import { useState } from "react";
 import { Check, Info, Building2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,7 @@ function Pricing() {
   const pkg = teamPackages.find((p) => p.id === size)!;
   return (
     <>
-      <PageHero eyebrow="Pricing" title="Your next opportunity starts with what you can prove.">
+      <PageHero image={heroImg} eyebrow="Pricing" title="Your next opportunity starts with what you can prove.">
         MetaTwin helps you build a record of your skills, projects, achievements, and contributions. Start with your individual profile or bring your team together to document what you're building.
       </PageHero>
 

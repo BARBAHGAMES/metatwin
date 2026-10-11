@@ -4,16 +4,23 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { statusMeta, type Status } from "@/lib/data";
 import { cn } from "@/lib/utils";
-import { CareerGraph } from "@/components/CareerGraph";
 import { useAuth } from "@/lib/auth";
 import metatwinLogo from "@/assets/metatwin-logo-dark.png";
+import heroBackdrop from "@/assets/hero-backdrop.jpg";
 
-export function HeroBackdrop() {
+export function HeroBackdrop({ image = heroBackdrop, imageClassName }: { image?: string | undefined; imageClassName?: string | undefined }) {
   return (
-    <>
-      <div className="absolute inset-0 opacity-70" aria-hidden><CareerGraph /></div>
-      <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/80 to-ink/20" aria-hidden />
-    </>
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <img
+        src={image}
+        alt=""
+        width={1920}
+        height={1088}
+        className={cn("hero-drift absolute inset-0 h-full w-full object-cover object-right opacity-80", imageClassName)}
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/10" />
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-ink to-transparent" />
+    </div>
   );
 }
 
@@ -196,10 +203,24 @@ export function SampleTag() {
   );
 }
 
-export function PageHero({ eyebrow, title, children }: { eyebrow: string; title: ReactNode; children?: ReactNode }) {
+export function PageHero({
+  eyebrow,
+  title,
+  children,
+  image,
+  imageClassName,
+  className,
+}: {
+  eyebrow: string;
+  title: ReactNode;
+  children?: ReactNode;
+  image?: string | undefined;
+  imageClassName?: string | undefined;
+  className?: string | undefined;
+}) {
   return (
-    <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
-      <HeroBackdrop />
+    <section className={cn("relative overflow-hidden bg-gradient-ink text-ink-foreground", className)}>
+      <HeroBackdrop image={image} imageClassName={imageClassName} />
       <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-20">
         <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">{eyebrow}</p>
         <h1 className="hero-rise-delay-1 mt-4 max-w-3xl text-4xl font-semibold leading-tight md:text-5xl">{title}</h1>

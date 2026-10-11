@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import heroImg from "@/assets/hero-build.jpg";
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Check, FileCheck2, Lock, Plus, Sparkles, Trash2, UserRound, Layers, Paperclip, Target, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -90,7 +91,7 @@ function Build() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-muted/40">
       <div className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
-        <HeroBackdrop />
+        <HeroBackdrop image={heroImg} />
         <div className="relative mx-auto max-w-7xl px-5 py-10">
           <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Build Your MetaTwin</p>
           <h1 className="hero-rise-delay-1 mt-3 text-3xl font-semibold md:text-4xl">Don't just tell the world. Show the evidence.</h1>
@@ -265,7 +266,7 @@ function Done({ name, caps, evs, vis }: { name: string; caps: Cap[]; evs: Ev[]; 
   const counts = (Object.keys(statusMeta) as Status[]).map((s) => [s, caps.filter((c) => c.status === s).length] as const);
   return (
     <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
-      <HeroBackdrop />
+      <HeroBackdrop image={heroImg} />
       <div className="relative mx-auto max-w-3xl px-5 py-20 text-center">
         <div className="pop-in mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-electric shadow-glow"><Check className="h-8 w-8" /></div>
         <h1 className="hero-rise mt-6 text-4xl font-semibold md:text-5xl">{name.trim() ? `Here's your MetaTwin preview, ${name.trim().split(" ")[0]}.` : "Here's your MetaTwin preview."}</h1>

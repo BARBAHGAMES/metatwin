@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import heroImg from "@/assets/hero-capability.jpg";
 import { useEffect, useState } from "react";
 import { ArrowLeft, FileCheck2, AlertCircle } from "lucide-react";
 import { capBySlug, projectById, statusMeta, type Capability, type Status } from "@/lib/data";
@@ -85,7 +86,7 @@ function RealCapability({ skill, userId }: { skill: SkillRow; userId: string }) 
   const status: Status | null = data ? (data.competency.evidence_count > 0 ? "evidence" : "self") : null;
   return (
     <>
-      <PageHero eyebrow={`Your capability${skill.category ? ` · ${skill.category}` : ""}`} title={skill.name}>
+      <PageHero image={heroImg} eyebrow={`Your capability${skill.category ? ` · ${skill.category}` : ""}`} title={skill.name}>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           {status ? <StatusBadge status={status} /> : <span className="text-sm text-ink-muted">Not added yet</span>}
         </div>
@@ -153,7 +154,7 @@ function RealCapability({ skill, userId }: { skill: SkillRow; userId: string }) 
 function SampleCapability({ cap }: { cap: Capability }) {
   return (
     <>
-      <PageHero eyebrow={`Capability · ${cap.group}`} title={cap.name}>
+      <PageHero image={heroImg} eyebrow={`Capability · ${cap.group}`} title={cap.name}>
         <p>{cap.summary}</p>
         <div className="mt-5 flex flex-wrap items-center gap-3"><StatusBadge status={cap.status} /><SampleTag /></div>
       </PageHero>

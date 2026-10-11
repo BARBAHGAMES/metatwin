@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import heroImg from "@/assets/hero-metatwin.jpg";
 import { useEffect, useState } from "react";
 import { ArrowRight, MapPin, Target, Lock, Bot, Briefcase, UserPlus, Sparkles, Search, Handshake } from "lucide-react";
 import { toast } from "sonner";
@@ -292,7 +293,7 @@ function RealProfile({ userId }: { userId: string }) {
 function VisionHero({ signedIn }: { signedIn: boolean }) {
   return (
     <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
-      <HeroBackdrop />
+      <HeroBackdrop image={heroImg} />
       <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-24">
         <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Your MetaTwin</p>
         <h1 className="hero-rise-delay-1 mt-4 max-w-4xl text-4xl font-semibold leading-tight md:text-6xl">Your digital twin. Working for you, 24/7.</h1>

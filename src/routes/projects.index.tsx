@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import heroImg from "@/assets/hero-explore.jpg";
 import { useEffect, useState } from "react";
 import { FileCheck2, Users, User } from "lucide-react";
 import { capBySlug, projects, type Discipline, type Stage } from "@/lib/data";
@@ -39,7 +40,7 @@ function SampleProjects() {
   const list = projects.filter((p) => (d === "All" || p.discipline === d) && (s === "All" || p.stage === s));
   return (
     <>
-      <PageHero eyebrow="Explore Capabilities" title="Real work. Clear contribution. Visible evidence.">
+      <PageHero image={heroImg} eyebrow="Explore Capabilities" title="Real work. Clear contribution. Visible evidence.">
         Every project shows what was built, who did what, and which capabilities it demonstrates. All examples are fictional.
       </PageHero>
       <Section className="py-10 md:py-12">
@@ -129,7 +130,7 @@ function SignedInProjects({ userId }: { userId: string }) {
 
   return (
     <>
-      <PageHero eyebrow="My projects" title="The work you've documented.">
+      <PageHero image={heroImg} eyebrow="My projects" title="The work you've documented.">
         Each project shows when it started and the evidence you've attached along the way.
       </PageHero>
       <Section className="py-10 md:py-12">
