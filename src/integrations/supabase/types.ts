@@ -321,6 +321,7 @@ export type Database = {
         Row: {
           birth_year: number | null;
           created_at: string;
+          handle: string | null;
           headline: string | null;
           id: string;
           institution: string | null;
@@ -328,6 +329,7 @@ export type Database = {
           name: string | null;
           parental_consent_at: string | null;
           programme: string | null;
+          public_show_evidence_details: boolean;
           updated_at: string;
           visibility: string;
           year: number | null;
@@ -335,6 +337,7 @@ export type Database = {
         Insert: {
           birth_year?: number | null;
           created_at?: string;
+          handle?: string | null;
           headline?: string | null;
           id: string;
           institution?: string | null;
@@ -342,6 +345,7 @@ export type Database = {
           name?: string | null;
           parental_consent_at?: string | null;
           programme?: string | null;
+          public_show_evidence_details?: boolean;
           updated_at?: string;
           visibility?: string;
           year?: number | null;
@@ -349,6 +353,7 @@ export type Database = {
         Update: {
           birth_year?: number | null;
           created_at?: string;
+          handle?: string | null;
           headline?: string | null;
           id?: string;
           institution?: string | null;
@@ -356,6 +361,7 @@ export type Database = {
           name?: string | null;
           parental_consent_at?: string | null;
           programme?: string | null;
+          public_show_evidence_details?: boolean;
           updated_at?: string;
           visibility?: string;
           year?: number | null;
@@ -367,6 +373,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      get_public_profile: {
+        Args: { p_handle: string };
+        Returns: Json;
+      };
       declare_adult: {
         Args: { p_birth_year: number };
         Returns: undefined;

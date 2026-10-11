@@ -44,6 +44,7 @@ type Twin = {
   year: number | null;
   headline: string | null;
   visibility: "private" | "public";
+  handle: string | null;
 };
 type Competency = {
   id: string;
@@ -72,7 +73,7 @@ function RealProfile({ userId }: { userId: string }) {
     let cancelled = false;
     async function load() {
       const [twinRes, compsRes, projectsRes, evidenceRes] = await Promise.all([
-        supabase.from("twins").select("id, name, institution, programme, year, headline, visibility").eq("id", userId).maybeSingle(),
+        supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, handle").eq("id", userId).maybeSingle(),
         supabase
           .from("competencies")
           .select("id, level, evidence_count, updated_at, skills(name, category)")
@@ -97,7 +98,7 @@ function RealProfile({ userId }: { userId: string }) {
         return;
       }
       setLoadError(false);
-      setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private" });
+      setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private", handle: null });
       setCompetencies((compsRes.data as unknown as Competency[] | null) ?? []);
       setProjectList((projectsRes.data as Project[] | null) ?? []);
       setEvidence((evidenceRes.data as Evidence[] | null) ?? []);
@@ -260,9 +261,16 @@ function RealProfile({ userId }: { userId: string }) {
           <Card className="bg-muted/50">
             <p className="flex items-start gap-2 text-sm text-muted-foreground">
               <Lock className="mt-0.5 h-4 w-4 shrink-0" />
-              {twin.visibility === "public"
-                ? "You've marked this profile public. Shareable public pages are coming soon — there is no employer access in this version."
-                : "This profile is private — only you can see it. Change this from your dashboard."}
+              {twin.visibility === "public" && twin.handle ? (
+                <span>
+                  Your profile is public. Anyone with your link can view it:{" "}
+                  <Link to="/t/$handle" params={{ handle: twin.handle }} className="text-electric underline-offset-4 hover:underline">
+                    /t/{twin.handle}
+                  </Link>
+                </span>
+              ) : (
+                "This profile is private — only you can see it. You can share a public page from your dashboard."
+              )}
             </p>
           </Card>
         </aside>

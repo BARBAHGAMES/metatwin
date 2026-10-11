@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -112,6 +112,12 @@ export function Header() {
 }
 
 export function Footer() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { user } = useAuth();
+  // The "fictional demonstration data" line is true on marketing/sample pages
+  // but false where a real student's data is shown.
+  const showsRealData =
+    pathname.startsWith("/t/") || pathname.startsWith("/dashboard") || (pathname === "/profile" && !!user);
   return (
     <footer className="bg-ink text-ink-muted">
       <div className="mx-auto grid max-w-7xl gap-8 px-5 py-14 md:grid-cols-[1.5fr_1fr_1fr]">
@@ -136,9 +142,11 @@ export function Footer() {
           <Link to="/about" className="block hover:text-ink-foreground">About</Link>
         </div>
       </div>
-      <div className="border-t border-ink-foreground/10 px-5 py-5 text-center text-xs">
-        Prototype · All people, projects and reviews shown are fictional demonstration data.
-      </div>
+      {!showsRealData && (
+        <div className="border-t border-ink-foreground/10 px-5 py-5 text-center text-xs">
+          Prototype · All people, projects and reviews shown are fictional demonstration data.
+        </div>
+      )}
     </footer>
   );
 }

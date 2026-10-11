@@ -16,6 +16,7 @@ import { AdultGate } from "@/components/AdultGate";
 import { LINK_ERROR, isHttpUrl, safeHref } from "@/lib/url";
 import { LIMITS, validateStudyYear } from "@/lib/limits";
 import { LoadError } from "@/components/LoadError";
+import { HANDLE_HELP, normalizeHandle, publicProfilePath, validateHandle } from "@/lib/public-profile";
 import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -37,6 +38,8 @@ type Twin = {
   headline: string | null;
   visibility: "private" | "public";
   is_adult: boolean;
+  handle: string | null;
+  public_show_evidence_details: boolean;
 };
 
 type Skill = { id: string; name: string; category: string | null };
@@ -97,7 +100,7 @@ function Dashboard() {
 
   async function loadAll(userId: string) {
     const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes] = await Promise.all([
-      supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, is_adult").eq("id", userId).maybeSingle(),
+      supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, is_adult, handle, public_show_evidence_details").eq("id", userId).maybeSingle(),
       supabase.from("skills").select("id, name, category").order("name"),
       supabase
         .from("competencies")
@@ -135,6 +138,8 @@ function Dashboard() {
         headline: null,
         visibility: "private",
         is_adult: false,
+        handle: null,
+        public_show_evidence_details: false,
       },
     );
     setSkills((skillsRes.data as Skill[] | null) ?? []);
@@ -494,11 +499,25 @@ function Dashboard() {
 function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
   const [form, setForm] = useState(twin);
   const [saving, setSaving] = useState(false);
+  const publicBase = typeof window === "undefined" ? "" : window.location.origin;
 
   async function save() {
     const yearError = validateStudyYear(form.year);
     if (yearError) {
       toast.error(yearError);
+      return;
+    }
+    const handle = normalizeHandle(form.handle ?? "");
+    const isPublic = form.visibility === "public";
+    if (handle || isPublic) {
+      const handleError = validateHandle(handle);
+      if (handleError) {
+        toast.error(isPublic && !handle ? "Choose a handle to make your profile public." : handleError);
+        return;
+      }
+    }
+    if (isPublic && !form.name?.trim()) {
+      toast.error("Add your name before making your profile public.");
       return;
     }
     setSaving(true);
@@ -512,12 +531,14 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
         year: form.year,
         headline: form.headline,
         visibility: form.visibility,
+        handle: handle || null,
+        public_show_evidence_details: form.public_show_evidence_details,
       },
       { onConflict: "id" },
     );
     setSaving(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(error.code === "23505" ? "That handle is already taken. Try another." : error.message);
       return;
     }
     toast.success("Profile saved.");
@@ -552,17 +573,71 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
           onChange={(e) => setForm({ ...form, year: e.target.value ? Number(e.target.value) : null })}
         />
       </div>
-      <label className="flex items-center gap-2 self-end pb-2 text-sm">
-        <input
-          type="checkbox"
-          checked={form.visibility === "public"}
-          onChange={(e) => setForm({ ...form, visibility: e.target.checked ? "public" : "private" })}
-        />
-        Make my profile public
-      </label>
-      <p className="self-end pb-2 text-xs text-muted-foreground">
-        Shareable public profile links are coming soon. There is no employer access in this version.
-      </p>
+      <div className="space-y-4 rounded-xl border bg-muted/30 p-4 sm:col-span-2">
+        <div>
+          <h4 className="font-semibold">Public profile</h4>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Optional. Your profile is private unless you turn this on. When public, anyone with your link can view it.
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="profile-handle">Your link</Label>
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-sm text-muted-foreground">{publicBase}/t/</span>
+            <Input
+              id="profile-handle"
+              maxLength={30}
+              value={form.handle ?? ""}
+              onChange={(e) => setForm({ ...form, handle: e.target.value.toLowerCase() })}
+              placeholder="your-name"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">{HANDLE_HELP}</p>
+        </div>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={form.visibility === "public"}
+            onChange={(e) => setForm({ ...form, visibility: e.target.checked ? "public" : "private" })}
+          />
+          <span>Make my profile public</span>
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={form.public_show_evidence_details}
+            onChange={(e) => setForm({ ...form, public_show_evidence_details: e.target.checked })}
+          />
+          <span>Also show my evidence links, evidence notes and project links</span>
+        </label>
+        <p className="text-xs text-muted-foreground">
+          The public page shows your name, headline, institution, programme, capabilities, evidence titles and projects. It never
+          shows your email, birth year or year of study.
+        </p>
+        {twin.visibility === "public" && twin.handle && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-background p-3 text-sm">
+            <span className="min-w-0 truncate font-mono text-xs">{publicBase}{publicProfilePath(twin.handle)}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard
+                  ?.writeText(`${publicBase}${publicProfilePath(twin.handle!)}`)
+                  .then(() => toast.success("Link copied."))
+                  .catch(() => toast.error("Couldn't copy — select the link and copy it manually."));
+              }}
+            >
+              Copy link
+            </Button>
+            <Button asChild type="button" variant="link" size="sm" className="px-0">
+              <a href={publicProfilePath(twin.handle)} target="_blank" rel="noopener noreferrer">View public page</a>
+            </Button>
+          </div>
+        )}
+      </div>
       <div className="sm:col-span-2">
         <Button onClick={save} disabled={saving}>{saving ? "Saving..." : "Save profile"}</Button>
       </div>
