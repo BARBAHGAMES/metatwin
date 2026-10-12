@@ -111,18 +111,12 @@ function Build() {
     async function load() {
       const [citiesRes, universitiesRes, skillsRes] = await Promise.all([
         supabase.from("kenya_cities").select("id, name").order("name"),
-        supabase.from("universities").select("id, name, location").order("name"),
+        supabase.from("universities").select("id, name, location").order("sort_order"),
         supabase.from("skills").select("id, name, category").order("name"),
       ]);
       if (cancelled) return;
       setCities((citiesRes.data as City[] | null) ?? []);
-      const sortedUniversities = ((universitiesRes.data as University[] | null) ?? []).sort((a, b) => {
-        const aFirst = a.name === "Mount Kenya University";
-        const bFirst = b.name === "Mount Kenya University";
-        if (aFirst !== bFirst) return aFirst ? -1 : 1;
-        return a.name.localeCompare(b.name);
-      });
-      setUniversities(sortedUniversities);
+      setUniversities((universitiesRes.data as University[] | null) ?? []);
       setSkills((skillsRes.data as Skill[] | null) ?? []);
       setLoadingLists(false);
     }

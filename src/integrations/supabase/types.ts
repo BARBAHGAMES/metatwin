@@ -646,16 +646,19 @@ export type Database = {
           id: string;
           location: string | null;
           name: string;
+          sort_order: number;
         };
         Insert: {
           id?: string;
           location?: string | null;
           name: string;
+          sort_order?: number;
         };
         Update: {
           id?: string;
           location?: string | null;
           name?: string;
+          sort_order?: number;
         };
         Relationships: [];
       };
