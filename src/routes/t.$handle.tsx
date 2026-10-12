@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowRight, ExternalLink, GitFork, Github, MapPin, Rocket, Star } from "lucide-react";
+import { ArrowRight, ExternalLink, Flame, GitFork, Github, MapPin, Rocket, Star } from "lucide-react";
 import { fetchPublicProfile, type PublicCapability, type PublicProfile } from "@/lib/public-profile";
 import { safeHref } from "@/lib/url";
 import { Card, HeroBackdrop, SampleAvatar, Section, StatusBadge } from "@/components/site";
@@ -106,6 +106,47 @@ function PublicProfilePage() {
       </section>
 
       <Section className="mx-auto grid max-w-5xl gap-10">
+        {profile.github_activity && (
+          <div>
+            <h2 className="flex items-center gap-2 text-2xl font-semibold"><Github className="h-5 w-5" /> GitHub activity</h2>
+            <Card className="mt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <a href={`https://github.com/${profile.github_activity.username}`} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-2 text-sm font-medium text-electric hover:underline">
+                  @{profile.github_activity.username} <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-2xl font-semibold">{profile.github_activity.total_contributions_year}</p>
+                  <p className="text-xs text-muted-foreground">contributions (1y)</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="flex items-center gap-1 text-2xl font-semibold">
+                    {profile.github_activity.current_streak_days}
+                    {profile.github_activity.current_streak_days > 0 && <Flame className="h-4 w-4 text-electric" />}
+                  </p>
+                  <p className="text-xs text-muted-foreground">day streak</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-2xl font-semibold">{profile.github_activity.public_repo_count}</p>
+                  <p className="text-xs text-muted-foreground">public repos</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-2xl font-semibold">{profile.github_activity.top_languages[0]?.language ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground">top language</p>
+                </div>
+              </div>
+              {profile.github_activity.top_languages.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {profile.github_activity.top_languages.map((l) => (
+                    <span key={l.language} className="rounded-md bg-electric-soft px-2 py-0.5 text-xs text-accent-foreground">{l.language} · {l.pct}%</span>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+
         <div>
           <h2 className="text-2xl font-semibold">Capabilities</h2>
           {profile.capabilities.length === 0 ? (

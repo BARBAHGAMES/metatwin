@@ -21,6 +21,7 @@ import { fetchMyOpportunityMatches, type OpportunityMatch } from "@/lib/real-dat
 import { HANDLE_HELP, normalizeHandle, publicProfilePath, validateHandle } from "@/lib/public-profile";
 import { uploadAvatar } from "@/lib/avatar";
 import { OpportunitiesScout } from "@/components/OpportunitiesScout";
+import { GithubActivityCard } from "@/components/GithubActivityCard";
 import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -541,6 +542,10 @@ function Dashboard() {
             </ul>
           )}
           <OpportunitiesScout />
+        </Card>
+
+        <Card className="mt-5">
+          <GithubActivityCard />
         </Card>
 
         <Card className="mt-5">

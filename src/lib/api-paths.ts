@@ -8,6 +8,19 @@ export const GITHUB_SYNC_PATH = "/api/github/sync";
 export const TWIN_CHAT_PATH = "/api/ai/chat";
 export const OPPORTUNITIES_SCOUT_PATH = "/api/ai/opportunities";
 export const PARTNERSHIP_INQUIRY_WEBHOOK_PATH = "/api/webhooks/partnership-inquiry";
+export const GITHUB_CONNECT_PATH = "/api/github/connect";
+export const GITHUB_REFRESH_PATH = "/api/github/refresh";
+
+export type GithubConnection = {
+  github_username: string;
+  avatar_url: string | null;
+  total_contributions_year: number;
+  current_streak_days: number;
+  top_languages: { language: string; pct: number }[];
+  public_repo_count: number;
+  connected_at: string;
+  last_synced_at: string;
+};
 
 export type GitHubRepoStats = {
   full_name: string;

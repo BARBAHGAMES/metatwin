@@ -57,6 +57,18 @@ export type PublicProject = {
   github?: PublicGithubStats | null;
   pitch_stats?: PublicPitchStats | null;
 };
+// Aggregate signals only, deliberately — no repo listing, no token. Shown to
+// anyone viewing a public profile (including recruiters), so it mirrors
+// exactly what GitHub's own public contribution graph exposes: activity
+// counts, not repo contents.
+export type PublicGithubActivity = {
+  username: string;
+  avatar_url: string | null;
+  total_contributions_year: number;
+  current_streak_days: number;
+  top_languages: { language: string; pct: number }[];
+  public_repo_count: number;
+};
 export type PublicProfile = {
   handle: string;
   name: string | null;
@@ -65,6 +77,7 @@ export type PublicProfile = {
   programme: string | null;
   photo_url: string | null;
   show_evidence_details: boolean;
+  github_activity: PublicGithubActivity | null;
   capabilities: PublicCapability[];
   projects: PublicProject[];
 };
@@ -84,6 +97,8 @@ export type PublicTwinListItem = {
   headline: string | null;
   institution: string | null;
   photo_url: string | null;
+  github_username: string | null;
+  github_total_contributions_year: number | null;
 };
 
 // For the Find Talent directory — the same least-privilege pattern as

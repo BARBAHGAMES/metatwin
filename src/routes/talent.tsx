@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Search, UserRound } from "lucide-react";
+import { Search, UserRound, Github } from "lucide-react";
 import { fetchPublicTwins, type PublicTwinListItem } from "@/lib/public-profile";
 import { Card, HeroBackdrop, Section } from "@/components/site";
 import { Input } from "@/components/ui/input";
@@ -85,6 +85,11 @@ function Talent() {
                     <p className="truncate font-medium">{t.name ?? "MetaTwin"}</p>
                     {t.headline && <p className="truncate text-sm text-muted-foreground">{t.headline}</p>}
                     {t.institution && <p className="truncate text-xs text-muted-foreground">{t.institution}</p>}
+                    {t.github_username && (
+                      <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                        <Github className="h-3 w-3" /> {t.github_total_contributions_year} contributions (1y)
+                      </p>
+                    )}
                   </div>
                 </Card>
               </Link>

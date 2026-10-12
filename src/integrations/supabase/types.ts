@@ -240,6 +240,56 @@ export type Database = {
           },
         ];
       };
+      github_connections: {
+        Row: {
+          access_token: string;
+          avatar_url: string | null;
+          connected_at: string;
+          current_streak_days: number;
+          github_user_id: number;
+          github_username: string;
+          last_synced_at: string;
+          public_repo_count: number;
+          top_languages: Json;
+          total_contributions_year: number;
+          twin_id: string;
+        };
+        Insert: {
+          access_token: string;
+          avatar_url?: string | null;
+          connected_at?: string;
+          current_streak_days?: number;
+          github_user_id: number;
+          github_username: string;
+          last_synced_at?: string;
+          public_repo_count?: number;
+          top_languages?: Json;
+          total_contributions_year?: number;
+          twin_id: string;
+        };
+        Update: {
+          access_token?: string;
+          avatar_url?: string | null;
+          connected_at?: string;
+          current_streak_days?: number;
+          github_user_id?: number;
+          github_username?: string;
+          last_synced_at?: string;
+          public_repo_count?: number;
+          top_languages?: Json;
+          total_contributions_year?: number;
+          twin_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "github_connections_twin_id_fkey";
+            columns: ["twin_id"];
+            isOneToOne: true;
+            referencedRelation: "twins";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       github_repos: {
         Row: {
           description: string | null;
@@ -693,6 +743,8 @@ export type Database = {
     };
     Functions: {
       declare_adult: { Args: { p_birth_year: number }; Returns: undefined };
+      disconnect_github: { Args: never; Returns: undefined };
+      get_my_github_connection: { Args: never; Returns: Json };
       get_my_opportunity_matches: {
         Args: never;
         Returns: {
@@ -739,6 +791,8 @@ export type Database = {
       list_public_twins: {
         Args: never;
         Returns: {
+          github_total_contributions_year: number;
+          github_username: string;
           handle: string;
           headline: string;
           institution: string;
