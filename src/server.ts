@@ -1,9 +1,10 @@
-import { NEW_USER_WEBHOOK_PATH, GITHUB_SYNC_PATH, TWIN_CHAT_PATH, OPPORTUNITIES_SCOUT_PATH, PARTNERSHIP_INQUIRY_WEBHOOK_PATH, GITHUB_CONNECT_PATH, GITHUB_REFRESH_PATH } from "./lib/api-paths";
+import { NEW_USER_WEBHOOK_PATH, GITHUB_SYNC_PATH, TWIN_CHAT_PATH, OPPORTUNITIES_SCOUT_PATH, PARTNERSHIP_INQUIRY_WEBHOOK_PATH, GITHUB_CONNECT_PATH, GITHUB_REFRESH_PATH, PITCH_SCORE_WEBHOOK_PATH } from "./lib/api-paths";
 import { handleNewUserWebhook } from "./lib/new-user-webhook-route.server";
 import { handleGitHubSync } from "./lib/github-sync-route.server";
 import { handleTwinChat, handleOpportunitiesScout } from "./lib/twin-ai-route.server";
 import { handlePartnershipInquiryWebhook } from "./lib/partnership-inquiry-webhook-route.server";
 import { handleGithubConnect, handleGithubRefresh } from "./lib/github-connect-route.server";
+import { handlePitchScoreWebhook } from "./lib/pitch-score-webhook-route.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -122,6 +123,18 @@ export default {
         return await handleGithubRefresh(request);
       } catch (error) {
         console.error("[github-refresh route]", error);
+        return new Response(JSON.stringify({ error: "Internal error" }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
+
+    if (url.pathname === PITCH_SCORE_WEBHOOK_PATH && request.method === "POST") {
+      try {
+        return await handlePitchScoreWebhook(request);
+      } catch (error) {
+        console.error("[pitch-score-webhook route]", error);
         return new Response(JSON.stringify({ error: "Internal error" }), {
           status: 500,
           headers: { "content-type": "application/json" },

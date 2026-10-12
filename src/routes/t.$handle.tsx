@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowRight, ExternalLink, Flame, GitFork, Github, MapPin, Rocket, Star, Users2 } from "lucide-react";
+import { ArrowRight, ExternalLink, Flame, GitFork, Github, MapPin, Rocket, Star, Users2, Trophy } from "lucide-react";
 import { fetchPublicProfile, type PublicCapability, type PublicProfile } from "@/lib/public-profile";
 import { safeHref } from "@/lib/url";
 import { Card, HeroBackdrop, SampleAvatar, Section, StatusBadge } from "@/components/site";
@@ -158,6 +158,29 @@ function PublicProfilePage() {
                 </div>
               )}
             </Card>
+          </div>
+        )}
+
+        {profile.pitch_scores.length > 0 && (
+          <div>
+            <h2 className="flex items-center gap-2 text-2xl font-semibold"><Trophy className="h-5 w-5" /> Pitch competition scores</h2>
+            <ul className="mt-5 space-y-3">
+              {profile.pitch_scores.map((s, i) => (
+                <li key={`${s.competition_name}-${s.event_date}-${i}`}>
+                  <Card>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="font-display font-semibold">
+                        {s.competition_name}{s.round_name && <span className="text-muted-foreground"> · {s.round_name}</span>}
+                      </p>
+                      <p className="text-2xl font-semibold">{s.total_score}<span className="text-sm text-muted-foreground">/100</span></p>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Problem {s.problem_score} · Solution {s.solution_score} · Team {s.team_score} · Ask {s.ask_score}
+                    </p>
+                  </Card>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

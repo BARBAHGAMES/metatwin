@@ -473,6 +473,75 @@ export type Database = {
         };
         Relationships: [];
       };
+      pitch_scores: {
+        Row: {
+          ask_score: number;
+          competition_name: string;
+          created_at: string;
+          event_date: string;
+          form_response_id: string;
+          id: string;
+          judge_comment: string | null;
+          judge_name: string | null;
+          problem_score: number;
+          round_name: string | null;
+          solution_score: number;
+          team_id: string | null;
+          team_score: number;
+          total_score: number | null;
+          twin_id: string | null;
+        };
+        Insert: {
+          ask_score: number;
+          competition_name: string;
+          created_at?: string;
+          event_date?: string;
+          form_response_id: string;
+          id?: string;
+          judge_comment?: string | null;
+          judge_name?: string | null;
+          problem_score: number;
+          round_name?: string | null;
+          solution_score: number;
+          team_id?: string | null;
+          team_score: number;
+          total_score?: number | null;
+          twin_id?: string | null;
+        };
+        Update: {
+          ask_score?: number;
+          competition_name?: string;
+          created_at?: string;
+          event_date?: string;
+          form_response_id?: string;
+          id?: string;
+          judge_comment?: string | null;
+          judge_name?: string | null;
+          problem_score?: number;
+          round_name?: string | null;
+          solution_score?: number;
+          team_id?: string | null;
+          team_score?: number;
+          total_score?: number | null;
+          twin_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pitch_scores_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pitch_scores_twin_id_fkey";
+            columns: ["twin_id"];
+            isOneToOne: false;
+            referencedRelation: "twins";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       pitches: {
         Row: {
           business_name: string;
@@ -861,6 +930,7 @@ export type Database = {
           url: string;
         }[];
       };
+      get_my_pitch_scores: { Args: never; Returns: Json };
       get_my_teams: { Args: never; Returns: Json };
       get_public_profile: { Args: { p_handle: string }; Returns: Json };
       get_review_invite: {

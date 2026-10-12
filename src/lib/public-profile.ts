@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { PublicPitchScore } from "./pitch-scores";
 
 // Mirrors twins_handle_format in the public_profile_handle_and_function
 // migration (P1-5): 3-30 chars, lowercase letters/digits/hyphens, starting and
@@ -82,6 +83,7 @@ export type PublicProfile = {
   show_evidence_details: boolean;
   github_activity: PublicGithubActivity | null;
   teams: PublicProfileTeam[];
+  pitch_scores: PublicPitchScore[];
   capabilities: PublicCapability[];
   projects: PublicProject[];
 };

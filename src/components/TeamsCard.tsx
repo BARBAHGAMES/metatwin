@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Users, Plus, ExternalLink, X } from "lucide-react";
+import { Users, Plus, ExternalLink, X, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -133,7 +133,14 @@ export function TeamsCard() {
           {teams.map((team) => (
             <li key={team.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{team.name} {team.visibility === "public" && team.slug && <span className="font-normal text-muted-foreground">· public</span>}</p>
+                <p className="truncate text-sm font-medium">
+                  {team.name} {team.visibility === "public" && team.slug && <span className="font-normal text-muted-foreground">· public</span>}
+                  {team.pitch_scores.length > 0 && (
+                    <span className="ml-1.5 inline-flex items-center gap-1 text-xs font-normal text-muted-foreground">
+                      <Trophy className="h-3 w-3" /> {team.pitch_scores[0]!.total_score}/100
+                    </span>
+                  )}
+                </p>
                 <p className="truncate text-xs text-muted-foreground">{team.members.map((m) => m.name ?? m.handle ?? "member").join(", ")}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -196,6 +203,26 @@ export function TeamsCard() {
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">They need a MetaTwin handle set on their own profile first.</p>
               </div>
+
+              {manageTeam.pitch_scores.length > 0 && (
+                <div className="border-t pt-4">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground"><Trophy className="h-3.5 w-3.5" /> Pitch scores</p>
+                  <ul className="mt-2 space-y-2">
+                    {manageTeam.pitch_scores.map((s) => (
+                      <li key={s.id} className="rounded-md bg-muted/40 px-2.5 py-2 text-sm">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <span className="font-medium">{s.competition_name}{s.round_name && <span className="text-muted-foreground"> · {s.round_name}</span>}</span>
+                          <span className="font-display font-semibold">{s.total_score}/100</span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Problem {s.problem_score} · Solution {s.solution_score} · Team {s.team_score} · Ask {s.ask_score}
+                        </p>
+                        {s.judge_comment && <p className="mt-1 text-xs text-muted-foreground">"{s.judge_comment}"{s.judge_name && <span> — {s.judge_name}</span>}</p>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {manageTeam.is_creator ? (
                 <div className="space-y-3 border-t pt-4">

@@ -23,6 +23,7 @@ import { uploadAvatar } from "@/lib/avatar";
 import { OpportunitiesScout } from "@/components/OpportunitiesScout";
 import { GithubActivityCard } from "@/components/GithubActivityCard";
 import { TeamsCard } from "@/components/TeamsCard";
+import { PitchScoresCard } from "@/components/PitchScoresCard";
 import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -552,6 +553,8 @@ function Dashboard() {
         <Card className="mt-5">
           <TeamsCard />
         </Card>
+
+        <PitchScoresCard />
 
         <Card className="mt-5">
           <div className="flex items-center justify-between gap-3">

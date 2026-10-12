@@ -10,6 +10,7 @@ export const OPPORTUNITIES_SCOUT_PATH = "/api/ai/opportunities";
 export const PARTNERSHIP_INQUIRY_WEBHOOK_PATH = "/api/webhooks/partnership-inquiry";
 export const GITHUB_CONNECT_PATH = "/api/github/connect";
 export const GITHUB_REFRESH_PATH = "/api/github/refresh";
+export const PITCH_SCORE_WEBHOOK_PATH = "/api/webhooks/pitch-score";
 
 export type GithubConnection = {
   github_username: string;

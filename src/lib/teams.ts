@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { MyPitchScore, PublicPitchScore } from "./pitch-scores";
 
 export type MyTeamMember = { twin_id: string; name: string | null; handle: string | null; role: string | null };
 export type MyTeam = {
@@ -9,6 +10,7 @@ export type MyTeam = {
   visibility: "public" | "private";
   is_creator: boolean;
   members: MyTeamMember[];
+  pitch_scores: MyPitchScore[];
 };
 
 export async function fetchMyTeams(): Promise<MyTeam[]> {
@@ -59,6 +61,7 @@ export type PublicTeamProfile = {
   member_count: number;
   members: PublicTeamMember[];
   projects: PublicTeamProject[];
+  pitch_scores: PublicPitchScore[];
 };
 
 export async function fetchTeamPublicProfile(slug: string): Promise<PublicTeamProfile | null> {
