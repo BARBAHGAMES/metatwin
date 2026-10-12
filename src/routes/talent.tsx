@@ -54,7 +54,7 @@ function Talent() {
         <HeroBackdrop />
         <div className="relative mx-auto max-w-4xl px-5 py-16 md:py-20">
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">Find talent</p>
-          <h1 className="mt-4 text-3xl font-semibold md:text-5xl">People with proof, not just a CV.</h1>
+          <h1 className="mt-4 text-3xl font-bold md:text-5xl">People with proof, not just a CV.</h1>
           <p className="mt-3 max-w-xl text-ink-muted">Every MetaTwin here is public by choice. Open one to see the capabilities, projects and evidence behind it.</p>
         </div>
       </section>

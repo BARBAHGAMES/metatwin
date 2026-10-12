@@ -515,7 +515,7 @@ function Done({ firstName, caps, evs, vis }: { firstName: string; caps: Cap[]; e
       <HeroBackdrop image={heroImg} />
       <div className="relative mx-auto max-w-3xl px-5 py-20 text-center">
         <div className="pop-in mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-electric shadow-glow"><Check className="h-8 w-8" /></div>
-        <h1 className="hero-rise mt-6 text-4xl font-semibold md:text-5xl">
+        <h1 className="hero-rise mt-6 text-4xl font-bold md:text-5xl">
           {user
             ? `Your MetaTwin is live, ${firstName.trim() || "there"}.`
             : firstName.trim()

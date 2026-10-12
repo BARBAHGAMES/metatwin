@@ -165,15 +165,29 @@
   * {
     border-color: var(--color-border);
   }
+  html {
+    /* Scales every rem-based Tailwind size (type and spacing both) up from
+       the 16px default — makes body copy read larger site-wide without
+       hand-editing every text-* class, and gives sections a touch more
+       breathing room as a side effect since spacing utilities are rem too. */
+    font-size: 19px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
+    text-wrap: balance;
   }
 }
 

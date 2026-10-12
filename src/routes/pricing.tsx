@@ -45,7 +45,8 @@ function Pricing() {
     <>
       <PageHero
         image={heroImg}
-        imageClassName="sm:object-[68%_40%]"
+        imageClassName="sm:object-[62%_52%]"
+        className="md:flex md:min-h-[640px] md:items-center"
         eyebrow="Pricing"
         title="Your next opportunity starts with what you can prove."
       >
@@ -90,14 +91,19 @@ function Pricing() {
                   <thead><tr className="border-b bg-muted/50 text-left">
                     <th scope="col" className="p-4 font-semibold">Feature</th>
                     <th scope="col" className="p-4 font-semibold">Basic</th>
-                    <th scope="col" className="p-4 font-semibold">Guided</th>
+                    <th scope="col" className="relative bg-primary p-4 font-semibold text-primary-foreground">
+                      <span className="absolute inset-x-0 -top-px h-0.5 bg-electric" aria-hidden />
+                      Guided <span className="ml-1 font-normal text-primary-foreground/70">· Most guidance</span>
+                    </th>
                     <th scope="col" className="p-4 font-semibold">Builder</th>
                   </tr></thead>
                   <tbody>
                     {comparisonRows.map((r) => (
                       <tr key={r.feature} className="border-b last:border-0">
                         <th scope="row" className="p-4 text-left font-medium">{r.feature}</th>
-                        {[r.basic, r.guided, r.builder].map((v, i) => <td key={i} className={cn("p-4", v === "Included" ? "text-foreground" : v === "Not included" ? "text-muted-foreground" : "text-accent-foreground")}>{v}</td>)}
+                        {[r.basic, r.guided, r.builder].map((v, i) => (
+                          <td key={i} className={cn("p-4", i === 1 && "bg-electric-soft/60 font-medium", v === "Included" ? "text-foreground" : v === "Not included" ? "text-muted-foreground" : "text-accent-foreground")}>{v}</td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>

@@ -80,7 +80,7 @@ function PublicProfilePage() {
               <SampleAvatar initials={initialsOf(profile.name)} className="h-28 w-28 rounded-3xl text-4xl shadow-glow ring-2 ring-electric/40" />
             )}
             <div className="min-w-0">
-              <h1 className="text-4xl font-semibold md:text-5xl">{profile.name || "MetaTwin student"}</h1>
+              <h1 className="text-4xl font-bold md:text-5xl">{profile.name || "MetaTwin student"}</h1>
               {profile.headline && <p className="mt-2 text-lg text-ink-muted">{profile.headline}</p>}
               {(profile.institution || profile.programme) && (
                 <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-muted">

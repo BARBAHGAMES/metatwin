@@ -37,7 +37,7 @@ function How() {
         <HeroBackdrop />
         <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-24">
           <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">How It Works</p>
-          <h1 className="hero-rise-delay-1 mt-5 max-w-4xl text-4xl font-semibold leading-[1.08] md:text-6xl">
+          <h1 className="hero-rise-delay-1 mt-5 max-w-4xl text-4xl font-extrabold leading-[1.08] tracking-[-0.03em] md:text-6xl">
             The job market is shifting to a <span className="text-gradient-electric">proof-of-capability market.</span>
           </h1>
           <p className="hero-rise-delay-1 mt-6 max-w-2xl text-lg text-ink-muted">

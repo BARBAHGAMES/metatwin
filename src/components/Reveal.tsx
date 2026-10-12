@@ -15,13 +15,22 @@ type RevealProps = {
   y?: number;
   /** Wrapper element — use "ol"/"ul" when children are <li> (div is invalid there). */
   as?: "div" | "ol" | "ul";
+  /**
+   * Tie progress directly to scroll position instead of a one-shot
+   * play-on-enter trigger — children settle into place (position + a slight
+   * alternating tilt) as the section scrolls through view, rather than
+   * fading up all at once. Reserved for a section's single signature
+   * moment, not a default — overusing scroll-scrubbing everywhere reads as
+   * busy rather than premium. Requires `stagger` (multiple children).
+   */
+  scrub?: boolean;
 };
 
 // Scroll-triggered fade+rise, used for marketing/content sections below the
 // fold. Skips entirely under prefers-reduced-motion — content renders at its
 // final state immediately, never invisible-by-default (keeps it crawlable
 // and avoids stranding keyboard/reduced-motion users on an empty section).
-export function Reveal({ children, className, stagger, delay = 0, y = 16, as = "div" }: RevealProps) {
+export function Reveal({ children, className, stagger, delay = 0, y = 22, as = "div", scrub = false }: RevealProps) {
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -34,25 +43,24 @@ export function Reveal({ children, className, stagger, delay = 0, y = 16, as = "
     const ctx = gsap.context(() => {
       gsap.fromTo(
         targets,
-        { opacity: 0, y },
+        { opacity: 0, y, rotate: scrub ? (i: number) => (i % 2 === 0 ? -3 : 3) : 0 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.4,
-          delay,
-          ease: "power1.out",
+          rotate: 0,
+          duration: scrub ? 1 : 0.65,
+          delay: scrub ? 0 : delay,
+          ease: scrub ? "none" : "power3.out",
           stagger: stagger ?? 0,
-          scrollTrigger: {
-            trigger: el,
-            start: "top 88%",
-            toggleActions: "play none none reverse",
-          },
+          scrollTrigger: scrub
+            ? { trigger: el, start: "top 85%", end: "top 35%", scrub: 0.6 }
+            : { trigger: el, start: "top 88%", toggleActions: "play none none reverse" },
         },
       );
     }, el);
 
     return () => ctx.revert();
-  }, [stagger, delay, y]);
+  }, [stagger, delay, y, scrub]);
 
   const Tag = as;
   return (

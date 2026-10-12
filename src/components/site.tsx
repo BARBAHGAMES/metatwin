@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { statusMeta, type Status } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-import metatwinLogo from "@/assets/metatwin-logo-dark.png";
+import metatwinLogo from "@/assets/metatwin_logo_transparent.png";
 import heroBackdrop from "@/assets/hero-backdrop.jpg";
 
 export function HeroBackdrop({
@@ -45,7 +45,7 @@ export function Logo() {
       <img
         src={metatwinLogo}
         alt="MetaTwin"
-        width={600}
+        width={548}
         height={168}
         className="h-10 w-auto shrink-0 sm:h-12"
       />
@@ -242,7 +242,7 @@ export function PageHero({
       <HeroBackdrop image={image} imageClassName={imageClassName} />
       <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-20">
         <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">{eyebrow}</p>
-        <h1 className="hero-rise-delay-1 mt-4 max-w-3xl text-4xl font-semibold leading-tight md:text-5xl">{title}</h1>
+        <h1 className="hero-rise-delay-1 mt-4 max-w-3xl text-4xl font-bold leading-tight md:text-5xl">{title}</h1>
         {children && <div className="hero-rise-delay-2 mt-5 max-w-2xl text-ink-muted">{children}</div>}
       </div>
     </section>

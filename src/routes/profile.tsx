@@ -172,7 +172,7 @@ function RealProfile({ userId }: { userId: string }) {
           <div className="hero-rise mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
             <SampleAvatar initials={initials} className="h-64 w-52 rounded-3xl text-5xl shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64" />
             <div className="min-w-0">
-              <h1 className="mt-4 text-4xl font-semibold md:text-6xl">{twin.name || "Add your name"}</h1>
+              <h1 className="mt-4 text-4xl font-extrabold tracking-[-0.03em] md:text-6xl">{twin.name || "Add your name"}</h1>
               <p className="mt-2 text-lg text-ink-muted">{twin.headline || "Add a headline from your dashboard"}</p>
               {(twin.institution || twin.programme) && (
                 <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-muted">
@@ -314,7 +314,7 @@ function VisionHero({ signedIn }: { signedIn: boolean }) {
       <HeroBackdrop image={heroImg} />
       <div className="relative mx-auto max-w-7xl px-5 py-16 md:py-24">
         <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Your MetaTwin</p>
-        <h1 className="hero-rise-delay-1 mt-4 max-w-4xl text-4xl font-semibold leading-tight md:text-6xl">Your digital twin. Working for you, 24/7.</h1>
+        <h1 className="hero-rise-delay-1 mt-4 max-w-4xl text-4xl font-extrabold leading-tight tracking-[-0.03em] md:text-6xl">Your digital twin. Working for you, 24/7.</h1>
         <p className="hero-rise-delay-1 mt-5 max-w-2xl text-lg text-ink-muted">A MetaTwin is the AI version of you. It presents your proven skills to the world and searches for jobs, projects, gigs and collaborations that fit what you can actually do. It does this while you learn, build and sleep.</p>
         <div className="hero-rise-delay-2 mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {([
@@ -371,7 +371,7 @@ function ExampleShowcase() {
               <span className="inline-flex items-center gap-2 rounded-full border border-electric/40 bg-electric/10 px-3 py-1 text-xs text-electric">
                 <Bot className="h-3.5 w-3.5" /> Human + {aiEmployees.length} AI employees
               </span>
-              <h2 className="mt-4 text-4xl font-semibold md:text-5xl">{person.name}</h2>
+              <h2 className="mt-4 text-4xl font-bold md:text-5xl">{person.name}</h2>
               <p className="mt-2 text-lg text-ink-muted">{person.headline}</p>
               <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-muted"><MapPin className="h-4 w-4" />{person.location} · Open to gigs, internships & collaborations</p>
               <p className="mt-5 max-w-2xl text-ink-foreground/90">{person.intro}</p>

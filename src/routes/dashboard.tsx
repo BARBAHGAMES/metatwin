@@ -359,7 +359,7 @@ function Dashboard() {
         <div className="relative mx-auto flex max-w-7xl flex-col gap-4 px-5 py-14 md:flex-row md:items-end md:justify-between md:py-16">
           <div className="hero-rise">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">Owner view · Managing a MetaTwin</p>
-            <h1 className="mt-2 text-3xl font-semibold md:text-5xl">
+            <h1 className="mt-2 text-3xl font-bold md:text-5xl">
               Welcome back{twin.name ? `, ${twin.name.split(" ")[0]}` : ""}.
             </h1>
             <p className="mt-2 text-ink-muted">Skills, evidence and your MetaTwin in one place.</p>

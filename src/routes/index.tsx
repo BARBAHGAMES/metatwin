@@ -33,7 +33,7 @@ function Home() {
             <p className="hero-rise inline-flex items-center gap-2 rounded-full border border-ink-foreground/15 bg-ink-foreground/5 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-electric">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-electric" /> The Future of the CV
             </p>
-            <h1 className="hero-rise-delay-1 mt-5 max-w-xl text-4xl font-semibold leading-[1.08] md:text-6xl">
+            <h1 className="hero-rise-delay-1 mt-5 max-w-xl text-4xl font-extrabold leading-[1.08] tracking-[-0.03em] md:text-6xl">
               Your CV lists skills. <span className="text-gradient-electric">Your MetaTwin brings a workforce.</span>
             </h1>
             <p className="hero-rise-delay-1 mt-6 max-w-xl text-lg text-ink-muted">
@@ -55,7 +55,7 @@ function Home() {
             <h2 className="mt-3 text-3xl font-semibold md:text-4xl">Connect. Show your work. Get matched on evidence.</h2>
             <p className="mt-4 text-muted-foreground">A professional network, a portfolio of proof and a marketplace of opportunity — for a new breed of workforce: individuals with proven capability and their own team of AI employees.</p>
           </div>
-          <Reveal stagger={0.1} className="mt-10 grid gap-5 lg:grid-cols-3">
+          <Reveal stagger={0.15} scrub className="mt-10 grid gap-5 lg:grid-cols-3">
             <Card>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your network</p>
               <div className="mt-4 flex items-center gap-3">
@@ -203,7 +203,7 @@ function Home() {
 
       <Reveal>
         <Section className="text-center">
-          <h2 className="mx-auto max-w-2xl text-3xl font-semibold md:text-5xl">Don't just tell the world what you can do. <span className="text-gradient-electric">Show the evidence.</span></h2>
+          <h2 className="mx-auto max-w-2xl text-3xl font-bold md:text-5xl">Don't just tell the world what you can do. <span className="text-gradient-electric">Show the evidence.</span></h2>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild variant="hero" size="lg"><Link to="/build">Build Your MetaTwin</Link></Button>
             <Button asChild variant="outline" size="lg" className="rounded-full"><Link to="/profile">Explore a Profile</Link></Button>
