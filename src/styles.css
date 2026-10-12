@@ -171,6 +171,15 @@
        hand-editing every text-* class, and gives sections a touch more
        breathing room as a side effect since spacing utilities are rem too. */
     font-size: 19px;
+    /* Safety net, not a fix: a single element (a long button label, an
+       unbreakable string) overflowing anywhere on the page can drag the
+       whole document wider than the viewport on narrow screens, with
+       nothing to scroll back from since nothing visually indicates it's
+       there. `clip` (not `hidden`/`auto`) specifically because it doesn't
+       create a new scroll container or trip the overflow-y:visible→auto
+       conversion that `hidden` causes — both of which can break this
+       header's `position: sticky`. */
+    overflow-x: clip;
   }
   @media (prefers-reduced-motion: no-preference) {
     html {
@@ -218,10 +227,17 @@
 @keyframes hero-drift-soft { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-1%, 0, 0) scale(1.01); } }
 .hero-drift.hero-drift-soft { animation-name: hero-drift-soft; }
 
+/* Ambient gradient blobs for HeroField — two independent drift paths so the
+   pair reads as organic rather than a single mirrored motion. */
+@keyframes hero-field-drift-a { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(6%, 8%, 0) scale(1.12); } }
+@keyframes hero-field-drift-b { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-7%, -6%, 0) scale(1.08); } }
+.hero-field-blob-a { animation: hero-field-drift-a 22s ease-in-out infinite alternate; }
+.hero-field-blob-b { animation: hero-field-drift-b 26s ease-in-out infinite alternate; }
+
 @media (prefers-reduced-motion: reduce) {
   .career-line { animation: none; stroke-dashoffset: 0; }
   .hero-rise, .hero-rise-delay-1, .hero-rise-delay-2, .pop-in { animation: none; }
-  .hero-drift { animation: none; }
+  .hero-drift, .hero-field-blob-a, .hero-field-blob-b { animation: none; }
 }
 
 .dark {

@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, FileText, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { statusMeta, type Status } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,22 @@ export function HeroBackdrop({
         />
       )}
       <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/10" />
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-ink to-transparent" />
+    </div>
+  );
+}
+
+// Ambient, on-brand alternative to HeroBackdrop for hero sections where a
+// photo would just sit behind foreground UI and add nothing visible (e.g.
+// the homepage hero, where ProfileMockup covers most of the frame) — a
+// slow-drifting gradient field plus the same grid-lines pattern used
+// elsewhere (AITeam), instead of a photo nobody actually sees.
+export function HeroField() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <div className="grid-lines absolute inset-0 opacity-70" />
+      <div className="hero-field-blob hero-field-blob-a absolute -left-24 -top-24 h-[28rem] w-[28rem] rounded-full bg-electric/30 blur-3xl" />
+      <div className="hero-field-blob hero-field-blob-b absolute -right-32 bottom-0 h-[26rem] w-[26rem] rounded-full bg-violet/25 blur-3xl" />
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-ink to-transparent" />
     </div>
   );
@@ -150,7 +166,7 @@ export function Footer() {
     (!!user && realDataPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`)));
   return (
     <footer className="bg-ink text-ink-muted">
-      <div className="mx-auto grid max-w-7xl gap-8 px-5 py-14 md:grid-cols-[1.5fr_1fr_1fr]">
+      <div className="mx-auto grid max-w-7xl gap-8 px-5 py-14 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div>
           <Logo />
           <p className="mt-4 max-w-sm text-sm">
@@ -173,6 +189,15 @@ export function Footer() {
           <Link to="/about" className="block hover:text-ink-foreground">About</Link>
           <Link to="/privacy" className="block hover:text-ink-foreground">Privacy Policy</Link>
           <Link to="/terms" className="block hover:text-ink-foreground">Terms of Service</Link>
+        </div>
+        <div className="space-y-2 text-sm">
+          <p className="font-display text-ink-foreground">Pitch Deck</p>
+          <a href="/MetaTwin_Pitch_Deck.pdf" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-ink-foreground">
+            <FileText className="h-3.5 w-3.5 shrink-0" /> View the deck (PDF)
+          </a>
+          <a href="/MetaTwin_Pitch_Deck.mp4" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-ink-foreground">
+            <PlayCircle className="h-3.5 w-3.5 shrink-0" /> Watch the pitch (video)
+          </a>
         </div>
       </div>
       {!showsRealData && (

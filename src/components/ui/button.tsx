@@ -5,7 +5,13 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  // No whitespace-nowrap: this app's button copy runs longer than typical
+  // shadcn defaults ("Discuss an Institutional Partnership"), and nowrap
+  // text that can't shrink forces the whole page wider than the viewport
+  // on narrow screens instead of wrapping. The icon stays adjacent to the
+  // label (flex's default nowrap keeps them as one row of items) — only the
+  // label's own text wraps internally when it needs to.
+  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {

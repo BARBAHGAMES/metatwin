@@ -1,10 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import heroImg from "@/assets/hero-home.jpg";
 import { ArrowRight, Layers, FileCheck2, TrendingUp, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProfileMockup } from "@/components/ProfileMockup";
 import sampleProfilePhoto from "@/assets/sample-profile.jpg";
-import { Card, HeroBackdrop, Section, StatusBadge } from "@/components/site";
+import { Card, HeroField, Section, StatusBadge } from "@/components/site";
 import { Reveal } from "@/components/Reveal";
 import { capBySlug, statusMeta, type Status } from "@/lib/data";
 
@@ -27,7 +26,7 @@ function Home() {
   return (
     <>
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
-        <HeroBackdrop image={heroImg} />
+        <HeroField />
         <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 md:py-24 lg:grid-cols-[1fr_1.05fr]">
           <div className="min-w-0">
             <p className="hero-rise inline-flex items-center gap-2 rounded-full border border-ink-foreground/15 bg-ink-foreground/5 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-electric">
@@ -48,7 +47,7 @@ function Home() {
         </div>
       </section>
 
-      <section className="border-b bg-card">
+      <section className="overflow-x-clip border-b bg-card">
         <Section>
           <div className="max-w-2xl">
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">The capability network</p>

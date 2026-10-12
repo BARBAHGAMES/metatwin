@@ -104,7 +104,7 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
             <div className="mt-6"><Journey steps={buildProjectTimeline(p, evidence)} /></div>
           </div>
         </div>
-        <aside className="space-y-5">
+        <aside className="min-w-0 space-y-5">
           {artifact && (
             <Card>
               <p className="text-xs font-semibold uppercase text-muted-foreground">Project link</p>
@@ -240,7 +240,7 @@ function SampleProject({ p }: { p: Project }) {
             <div className="mt-6"><Journey steps={p.journey} /></div>
           </div>
         </div>
-        <aside>
+        <aside className="min-w-0">
           <Card>
             <h3 className="font-semibold">Competencies demonstrated</h3>
             <ul className="mt-4 space-y-3">

@@ -286,7 +286,7 @@ function RealProfile({ userId }: { userId: string }) {
           )}
         </div>
 
-        <aside className="space-y-5">
+        <aside className="min-w-0 space-y-5">
           <Card className="bg-muted/50">
             <p className="flex items-start gap-2 text-sm text-muted-foreground">
               <Lock className="mt-0.5 h-4 w-4 shrink-0" />
@@ -466,7 +466,7 @@ function SampleProfile() {
           </div>
         </div>
 
-        <aside className="space-y-5">
+        <aside className="min-w-0 space-y-5">
           <Card>
             <h3 className="flex items-center gap-2 font-semibold"><Target className="h-4 w-4 text-electric" /> Development goals</h3>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">{person.goals.map((g) => <li key={g}>— {g}</li>)}</ul>

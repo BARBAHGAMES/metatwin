@@ -466,7 +466,7 @@ function Build() {
           </div>
         </Card>
 
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground"><Eye className="h-3.5 w-3.5" /> Live preview</p>
           <div className="overflow-hidden rounded-2xl border bg-card shadow-card">
             <div className="bg-gradient-ink p-5 text-ink-foreground">

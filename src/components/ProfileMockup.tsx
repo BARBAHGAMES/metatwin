@@ -1,7 +1,7 @@
 import { capabilities, person, projects } from "@/lib/data";
 import sampleProfilePhoto from "@/assets/sample-profile.jpg";
 import { StatusBadge } from "@/components/site";
-import { MessageSquare, Sparkles, Target, FileCheck2 } from "lucide-react";
+import { MessageSquare, Target, FileCheck2 } from "lucide-react";
 
 export function ProfileMockup() {
   const caps = capabilities.slice(0, 4);
@@ -73,9 +73,6 @@ export function ProfileMockup() {
             </div>
           </div>
         </div>
-      </div>
-      <div className="absolute -bottom-5 -left-4 hidden items-center gap-2 rounded-xl border bg-card px-3 py-2 text-xs shadow-card sm:flex">
-        <Sparkles className="h-4 w-4 text-electric" /> New evidence added · 2h ago
       </div>
     </div>
   );

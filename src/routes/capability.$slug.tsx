@@ -132,7 +132,7 @@ function RealCapability({ skill, userId }: { skill: SkillRow; userId: string }) 
             </div>
           )}
         </div>
-        <aside>
+        <aside className="min-w-0">
           <Card>
             <h3 className="font-semibold">What the statuses mean</h3>
             <ul className="mt-4 space-y-4">
@@ -205,7 +205,7 @@ function SampleCapability({ cap }: { cap: Capability }) {
             </Reveal>
           </div>
         </div>
-        <aside>
+        <aside className="min-w-0">
           <Card>
             <h3 className="font-semibold">What the statuses mean</h3>
             <ul className="mt-4 space-y-4">

@@ -41,7 +41,7 @@ function SampleJourney() {
           <h2 className="mb-8 text-2xl font-semibold">{p.title}</h2>
           <Journey steps={p.journey} />
         </div>
-        <aside className="space-y-5">
+        <aside className="min-w-0 space-y-5">
           <Card className="border-electric/30">
             <h3 className="font-semibold">How feedback improved the work</h3>
             <p className="mt-3 text-sm text-muted-foreground">A July review flagged UV exposure. The v3 revision thickened walls and cut material by 18% — and that improvement is now part of the evidence for 3D Modelling.</p>
