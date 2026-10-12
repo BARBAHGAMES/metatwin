@@ -31,6 +31,12 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       sourcemap: "hidden",
+      // `cloudflare:workers` is a Workers-runtime built-in (used server-side
+      // to reach the env.AI binding reliably) — it doesn't exist as an npm
+      // package, so it must be externalized rather than bundled.
+      rolldownOptions: {
+        external: [/^cloudflare:/],
+      },
     },
     plugins: [
       tailwindcss(),

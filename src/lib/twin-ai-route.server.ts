@@ -2,16 +2,23 @@
 // first-party, no API key). Both endpoints build a short text "dossier" from
 // already-visible data and ask the model to answer only from it — never
 // invent facts, never fabricate company names or deadlines.
+import { env as cloudflareEnv } from "cloudflare:workers";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { PublicProfile } from "./public-profile";
 
 const CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
 // Workers AI's `env.AI` binding isn't a plain string, so it can't flow
-// through process.env the way secrets do — it has to come from the
-// Cloudflare fetch handler's own `env` argument.
+// through process.env the way secrets do. It also doesn't reliably arrive
+// via the fetch(request, env, ctx) parameter in this app's nitro/TanStack
+// Start setup (confirmed live: env was undefined at this call site even
+// though the binding is configured) — `cloudflare:workers`'s own `env`
+// export is the robust way to reach it regardless of how the handler was
+// invoked.
 type AiBinding = { run: (model: string, input: Record<string, unknown>) => Promise<{ response?: string } | string> };
-export type CloudflareEnv = { AI?: AiBinding };
+function getAiBinding(): AiBinding | undefined {
+  return (cloudflareEnv as { AI?: AiBinding }).AI;
+}
 
 // Per-isolate, best-effort only (Workers don't share memory across
 // instances) — enough to blunt casual abuse of a feature that costs real
@@ -48,8 +55,9 @@ function dossierFromPublicProfile(p: PublicProfile): { first: string; text: stri
   return { first, text: lines.join("\n") };
 }
 
-export async function handleTwinChat(request: Request, env: CloudflareEnv): Promise<Response> {
-  if (!env.AI) {
+export async function handleTwinChat(request: Request): Promise<Response> {
+  const ai = getAiBinding();
+  if (!ai) {
     return new Response(JSON.stringify({ error: "AI is not configured on this deployment." }), { status: 503, headers: { "content-type": "application/json" } });
   }
   if (rateLimited(`chat:${clientKey(request)}`)) {
@@ -81,7 +89,7 @@ export async function handleTwinChat(request: Request, env: CloudflareEnv): Prom
   const system = `You are the MetaTwin of ${first}: a first-person AI representative answering questions from visitors (recruiters, clients, mentors). Speak as "I" ("${first}" if a third person is more natural). Be warm, confident and concise — under 120 words. Only use the facts below; never invent skills, employers, grades, scores or numbers that aren't listed. If something isn't covered, say so plainly rather than guessing.\n\nFACTS:\n${text}`;
 
   try {
-    const reply = await runModel(env.AI, system, lastUserMessages);
+    const reply = await runModel(ai, system, lastUserMessages);
     return new Response(JSON.stringify({ reply }), { status: 200, headers: { "content-type": "application/json" } });
   } catch (err) {
     console.error("[twin-chat]", err);
@@ -91,8 +99,9 @@ export async function handleTwinChat(request: Request, env: CloudflareEnv): Prom
 
 type OpportunityIdea = { title: string; type: string; why: string; next_step: string; gap: string };
 
-export async function handleOpportunitiesScout(request: Request, env: CloudflareEnv): Promise<Response> {
-  if (!env.AI) {
+export async function handleOpportunitiesScout(request: Request): Promise<Response> {
+  const ai = getAiBinding();
+  if (!ai) {
     return new Response(JSON.stringify({ error: "AI is not configured on this deployment." }), { status: 503, headers: { "content-type": "application/json" } });
   }
 
@@ -148,7 +157,7 @@ export async function handleOpportunitiesScout(request: Request, env: Cloudflare
   const system = `You are a career scout for young Kenyan talent on MetaTwin. Based only on the profile below, suggest up to 5 concrete opportunity types to pursue now (internships, freelance gigs, competitions, grants, roles, accelerators) — realistic for Kenya/remote work. Never name specific real companies or invent deadlines. Respond with ONLY a JSON object, no other text: {"items":[{"title":"","type":"Internship|Freelance|Competition|Grant|Role|Accelerator","why":"one sentence tying to their skills/projects","next_step":"one concrete action","gap":"one skill or proof worth adding, or empty string"}]}\n\nPROFILE:\n${text}`;
 
   try {
-    const raw = await runModel(env.AI, system, [{ role: "user", content: "Suggest opportunities." }]);
+    const raw = await runModel(ai, system, [{ role: "user", content: "Suggest opportunities." }]);
     const match = raw.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(match?.[0] ?? "{}") as { items?: OpportunityIdea[] };
     return new Response(JSON.stringify({ items: (parsed.items ?? []).slice(0, 5) }), { status: 200, headers: { "content-type": "application/json" } });

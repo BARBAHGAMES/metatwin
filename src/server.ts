@@ -1,7 +1,7 @@
 import { NEW_USER_WEBHOOK_PATH, GITHUB_SYNC_PATH, TWIN_CHAT_PATH, OPPORTUNITIES_SCOUT_PATH } from "./lib/api-paths";
 import { handleNewUserWebhook } from "./lib/new-user-webhook-route.server";
 import { handleGitHubSync } from "./lib/github-sync-route.server";
-import { handleTwinChat, handleOpportunitiesScout, type CloudflareEnv } from "./lib/twin-ai-route.server";
+import { handleTwinChat, handleOpportunitiesScout } from "./lib/twin-ai-route.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -69,7 +69,7 @@ export default {
 
     if (url.pathname === TWIN_CHAT_PATH && request.method === "POST") {
       try {
-        return await handleTwinChat(request, env as CloudflareEnv);
+        return await handleTwinChat(request);
       } catch (error) {
         console.error("[twin-chat route]", error);
         return new Response(JSON.stringify({ error: "Internal error" }), {
@@ -81,7 +81,7 @@ export default {
 
     if (url.pathname === OPPORTUNITIES_SCOUT_PATH && request.method === "POST") {
       try {
-        return await handleOpportunitiesScout(request, env as CloudflareEnv);
+        return await handleOpportunitiesScout(request);
       } catch (error) {
         console.error("[opportunities-scout route]", error);
         return new Response(JSON.stringify({ error: "Internal error" }), {
