@@ -2,7 +2,6 @@
 // first-party, no API key). Both endpoints build a short text "dossier" from
 // already-visible data and ask the model to answer only from it — never
 // invent facts, never fabricate company names or deadlines.
-import { env as cloudflareEnv } from "cloudflare:workers";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { PublicProfile } from "./public-profile";
 
@@ -15,9 +14,20 @@ const CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 // though the binding is configured) — `cloudflare:workers`'s own `env`
 // export is the robust way to reach it regardless of how the handler was
 // invoked.
+//
+// `cloudflare:workers` only exists inside the actual Workers runtime, so it
+// must be a dynamic import, not a static one: `vite dev` runs on plain Node
+// (no Cloudflare Workers runtime), and a static import would fail to
+// resolve at module-load time, crashing every route in dev. Dynamic import
+// lets dev fall through to "AI not configured" instead.
 type AiBinding = { run: (model: string, input: Record<string, unknown>) => Promise<{ response?: string } | string> };
-function getAiBinding(): AiBinding | undefined {
-  return (cloudflareEnv as { AI?: AiBinding }).AI;
+async function getAiBinding(): Promise<AiBinding | undefined> {
+  try {
+    const { env: cloudflareEnv } = await import("cloudflare:workers");
+    return (cloudflareEnv as { AI?: AiBinding }).AI;
+  } catch {
+    return undefined;
+  }
 }
 
 // Per-isolate, best-effort only (Workers don't share memory across
@@ -56,7 +66,7 @@ function dossierFromPublicProfile(p: PublicProfile): { first: string; text: stri
 }
 
 export async function handleTwinChat(request: Request): Promise<Response> {
-  const ai = getAiBinding();
+  const ai = await getAiBinding();
   if (!ai) {
     return new Response(JSON.stringify({ error: "AI is not configured on this deployment." }), { status: 503, headers: { "content-type": "application/json" } });
   }
@@ -100,7 +110,7 @@ export async function handleTwinChat(request: Request): Promise<Response> {
 type OpportunityIdea = { title: string; type: string; why: string; next_step: string; gap: string };
 
 export async function handleOpportunitiesScout(request: Request): Promise<Response> {
-  const ai = getAiBinding();
+  const ai = await getAiBinding();
   if (!ai) {
     return new Response(JSON.stringify({ error: "AI is not configured on this deployment." }), { status: 503, headers: { "content-type": "application/json" } });
   }
