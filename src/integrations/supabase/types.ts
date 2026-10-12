@@ -533,6 +533,7 @@ export type Database = {
           id: string;
           pitch_deck_url: string | null;
           skill_ids: string[];
+          team_id: string | null;
           title: string;
           twin_id: string;
           writeup_url: string | null;
@@ -545,6 +546,7 @@ export type Database = {
           id?: string;
           pitch_deck_url?: string | null;
           skill_ids?: string[];
+          team_id?: string | null;
           title: string;
           twin_id: string;
           writeup_url?: string | null;
@@ -557,11 +559,19 @@ export type Database = {
           id?: string;
           pitch_deck_url?: string | null;
           skill_ids?: string[];
+          team_id?: string | null;
           title?: string;
           twin_id?: string;
           writeup_url?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "projects_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "projects_twin_id_fkey";
             columns: ["twin_id"];
@@ -594,6 +604,89 @@ export type Database = {
           slug?: string;
         };
         Relationships: [];
+      };
+      team_members: {
+        Row: {
+          joined_at: string;
+          left_at: string | null;
+          role: string | null;
+          team_id: string;
+          twin_id: string;
+        };
+        Insert: {
+          joined_at?: string;
+          left_at?: string | null;
+          role?: string | null;
+          team_id: string;
+          twin_id: string;
+        };
+        Update: {
+          joined_at?: string;
+          left_at?: string | null;
+          role?: string | null;
+          team_id?: string;
+          twin_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "team_members_twin_id_fkey";
+            columns: ["twin_id"];
+            isOneToOne: false;
+            referencedRelation: "twins";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      teams: {
+        Row: {
+          avatar_url: string | null;
+          created_at: string;
+          created_by: string;
+          description: string | null;
+          id: string;
+          name: string;
+          slug: string | null;
+          updated_at: string;
+          visibility: string;
+        };
+        Insert: {
+          avatar_url?: string | null;
+          created_at?: string;
+          created_by: string;
+          description?: string | null;
+          id?: string;
+          name: string;
+          slug?: string | null;
+          updated_at?: string;
+          visibility?: string;
+        };
+        Update: {
+          avatar_url?: string | null;
+          created_at?: string;
+          created_by?: string;
+          description?: string | null;
+          id?: string;
+          name?: string;
+          slug?: string | null;
+          updated_at?: string;
+          visibility?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "teams_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "twins";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       twins: {
         Row: {
@@ -742,6 +835,14 @@ export type Database = {
       };
     };
     Functions: {
+      add_team_member: {
+        Args: { p_handle: string; p_role?: string; p_team_id: string };
+        Returns: undefined;
+      };
+      create_team: {
+        Args: { p_description?: string; p_name: string };
+        Returns: string;
+      };
       declare_adult: { Args: { p_birth_year: number }; Returns: undefined };
       disconnect_github: { Args: never; Returns: undefined };
       get_my_github_connection: { Args: never; Returns: Json };
@@ -760,6 +861,7 @@ export type Database = {
           url: string;
         }[];
       };
+      get_my_teams: { Args: never; Returns: Json };
       get_public_profile: { Args: { p_handle: string }; Returns: Json };
       get_review_invite: {
         Args: { p_token: string };
@@ -773,6 +875,7 @@ export type Database = {
           twin_name: string;
         }[];
       };
+      get_team_public_profile: { Args: { p_slug: string }; Returns: Json };
       introspect_applied_migrations: {
         Args: never;
         Returns: {
@@ -788,6 +891,7 @@ export type Database = {
           column_name: string;
         }[];
       };
+      leave_team: { Args: { p_team_id: string }; Returns: undefined };
       list_public_twins: {
         Args: never;
         Returns: {
@@ -799,6 +903,10 @@ export type Database = {
           name: string;
           photo_url: string;
         }[];
+      };
+      remove_team_member: {
+        Args: { p_team_id: string; p_twin_id: string };
+        Returns: undefined;
       };
       submit_evidence_review: {
         Args: { p_comment: string; p_token: string };
@@ -815,6 +923,16 @@ export type Database = {
         Returns: undefined;
       };
       twin_is_adult: { Args: { p_twin_id: string }; Returns: boolean };
+      update_team: {
+        Args: {
+          p_description: string;
+          p_name: string;
+          p_slug: string;
+          p_team_id: string;
+          p_visibility: string;
+        };
+        Returns: undefined;
+      };
     };
     Enums: {
       [_ in never]: never;

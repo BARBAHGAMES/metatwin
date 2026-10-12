@@ -22,6 +22,7 @@ import { HANDLE_HELP, normalizeHandle, publicProfilePath, validateHandle } from 
 import { uploadAvatar } from "@/lib/avatar";
 import { OpportunitiesScout } from "@/components/OpportunitiesScout";
 import { GithubActivityCard } from "@/components/GithubActivityCard";
+import { TeamsCard } from "@/components/TeamsCard";
 import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -546,6 +547,10 @@ function Dashboard() {
 
         <Card className="mt-5">
           <GithubActivityCard />
+        </Card>
+
+        <Card className="mt-5">
+          <TeamsCard />
         </Card>
 
         <Card className="mt-5">

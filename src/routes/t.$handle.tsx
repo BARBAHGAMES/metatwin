@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowRight, ExternalLink, Flame, GitFork, Github, MapPin, Rocket, Star } from "lucide-react";
+import { ArrowRight, ExternalLink, Flame, GitFork, Github, MapPin, Rocket, Star, Users2 } from "lucide-react";
 import { fetchPublicProfile, type PublicCapability, type PublicProfile } from "@/lib/public-profile";
 import { safeHref } from "@/lib/url";
 import { Card, HeroBackdrop, SampleAvatar, Section, StatusBadge } from "@/components/site";
@@ -87,6 +87,20 @@ function PublicProfilePage() {
                   <MapPin className="h-4 w-4" />
                   {[profile.institution, profile.programme].filter(Boolean).join(" · ")}
                 </p>
+              )}
+              {profile.teams.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {profile.teams.map((t) => (
+                    <Link
+                      key={t.slug}
+                      to="/teams/$slug"
+                      params={{ slug: t.slug }}
+                      className="flex items-center gap-1 rounded-full border border-ink-foreground/15 bg-ink-soft px-3 py-1 text-xs text-ink-muted hover:text-ink-foreground"
+                    >
+                      <Users2 className="h-3 w-3" /> {t.name}
+                    </Link>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -201,7 +215,18 @@ function PublicProfilePage() {
                 return (
                   <li key={p.id}>
                     <Card className="h-full">
-                      <p className="font-display font-semibold">{p.title}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-display font-semibold">{p.title}</p>
+                        {p.team && (
+                          <Link
+                            to="/teams/$slug"
+                            params={{ slug: p.team.slug }}
+                            className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            <Users2 className="h-3 w-3" /> {p.team.name}
+                          </Link>
+                        )}
+                      </div>
                       {p.description && <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>}
                       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                         {href && <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="text-electric hover:underline">View work</a>}
