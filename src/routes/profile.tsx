@@ -56,8 +56,11 @@ type Competency = {
 };
 type Project = { id: string; title: string; description: string | null; created_at: string };
 type Evidence = { id: string; competency_id: string; title: string; link: string | null; note: string | null; created_at: string };
+type EvidenceReview = { id: string; evidence_id: string; reviewer_name: string; reviewer_role: string | null; comment: string | null };
 
-function competencyStatus(c: Competency): Status {
+function competencyStatus(c: Competency, evidence: Evidence[], reviews: EvidenceReview[]): Status {
+  const evidenceIds = evidence.filter((e) => e.competency_id === c.id).map((e) => e.id);
+  if (reviews.some((r) => evidenceIds.includes(r.evidence_id))) return "reviewed";
   return c.evidence_count > 0 ? "evidence" : "self";
 }
 
@@ -66,6 +69,7 @@ function RealProfile({ userId }: { userId: string }) {
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
+  const [reviews, setReviews] = useState<EvidenceReview[]>([]);
   const [fetching, setFetching] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -73,7 +77,7 @@ function RealProfile({ userId }: { userId: string }) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [twinRes, compsRes, projectsRes, evidenceRes] = await Promise.all([
+      const [twinRes, compsRes, projectsRes, evidenceRes, reviewsRes] = await Promise.all([
         supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, handle").eq("id", userId).maybeSingle(),
         supabase
           .from("competencies")
@@ -86,14 +90,18 @@ function RealProfile({ userId }: { userId: string }) {
           .select("id, competency_id, title, link, note, created_at")
           .eq("twin_id", userId)
           .order("created_at", { ascending: false }),
+        // RLS only ever returns rows with submitted_at set for the owner — see
+        // "evidence_reviews: owner select submitted" policy.
+        supabase.from("evidence_reviews").select("id, evidence_id, reviewer_name, reviewer_role, comment").eq("twin_id", userId),
       ]);
       if (cancelled) return;
       if (twinRes.error) console.error("[profile] load twin failed:", twinRes.error.message);
       if (compsRes.error) console.error("[profile] load competencies failed:", compsRes.error.message);
       if (projectsRes.error) console.error("[profile] load projects failed:", projectsRes.error.message);
       if (evidenceRes.error) console.error("[profile] load evidence failed:", evidenceRes.error.message);
+      if (reviewsRes.error) console.error("[profile] load evidence reviews failed:", reviewsRes.error.message);
       // A failed load must not render as an empty profile (it reads as lost data).
-      if ([twinRes, compsRes, projectsRes, evidenceRes].some((r) => r.error)) {
+      if ([twinRes, compsRes, projectsRes, evidenceRes, reviewsRes].some((r) => r.error)) {
         setLoadError(true);
         setFetching(false);
         return;
@@ -103,6 +111,7 @@ function RealProfile({ userId }: { userId: string }) {
       setCompetencies((compsRes.data as unknown as Competency[] | null) ?? []);
       setProjectList((projectsRes.data as Project[] | null) ?? []);
       setEvidence((evidenceRes.data as Evidence[] | null) ?? []);
+      setReviews((reviewsRes.data as EvidenceReview[] | null) ?? []);
       setFetching(false);
     }
     load();
@@ -124,7 +133,7 @@ function RealProfile({ userId }: { userId: string }) {
 
   if (fetching || !twin) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
 
-  const reviewedCount = 0; // no reviewer/review concept in the schema yet
+  const reviewedCount = competencies.filter((c) => competencyStatus(c, evidence, reviews) === "reviewed").length;
   const evidenceCount = competencies.filter((c) => c.evidence_count > 0).length;
   const initials = (twin.name ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
   const recentActivity = [
@@ -206,20 +215,29 @@ function RealProfile({ userId }: { userId: string }) {
                             <div key={c.id} className="rounded-xl border bg-card p-4 transition-shadow duration-200 hover:shadow-card">
                               <div className="flex items-start justify-between gap-2">
                                 <p className="font-medium">{c.skills?.name ?? "Unknown skill"}</p>
-                                <StatusBadge status={competencyStatus(c)} />
+                                <StatusBadge status={competencyStatus(c, evidence, reviews)} />
                               </div>
                               {items.length > 0 && (
-                                <ul className="mt-2 space-y-1 border-t pt-2">
+                                <ul className="mt-2 space-y-2 border-t pt-2">
                                   {items.map((e) => {
                                     const href = safeHref(e.link);
-                                    return href ? (
+                                    const review = reviews.find((r) => r.evidence_id === e.id);
+                                    return (
                                       <li key={e.id}>
-                                        <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs text-electric hover:underline">
-                                          {e.title}
-                                        </a>
+                                        {href ? (
+                                          <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs text-electric hover:underline">
+                                            {e.title}
+                                          </a>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground">{e.title}</span>
+                                        )}
+                                        {review && (
+                                          <div className="mt-1 rounded-md bg-status-reviewed-bg p-2 text-xs text-status-reviewed">
+                                            <p className="font-medium">Review · {review.reviewer_name}{review.reviewer_role ? ` · ${review.reviewer_role}` : ""}</p>
+                                            {review.comment && <p className="mt-0.5 text-muted-foreground">{review.comment}</p>}
+                                          </div>
+                                        )}
                                       </li>
-                                    ) : (
-                                      <li key={e.id} className="text-xs text-muted-foreground">{e.title}</li>
                                     );
                                   })}
                                 </ul>

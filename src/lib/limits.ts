@@ -15,6 +15,7 @@ export const LIMITS = {
   projectDescription: 2000,
   evidenceTitle: 120,
   evidenceNote: 1000,
+  developmentGoal: 300,
 } as const;
 
 export const MIN_PASSWORD_LENGTH = 8;

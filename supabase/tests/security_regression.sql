@@ -21,6 +21,8 @@ declare
   prof jsonb;
   n int;
   city uuid; uni uuid;
+  rv_id uuid; rv_token uuid; rv_result boolean; rv_row jsonb;
+  gh_id uuid; pitch_id uuid;
 begin
   ------------------------------------------------------------------ signups
   -- under-18 declaration is rejected at signup
@@ -240,6 +242,203 @@ begin
   ), 'reference tables must be read-only for all client roles';
   assert exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'twins_city_id_idx'), 'twins.city_id FK index';
   assert exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'twins_university_id_idx'), 'twins.university_id FK index';
+
+  ------------------------------------------------------------ evidence_reviews: native reviewer workflow
+  -- owner can invite a reviewer on their own evidence. Token is generated client-side
+  -- (mirroring dashboard.tsx's inviteReviewer()) rather than read back via RETURNING --
+  -- RETURNING on an INSERT must also satisfy the SELECT policy, and a fresh/unsubmitted
+  -- invite never does (see the "fabrication guard" + "nobody can read a pending invite" tests below).
+  rv_token := gen_random_uuid();
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.evidence_reviews (evidence_id, twin_id, reviewer_name, reviewer_role, token)
+    values (ev, a, 'Dr. Imani Wekesa', 'Mentor', rv_token);
+  reset role;
+  select id into rv_id from public.evidence_reviews where token = rv_token;
+
+  -- another student cannot insert a review row claiming A's twin_id
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  blocked := false;
+  begin insert into public.evidence_reviews (evidence_id, twin_id, reviewer_name) values (ev, a, 'Faker'); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'only the owner can insert a review invite for their own twin_id';
+  reset role;
+
+  -- fabrication guard: the owner cannot self-insert an already-"submitted" review
+  -- (state transitions must only happen through submit_evidence_review)
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  blocked := false;
+  begin
+    insert into public.evidence_reviews (evidence_id, twin_id, reviewer_name, comment, submitted_at)
+      values (ev, a, 'Fabricated Reviewer', 'Amazing!', now());
+  exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'owner must not be able to insert a pre-submitted (fabricated) review';
+  reset role;
+
+  -- nobody can read a pending (unsubmitted) invite directly, not even the owner
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.evidence_reviews where id = rv_id;
+  assert n = 0, 'owner cannot select their own pending review row directly (only via the RPC flow)';
+  reset role;
+
+  set local role anon;
+  blocked := false;
+  begin perform 1 from public.evidence_reviews where id = rv_id; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon cannot read evidence_reviews directly at all';
+  blocked := false;
+  begin update public.evidence_reviews set submitted_at = now() where id = rv_id; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not be able to update evidence_reviews directly';
+  reset role;
+
+  assert not has_table_privilege('authenticated', 'public.evidence_reviews', 'update'), 'authenticated must not hold UPDATE on evidence_reviews';
+  assert not has_table_privilege('authenticated', 'public.evidence_reviews', 'delete'), 'authenticated must not hold DELETE on evidence_reviews';
+  assert not has_table_privilege('anon', 'public.evidence_reviews', 'select') and not has_table_privilege('anon', 'public.evidence_reviews', 'insert'),
+    'anon must hold no direct table privileges on evidence_reviews';
+
+  -- the public review-lookup RPC works for anon, scoped to this one token
+  assert has_function_privilege('anon', 'public.get_review_invite(uuid)', 'execute'), 'get_review_invite must be callable by anon';
+  assert has_function_privilege('anon', 'public.submit_evidence_review(uuid, text)', 'execute'), 'submit_evidence_review must be callable by anon';
+  select to_jsonb(r) into rv_row from public.get_review_invite(rv_token) r;
+  assert rv_row ->> 'evidence_title' = 'Proof', 'get_review_invite must return the evidence title';
+  assert (rv_row ->> 'already_submitted')::boolean = false, 'fresh invite must not show already_submitted';
+  assert (rv_row ->> 'expired')::boolean = false, 'fresh invite must not show expired';
+  select count(*) into n from public.get_review_invite(gen_random_uuid());
+  assert n = 0, 'an unknown token must return no rows';
+
+  -- an anonymous reviewer can submit using the token, but cannot reuse it
+  set local role anon;
+  select public.submit_evidence_review(rv_token, 'Great work!') into rv_result;
+  reset role;
+  assert rv_result, 'a valid, unexpired, unused token must be accepted';
+
+  set local role anon;
+  select public.submit_evidence_review(rv_token, 'again') into rv_result;
+  reset role;
+  assert not rv_result, 'a token must not be reusable once submitted';
+
+  -- the token cannot be enumerated / read back via the table directly
+  set local role anon;
+  blocked := false; begin perform 1 from public.evidence_reviews where token = rv_token; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not be able to query evidence_reviews by token directly';
+  reset role;
+
+  -- once submitted, the owner can read it; other students still cannot
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.evidence_reviews where id = rv_id and comment = 'Great work!';
+  assert n = 1, 'owner can read the submitted review, comment included';
+  reset role;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.evidence_reviews where id = rv_id;
+  assert n = 0, 'another student must not be able to read A''s submitted review';
+  reset role;
+
+  -- an expired token must be rejected even though it was never submitted
+  rv_token := gen_random_uuid();
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.evidence_reviews (evidence_id, twin_id, reviewer_name, token, token_expires_at)
+    values (ev, a, 'Late reviewer', rv_token, now() - interval '1 day');
+  reset role;
+  set local role anon;
+  select public.submit_evidence_review(rv_token, 'too late') into rv_result;
+  reset role;
+  assert not rv_result, 'an expired token must be rejected';
+
+  -- an over-length comment is rejected inside the function too, not just the table check
+  rv_token := gen_random_uuid();
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.evidence_reviews (evidence_id, twin_id, reviewer_name, token) values (ev, a, 'Yet another reviewer', rv_token);
+  reset role;
+  blocked := false;
+  set local role anon;
+  begin perform public.submit_evidence_review(rv_token, repeat('x', 1001)); exception when others then blocked := true; end;
+  reset role;
+  assert blocked, 'an over-length comment must be rejected by submit_evidence_review';
+
+  ------------------------------------------------------------ github_repos / pitches (Lovable-sync round)
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.github_repos (twin_id, project_id, full_name, url, stars, forks, language)
+    values (a, pa, 'octocat/hello-world', 'https://github.com/octocat/hello-world', 5, 1, 'TypeScript')
+    returning id into gh_id;
+  insert into public.pitches (twin_id, project_id, business_name, outcome)
+    values (a, pa, 'Acme Duka', 'customer') returning id into pitch_id;
+  reset role;
+
+  -- another student cannot write or read A's github_repos / pitches rows
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.github_repos where id = gh_id; assert n = 0, 'B must not read A''s github_repos row';
+  select count(*) into n from public.pitches where id = pitch_id; assert n = 0, 'B must not read A''s pitches row';
+  blocked := false; begin insert into public.github_repos (twin_id, project_id, full_name) values (a, pa, 'evil/repo'); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'B must not insert a github_repos row claiming A''s twin_id';
+  blocked := false; begin insert into public.pitches (twin_id, project_id, business_name) values (a, pa, 'Fake Co'); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'B must not insert a pitches row claiming A''s twin_id';
+  reset role;
+
+  -- anon has no direct table access to either (public exposure is only via get_public_profile)
+  set local role anon;
+  blocked := false; begin perform 1 from public.github_repos limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not read github_repos directly';
+  blocked := false; begin perform 1 from public.pitches limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not read pitches directly';
+  blocked := false; begin perform 1 from public.pitch_stats limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not read pitch_stats directly';
+  reset role;
+
+  -- owner can read their own rows and the computed stats view
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.github_repos where id = gh_id; assert n = 1, 'owner can read their own github_repos row';
+  select total_pitches into n from public.pitch_stats where project_id = pa; assert n = 1, 'pitch_stats must compute from real pitches, not be hand-set';
+  reset role;
+
+  -- cannot attach a second project's github_repos/pitches row to a different owner's project
+  blocked := false;
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  begin insert into public.github_repos (twin_id, project_id, full_name) values (a, pb, 'x/y'); exception when foreign_key_violation then blocked := true; end;
+  assert blocked, 'github_repos must reject a project_id that does not belong to the same twin_id';
+  reset role;
+
+  ------------------------------------------------------------ list_public_twins() + extended get_public_profile()
+  set local role anon;
+  select count(*) into n from public.list_public_twins() where handle = 'amina-reg';
+  assert n = 0, 'A is still private at this point, so list_public_twins must not include her';
+  reset role;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.twins set visibility = 'public', photo_url = 'https://example.com/me.jpg' where id = a;
+  reset role;
+
+  set local role anon;
+  select count(*) into n from public.list_public_twins() where handle = 'amina-reg';
+  assert n = 1, 'a public, handled, adult twin must appear in list_public_twins';
+  reset role;
+  assert not exists (
+    select 1 from public.list_public_twins() t
+    join public.twins tw on tw.handle = t.handle
+    where tw.visibility <> 'public' or not tw.is_adult or tw.handle is null
+  ), 'list_public_twins must never include a private, non-adult, or handleless twin';
+
+  set local role anon;
+  prof := public.get_public_profile('amina-reg');
+  assert prof ->> 'photo_url' = 'https://example.com/me.jpg', 'get_public_profile must surface photo_url';
+  assert (prof -> 'projects' -> 0 -> 'github' ->> 'full_name') = 'octocat/hello-world', 'get_public_profile must surface github stats for a project';
+  assert (prof -> 'projects' -> 0 -> 'pitch_stats' ->> 'total_pitches') = '1', 'get_public_profile must surface pitch_stats for a project';
+  reset role;
+
+  -- the earlier evidence_reviews section submitted a real review for this evidence item
+  -- (token rv_token, comment "Great work!") -- the public page must reflect that as reviewed=true
+  assert (prof -> 'capabilities' -> 0 -> 'evidence' -> 0 ->> 'reviewed')::boolean = true,
+    'evidence with a submitted review must show reviewed=true on the public page';
 
   raise exception 'ALL PASS (rolled back)';
 exception

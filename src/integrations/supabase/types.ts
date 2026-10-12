@@ -186,6 +186,123 @@ export type Database = {
           },
         ];
       };
+      evidence_reviews: {
+        Row: {
+          comment: string | null;
+          created_at: string;
+          evidence_id: string;
+          id: string;
+          reviewer_name: string;
+          reviewer_role: string | null;
+          submitted_at: string | null;
+          token: string;
+          token_expires_at: string;
+          twin_id: string;
+        };
+        Insert: {
+          comment?: string | null;
+          created_at?: string;
+          evidence_id: string;
+          id?: string;
+          reviewer_name: string;
+          reviewer_role?: string | null;
+          submitted_at?: string | null;
+          token?: string;
+          token_expires_at?: string;
+          twin_id: string;
+        };
+        Update: {
+          comment?: string | null;
+          created_at?: string;
+          evidence_id?: string;
+          id?: string;
+          reviewer_name?: string;
+          reviewer_role?: string | null;
+          submitted_at?: string | null;
+          token?: string;
+          token_expires_at?: string;
+          twin_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "evidence_reviews_evidence_id_fkey";
+            columns: ["evidence_id"];
+            isOneToOne: false;
+            referencedRelation: "evidence";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "evidence_reviews_twin_id_fkey";
+            columns: ["twin_id"];
+            isOneToOne: false;
+            referencedRelation: "twins";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      github_repos: {
+        Row: {
+          description: string | null;
+          forks: number;
+          full_name: string;
+          id: string;
+          language: string | null;
+          last_commit_at: string | null;
+          last_synced_at: string;
+          open_issues: number;
+          project_id: string;
+          stars: number;
+          twin_id: string;
+          url: string | null;
+          weekly_commits: Json;
+        };
+        Insert: {
+          description?: string | null;
+          forks?: number;
+          full_name: string;
+          id?: string;
+          language?: string | null;
+          last_commit_at?: string | null;
+          last_synced_at?: string;
+          open_issues?: number;
+          project_id: string;
+          stars?: number;
+          twin_id: string;
+          url?: string | null;
+          weekly_commits?: Json;
+        };
+        Update: {
+          description?: string | null;
+          forks?: number;
+          full_name?: string;
+          id?: string;
+          language?: string | null;
+          last_commit_at?: string | null;
+          last_synced_at?: string;
+          open_issues?: number;
+          project_id?: string;
+          stars?: number;
+          twin_id?: string;
+          url?: string | null;
+          weekly_commits?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "github_repos_project_owner_fkey";
+            columns: ["project_id", "twin_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id", "twin_id"];
+          },
+          {
+            foreignKeyName: "github_repos_twin_id_fkey";
+            columns: ["twin_id"];
+            isOneToOne: false;
+            referencedRelation: "twins";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       kenya_cities: {
         Row: {
           id: string;
@@ -273,33 +390,93 @@ export type Database = {
         };
         Relationships: [];
       };
+      pitches: {
+        Row: {
+          business_name: string;
+          created_at: string;
+          id: string;
+          notes: string | null;
+          outcome: string;
+          pitched_on: string;
+          project_id: string;
+          sector: string | null;
+          twin_id: string;
+        };
+        Insert: {
+          business_name: string;
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          outcome?: string;
+          pitched_on?: string;
+          project_id: string;
+          sector?: string | null;
+          twin_id: string;
+        };
+        Update: {
+          business_name?: string;
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          outcome?: string;
+          pitched_on?: string;
+          project_id?: string;
+          sector?: string | null;
+          twin_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pitches_project_owner_fkey";
+            columns: ["project_id", "twin_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id", "twin_id"];
+          },
+          {
+            foreignKeyName: "pitches_twin_id_fkey";
+            columns: ["twin_id"];
+            isOneToOne: false;
+            referencedRelation: "twins";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       projects: {
         Row: {
           artifact_url: string | null;
           created_at: string;
           description: string | null;
+          github_repo: string | null;
           id: string;
+          pitch_deck_url: string | null;
           skill_ids: string[];
           title: string;
           twin_id: string;
+          writeup_url: string | null;
         };
         Insert: {
           artifact_url?: string | null;
           created_at?: string;
           description?: string | null;
+          github_repo?: string | null;
           id?: string;
+          pitch_deck_url?: string | null;
           skill_ids?: string[];
           title: string;
           twin_id: string;
+          writeup_url?: string | null;
         };
         Update: {
           artifact_url?: string | null;
           created_at?: string;
           description?: string | null;
+          github_repo?: string | null;
           id?: string;
+          pitch_deck_url?: string | null;
           skill_ids?: string[];
           title?: string;
           twin_id?: string;
+          writeup_url?: string | null;
         };
         Relationships: [
           {
@@ -341,7 +518,9 @@ export type Database = {
           birth_year: number | null;
           city_id: string | null;
           created_at: string;
+          development_goal: string | null;
           education_status: string | null;
+          fields_of_interest: string[] | null;
           first_name: string | null;
           handle: string | null;
           headline: string | null;
@@ -351,8 +530,10 @@ export type Database = {
           last_name: string | null;
           name: string | null;
           parental_consent_at: string | null;
+          photo_url: string | null;
           programme: string | null;
           public_show_evidence_details: boolean;
+          seeking: string[] | null;
           university_id: string | null;
           updated_at: string;
           visibility: string;
@@ -363,7 +544,9 @@ export type Database = {
           birth_year?: number | null;
           city_id?: string | null;
           created_at?: string;
+          development_goal?: string | null;
           education_status?: string | null;
+          fields_of_interest?: string[] | null;
           first_name?: string | null;
           handle?: string | null;
           headline?: string | null;
@@ -373,8 +556,10 @@ export type Database = {
           last_name?: string | null;
           name?: string | null;
           parental_consent_at?: string | null;
+          photo_url?: string | null;
           programme?: string | null;
           public_show_evidence_details?: boolean;
+          seeking?: string[] | null;
           university_id?: string | null;
           updated_at?: string;
           visibility?: string;
@@ -385,7 +570,9 @@ export type Database = {
           birth_year?: number | null;
           city_id?: string | null;
           created_at?: string;
+          development_goal?: string | null;
           education_status?: string | null;
+          fields_of_interest?: string[] | null;
           first_name?: string | null;
           handle?: string | null;
           headline?: string | null;
@@ -395,8 +582,10 @@ export type Database = {
           last_name?: string | null;
           name?: string | null;
           parental_consent_at?: string | null;
+          photo_url?: string | null;
           programme?: string | null;
           public_show_evidence_details?: boolean;
+          seeking?: string[] | null;
           university_id?: string | null;
           updated_at?: string;
           visibility?: string;
@@ -439,7 +628,32 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      pitch_stats: {
+        Row: {
+          conversion_pct: number | null;
+          customers: number | null;
+          positive: number | null;
+          project_id: string | null;
+          total_pitches: number | null;
+          twin_id: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pitches_project_owner_fkey";
+            columns: ["project_id", "twin_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id", "twin_id"];
+          },
+          {
+            foreignKeyName: "pitches_twin_id_fkey";
+            columns: ["twin_id"];
+            isOneToOne: false;
+            referencedRelation: "twins";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Functions: {
       declare_adult: { Args: { p_birth_year: number }; Returns: undefined };
@@ -459,6 +673,18 @@ export type Database = {
         }[];
       };
       get_public_profile: { Args: { p_handle: string }; Returns: Json };
+      get_review_invite: {
+        Args: { p_token: string };
+        Returns: {
+          already_submitted: boolean;
+          evidence_link: string;
+          evidence_note: string;
+          evidence_title: string;
+          expired: boolean;
+          reviewer_name: string;
+          twin_name: string;
+        }[];
+      };
       introspect_applied_migrations: {
         Args: never;
         Returns: {
@@ -473,6 +699,20 @@ export type Database = {
           authenticated_select: boolean;
           column_name: string;
         }[];
+      };
+      list_public_twins: {
+        Args: never;
+        Returns: {
+          handle: string;
+          headline: string;
+          institution: string;
+          name: string;
+          photo_url: string;
+        }[];
+      };
+      submit_evidence_review: {
+        Args: { p_comment: string; p_token: string };
+        Returns: boolean;
       };
       twin_is_adult: { Args: { p_twin_id: string }; Returns: boolean };
     };

@@ -1,0 +1,82 @@
+create or replace function public.get_public_profile(p_handle text)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  t public.twins;
+  details boolean;
+begin
+  select * into t
+  from public.twins
+  where handle = lower(btrim(p_handle)) and visibility = 'public' and is_adult;
+  if not found then
+    return null;
+  end if;
+  details := t.public_show_evidence_details;
+
+  return jsonb_build_object(
+    'handle', t.handle,
+    'name', t.name,
+    'headline', t.headline,
+    'institution', t.institution,
+    'programme', t.programme,
+    'photo_url', t.photo_url,
+    'show_evidence_details', details,
+    'capabilities', coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'id', c.id,
+          'skill', s.name,
+          'category', s.category,
+          'level', c.level,
+          'evidence_count', c.evidence_count,
+          'evidence', coalesce((
+            select jsonb_agg(
+              jsonb_build_object(
+                'id', e.id, 'title', e.title,
+                'reviewed', exists (
+                  select 1 from public.evidence_reviews r
+                  where r.evidence_id = e.id and r.submitted_at is not null
+                )
+              )
+              || case when details then jsonb_build_object('link', e.link, 'note', e.note) else '{}'::jsonb end
+              order by e.created_at desc)
+            from public.evidence e where e.competency_id = c.id
+          ), '[]'::jsonb)
+        ) order by c.updated_at desc)
+      from public.competencies c
+      join public.skills s on s.id = c.skill_id
+      where c.twin_id = t.id
+    ), '[]'::jsonb),
+    'projects', coalesce((
+      select jsonb_agg(
+        jsonb_build_object('id', p.id, 'title', p.title, 'description', p.description)
+        || case when details then jsonb_build_object(
+             'artifact_url', p.artifact_url, 'writeup_url', p.writeup_url, 'pitch_deck_url', p.pitch_deck_url
+           ) else '{}'::jsonb end
+        || coalesce((
+             select jsonb_build_object('github', jsonb_build_object(
+               'full_name', g.full_name, 'url', g.url, 'stars', g.stars, 'forks', g.forks,
+               'language', g.language, 'last_commit_at', g.last_commit_at, 'weekly_commits', g.weekly_commits
+             ))
+             from public.github_repos g where g.project_id = p.id
+           ), '{}'::jsonb)
+        || coalesce((
+             select jsonb_build_object('pitch_stats', jsonb_build_object(
+               'total_pitches', ps.total_pitches, 'positive', ps.positive,
+               'customers', ps.customers, 'conversion_pct', ps.conversion_pct
+             ))
+             from public.pitch_stats ps where ps.project_id = p.id
+           ), '{}'::jsonb)
+        order by p.created_at desc)
+      from public.projects p where p.twin_id = t.id
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+revoke all on function public.get_public_profile(text) from public;
+grant execute on function public.get_public_profile(text) to anon, authenticated;

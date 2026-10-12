@@ -79,6 +79,11 @@ config.routes = [
   { pattern: "metatwin.metaglobetechnologies.co.ke", custom_domain: true },
 ];
 
+// Cloudflare Workers AI binding — first-party, no secret key needed, billed
+// through the existing Cloudflare account. Powers the public "Ask this
+// MetaTwin" chat and the dashboard opportunities scout.
+config.ai = { binding: "AI" };
+
 config.upload_source_maps = true;
 config.observability = {
   ...(config.observability || {}),

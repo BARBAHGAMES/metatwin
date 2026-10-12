@@ -28,7 +28,7 @@ export function publicProfilePath(handle: string): string {
   return `/t/${handle}`;
 }
 
-export type PublicEvidence = { id: string; title: string; link?: string | null; note?: string | null };
+export type PublicEvidence = { id: string; title: string; reviewed: boolean; link?: string | null; note?: string | null };
 export type PublicCapability = {
   id: string;
   skill: string;
@@ -37,13 +37,33 @@ export type PublicCapability = {
   evidence_count: number;
   evidence: PublicEvidence[];
 };
-export type PublicProject = { id: string; title: string; description: string | null; artifact_url?: string | null };
+export type PublicGithubStats = {
+  full_name: string;
+  url: string | null;
+  stars: number;
+  forks: number;
+  language: string | null;
+  last_commit_at: string | null;
+  weekly_commits: number[];
+};
+export type PublicPitchStats = { total_pitches: number; positive: number; customers: number; conversion_pct: number | null };
+export type PublicProject = {
+  id: string;
+  title: string;
+  description: string | null;
+  artifact_url?: string | null;
+  writeup_url?: string | null;
+  pitch_deck_url?: string | null;
+  github?: PublicGithubStats | null;
+  pitch_stats?: PublicPitchStats | null;
+};
 export type PublicProfile = {
   handle: string;
   name: string | null;
   headline: string | null;
   institution: string | null;
   programme: string | null;
+  photo_url: string | null;
   show_evidence_details: boolean;
   capabilities: PublicCapability[];
   projects: PublicProject[];
@@ -56,4 +76,21 @@ export async function fetchPublicProfile(handle: string): Promise<PublicProfile 
   const { data, error } = await supabase.rpc("get_public_profile", { p_handle: handle });
   if (error) throw new Error(error.message);
   return (data as PublicProfile | null) ?? null;
+}
+
+export type PublicTwinListItem = {
+  handle: string;
+  name: string | null;
+  headline: string | null;
+  institution: string | null;
+  photo_url: string | null;
+};
+
+// For the Find Talent directory — the same least-privilege pattern as
+// get_public_profile: a dedicated RPC returning only a fixed, non-sensitive
+// field set for public+handled twins, never a raw anon SELECT on twins.
+export async function fetchPublicTwins(): Promise<PublicTwinListItem[]> {
+  const { data, error } = await supabase.rpc("list_public_twins");
+  if (error) throw new Error(error.message);
+  return (data as PublicTwinListItem[] | null) ?? [];
 }

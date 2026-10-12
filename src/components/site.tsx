@@ -57,6 +57,7 @@ const nav = [
   { to: "/", label: "Home" },
   { to: "/profile", label: "My MetaTwin" },
   { to: "/projects", label: "Explore Capabilities" },
+  { to: "/talent", label: "Find Talent" },
   { to: "/how-it-works", label: "How It Works" },
   { to: "/pricing", label: "Pricing" },
   { to: "/about", label: "About" },
@@ -166,6 +167,7 @@ export function Footer() {
         </div>
         <div className="space-y-2 text-sm">
           <p className="font-display text-ink-foreground">Company</p>
+          <Link to="/talent" className="block hover:text-ink-foreground">Find Talent</Link>
           <Link to="/how-it-works" className="block hover:text-ink-foreground">How It Works</Link>
           <Link to="/pricing" className="block hover:text-ink-foreground">Pricing</Link>
           <Link to="/about" className="block hover:text-ink-foreground">About</Link>

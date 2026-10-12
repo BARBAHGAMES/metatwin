@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import heroImg from "@/assets/hero-dashboard.jpg";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FolderPlus, FilePlus2, Layers, ArrowRight, Info, Bot } from "lucide-react";
+import { FolderPlus, FilePlus2, Layers, ArrowRight, Info, Bot, Camera, UserRound } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { aiEmployees } from "@/lib/data";
@@ -14,12 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AdultGate } from "@/components/AdultGate";
-import { CompleteProfileGate } from "@/components/CompleteProfileGate";
 import { LINK_ERROR, isHttpUrl, safeHref } from "@/lib/url";
 import { LIMITS, validateStudyYear } from "@/lib/limits";
 import { LoadError } from "@/components/LoadError";
 import { fetchMyOpportunityMatches, type OpportunityMatch } from "@/lib/real-data";
 import { HANDLE_HELP, normalizeHandle, publicProfilePath, validateHandle } from "@/lib/public-profile";
+import { uploadAvatar } from "@/lib/avatar";
+import { OpportunitiesScout } from "@/components/OpportunitiesScout";
 import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -44,6 +45,7 @@ type Twin = {
   is_adult: boolean;
   handle: string | null;
   public_show_evidence_details: boolean;
+  photo_url: string | null;
 };
 
 type Skill = { id: string; name: string; category: string | null };
@@ -73,7 +75,18 @@ type Evidence = {
   created_at: string;
 };
 
-function competencyStatus(c: Competency): Status {
+type EvidenceReview = {
+  id: string;
+  evidence_id: string;
+  reviewer_name: string;
+  reviewer_role: string | null;
+  comment: string | null;
+  submitted_at: string;
+};
+
+function competencyStatus(c: Competency, evidence: Evidence[], reviews: EvidenceReview[]): Status {
+  const evidenceIds = evidence.filter((e) => e.competency_id === c.id).map((e) => e.id);
+  if (reviews.some((r) => evidenceIds.includes(r.evidence_id))) return "reviewed";
   return c.evidence_count > 0 ? "evidence" : "self";
 }
 
@@ -86,6 +99,7 @@ function Dashboard() {
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
+  const [reviews, setReviews] = useState<EvidenceReview[]>([]);
   const [fetching, setFetching] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -101,14 +115,18 @@ function Dashboard() {
   const [matchesReload, setMatchesReload] = useState(0);
   const [evidenceForm, setEvidenceForm] = useState({ title: "", link: "", note: "" });
   const [saving, setSaving] = useState(false);
+  const [reviewDialogEvidenceId, setReviewDialogEvidenceId] = useState<string | null>(null);
+  const [reviewerForm, setReviewerForm] = useState({ name: "", role: "" });
+  const [reviewLink, setReviewLink] = useState<string | null>(null);
+  const [invitingReviewer, setInvitingReviewer] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/login" });
   }, [authLoading, user, navigate]);
 
   async function loadAll(userId: string) {
-    const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes] = await Promise.all([
-      supabase.from("twins").select("id, name, first_name, institution, programme, year, headline, visibility, is_adult, handle, public_show_evidence_details").eq("id", userId).maybeSingle(),
+    const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes, reviewsRes] = await Promise.all([
+      supabase.from("twins").select("id, name, first_name, institution, programme, year, headline, visibility, is_adult, handle, public_show_evidence_details, photo_url").eq("id", userId).maybeSingle(),
       supabase.from("skills").select("id, name, category").order("name"),
       supabase
         .from("competencies")
@@ -121,15 +139,22 @@ function Dashboard() {
         .select("id, competency_id, title, link, note, created_at")
         .eq("twin_id", userId)
         .order("created_at", { ascending: false }),
+      // RLS only ever returns rows with submitted_at set for the owner — see
+      // "evidence_reviews: owner select submitted" policy.
+      supabase
+        .from("evidence_reviews")
+        .select("id, evidence_id, reviewer_name, reviewer_role, comment, submitted_at")
+        .eq("twin_id", userId),
     ]);
     if (twinRes.error) console.error("[dashboard] load twin failed:", twinRes.error.message);
     if (skillsRes.error) console.error("[dashboard] load skills failed:", skillsRes.error.message);
     if (compsRes.error) console.error("[dashboard] load competencies failed:", compsRes.error.message);
     if (projectsRes.error) console.error("[dashboard] load projects failed:", projectsRes.error.message);
     if (evidenceRes.error) console.error("[dashboard] load evidence failed:", evidenceRes.error.message);
+    if (reviewsRes.error) console.error("[dashboard] load evidence reviews failed:", reviewsRes.error.message);
 
     // A failed load must not render as an empty account (it reads as lost data).
-    if ([twinRes, skillsRes, compsRes, projectsRes, evidenceRes].some((r) => r.error)) {
+    if ([twinRes, skillsRes, compsRes, projectsRes, evidenceRes, reviewsRes].some((r) => r.error)) {
       setLoadError(true);
       setFetching(false);
       return;
@@ -149,12 +174,14 @@ function Dashboard() {
         is_adult: false,
         handle: null,
         public_show_evidence_details: false,
+        photo_url: null,
       },
     );
     setSkills((skillsRes.data as Skill[] | null) ?? []);
     setCompetencies((compsRes.data as unknown as Competency[] | null) ?? []);
     setProjects((projectsRes.data as Project[] | null) ?? []);
     setEvidence((evidenceRes.data as Evidence[] | null) ?? []);
+    setReviews((reviewsRes.data as EvidenceReview[] | null) ?? []);
     setFetching(false);
   }
 
@@ -253,6 +280,34 @@ function Dashboard() {
     loadAll(user.id);
   }
 
+  function openReviewDialog(evidenceId: string) {
+    setReviewDialogEvidenceId(evidenceId);
+    setReviewerForm({ name: "", role: "" });
+    setReviewLink(null);
+  }
+
+  async function inviteReviewer() {
+    if (!user || !reviewDialogEvidenceId || !reviewerForm.name.trim()) return;
+    setInvitingReviewer(true);
+    // Generate the token client-side rather than reading it back via .select() —
+    // RLS only lets the owner SELECT a submitted review, so an insert().select()
+    // round-trip on a fresh (unsubmitted) invite would fail the RLS check.
+    const token = crypto.randomUUID();
+    const { error } = await supabase.from("evidence_reviews").insert({
+      twin_id: user.id,
+      evidence_id: reviewDialogEvidenceId,
+      reviewer_name: reviewerForm.name.trim(),
+      reviewer_role: reviewerForm.role.trim() || null,
+      token,
+    });
+    setInvitingReviewer(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setReviewLink(`${window.location.origin}/review/${token}`);
+  }
+
   if (loadError) {
     return (
       <LoadError
@@ -274,7 +329,8 @@ function Dashboard() {
   }
 
   if (!twin.first_name) {
-    return <CompleteProfileGate twinId={twin.id} onCompleted={() => user && loadAll(user.id)} />;
+    navigate({ to: "/build" });
+    return <main className="p-16 text-center text-muted-foreground">Taking you to set up your MetaTwin…</main>;
   }
 
   const availableSkillsForCapability = skills.filter((s) => !competencies.some((c) => c.skill_id === s.id));
@@ -353,8 +409,8 @@ function Dashboard() {
             <p className="mt-1 font-display text-4xl font-semibold">{competencies.length}</p>
             {competencies.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2">
-                {(["evidence", "self"] as Status[])
-                  .filter((s) => competencies.some((c) => competencyStatus(c) === s))
+                {(["reviewed", "evidence", "self"] as Status[])
+                  .filter((s) => competencies.some((c) => competencyStatus(c, evidence, reviews) === s))
                   .map((s) => (
                     <StatusBadge key={s} status={s} />
                   ))}
@@ -383,20 +439,40 @@ function Dashboard() {
                   <li key={c.id} className="rounded-lg border px-3 py-2 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate">{c.skills?.name ?? "Unknown skill"}</span>
-                      <StatusBadge status={competencyStatus(c)} />
+                      <StatusBadge status={competencyStatus(c, evidence, reviews)} />
                     </div>
                     {items.length > 0 && (
-                      <ul className="mt-2 space-y-1 border-t pt-2">
+                      <ul className="mt-2 space-y-2 border-t pt-2">
                         {items.map((e) => {
                           const href = safeHref(e.link);
-                          return href ? (
+                          const review = reviews.find((r) => r.evidence_id === e.id);
+                          return (
                             <li key={e.id}>
-                              <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs text-electric hover:underline">
-                                {e.title}
-                              </a>
+                              <div className="flex items-center justify-between gap-2">
+                                {href ? (
+                                  <a href={href} target="_blank" rel="noopener noreferrer" className="truncate text-xs text-electric hover:underline">
+                                    {e.title}
+                                  </a>
+                                ) : (
+                                  <span className="truncate text-xs text-muted-foreground">{e.title}</span>
+                                )}
+                                {!review && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openReviewDialog(e.id)}
+                                    className="shrink-0 cursor-pointer text-xs text-electric hover:underline"
+                                  >
+                                    Invite a reviewer
+                                  </button>
+                                )}
+                              </div>
+                              {review && (
+                                <div className="mt-1 rounded-md bg-status-reviewed-bg p-2 text-xs text-status-reviewed">
+                                  <p className="font-medium">Review · {review.reviewer_name}{review.reviewer_role ? ` · ${review.reviewer_role}` : ""}</p>
+                                  {review.comment && <p className="mt-0.5 text-muted-foreground">{review.comment}</p>}
+                                </div>
+                              )}
                             </li>
-                          ) : (
-                            <li key={e.id} className="text-xs text-muted-foreground">{e.title}</li>
                           );
                         })}
                       </ul>
@@ -464,6 +540,7 @@ function Dashboard() {
               })}
             </ul>
           )}
+          <OpportunitiesScout />
         </Card>
 
         <Card className="mt-5">
@@ -576,7 +653,7 @@ function Dashboard() {
                 type="url"
                 value={evidenceForm.link}
                 onChange={(e) => setEvidenceForm({ ...evidenceForm, link: e.target.value })}
-                placeholder="https://..."
+                placeholder="Paste a link to a Google Doc, Drive file, GitHub repo…"
               />
             </div>
             <div className="space-y-1.5">
@@ -595,6 +672,47 @@ function Dashboard() {
           <DialogFooter><Button onClick={addEvidence} disabled={saving || !evidenceCompetencyId || !evidenceForm.title.trim()}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!reviewDialogEvidenceId} onOpenChange={(open) => !open && setReviewDialogEvidenceId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Invite a reviewer</DialogTitle></DialogHeader>
+          {reviewLink ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Send this link to {reviewerForm.name} — it's single-use and expires in 14 days. They don't need an account.</p>
+              <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm">
+                <span className="min-w-0 flex-1 truncate font-mono text-xs">{reviewLink}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard
+                      ?.writeText(reviewLink)
+                      .then(() => toast.success("Link copied."))
+                      .catch(() => toast.error("Couldn't copy — select the link and copy it manually."));
+                  }}
+                >
+                  Copy link
+                </Button>
+              </div>
+              <DialogFooter><Button onClick={() => setReviewDialogEvidenceId(null)}>Done</Button></DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="reviewer-name">Reviewer's name</Label>
+                <Input id="reviewer-name" maxLength={120} value={reviewerForm.name} onChange={(e) => setReviewerForm({ ...reviewerForm, name: e.target.value })} placeholder="e.g. Dr. Imani Wekesa" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="reviewer-role">Their role (optional)</Label>
+                <Input id="reviewer-role" maxLength={120} value={reviewerForm.role} onChange={(e) => setReviewerForm({ ...reviewerForm, role: e.target.value })} placeholder="e.g. Industrial Design Lecturer" />
+              </div>
+              <p className="text-xs text-muted-foreground">You'll get a link to send them yourself — by email, WhatsApp, whatever works. A "Reviewed" status only appears once they've actually looked at this specific evidence.</p>
+              <DialogFooter><Button onClick={inviteReviewer} disabled={invitingReviewer || !reviewerForm.name.trim()}>{invitingReviewer ? "Creating…" : "Create link"}</Button></DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -602,7 +720,24 @@ function Dashboard() {
 function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
   const [form, setForm] = useState(twin);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const publicBase = typeof window === "undefined" ? "" : window.location.origin;
+
+  async function handlePhotoChange(file: File | undefined) {
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const photo_url = await uploadAvatar(twin.id, file);
+      const { error } = await supabase.from("twins").update({ photo_url }).eq("id", twin.id);
+      if (error) throw new Error(error.message);
+      setForm((f) => ({ ...f, photo_url }));
+      onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not upload that photo.");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
 
   async function save() {
     const yearError = validateStudyYear(form.year);
@@ -662,6 +797,16 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
 
   return (
     <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="flex items-center gap-4 sm:col-span-2">
+        <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border bg-muted">
+          {form.photo_url ? <img src={form.photo_url} alt="" className="h-full w-full object-cover" /> : <UserRound className="h-6 w-6 text-muted-foreground" />}
+        </div>
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition hover:border-electric/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
+          <Camera className="h-4 w-4" />
+          {uploadingPhoto ? "Uploading…" : form.photo_url ? "Change photo" : "Add a photo"}
+          <input type="file" accept="image/*" className="sr-only" disabled={uploadingPhoto} onChange={(e) => handlePhotoChange(e.target.files?.[0])} />
+        </label>
+      </div>
       <div className="space-y-1.5">
         <Label>Name</Label>
         <Input maxLength={LIMITS.name} value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />

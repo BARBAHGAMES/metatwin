@@ -14,7 +14,41 @@ export type EvidenceRow = {
   project_id: string | null;
   competency_id: string;
 };
-export type MyProject = { id: string; title: string; description: string | null; artifact_url: string | null; created_at: string };
+export type MyProject = {
+  id: string;
+  title: string;
+  description: string | null;
+  artifact_url: string | null;
+  github_repo: string | null;
+  writeup_url: string | null;
+  pitch_deck_url: string | null;
+  created_at: string;
+};
+export type GithubRepoRow = {
+  full_name: string;
+  url: string | null;
+  description: string | null;
+  stars: number;
+  forks: number;
+  open_issues: number;
+  language: string | null;
+  last_commit_at: string | null;
+  weekly_commits: unknown;
+};
+export type PitchRow = {
+  id: string;
+  business_name: string;
+  sector: string | null;
+  pitched_on: string;
+  outcome: string;
+  notes: string | null;
+};
+export type PitchStatsRow = {
+  total_pitches: number;
+  positive: number;
+  customers: number;
+  conversion_pct: number | null;
+};
 export type OpportunityMatch = {
   id: string;
   title: string;
@@ -74,7 +108,7 @@ export async function fetchMyProjects(userId: string) {
   const [proj, ev] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, artifact_url, created_at")
+      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at")
       .eq("twin_id", userId)
       .order("created_at", { ascending: false }),
     supabase
@@ -89,10 +123,10 @@ export async function fetchMyProjects(userId: string) {
 }
 
 export async function fetchMyProject(userId: string, projectId: string) {
-  const [proj, ev] = await Promise.all([
+  const [proj, ev, repo, pitches, pitchStats] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, artifact_url, created_at")
+      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at")
       .eq("twin_id", userId)
       .eq("id", projectId)
       .maybeSingle(),
@@ -102,11 +136,38 @@ export async function fetchMyProject(userId: string, projectId: string) {
       .eq("twin_id", userId)
       .eq("project_id", projectId)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("github_repos")
+      .select("full_name, url, description, stars, forks, open_issues, language, last_commit_at, weekly_commits")
+      .eq("twin_id", userId)
+      .eq("project_id", projectId)
+      .maybeSingle(),
+    supabase
+      .from("pitches")
+      .select("id, business_name, sector, pitched_on, outcome, notes")
+      .eq("twin_id", userId)
+      .eq("project_id", projectId)
+      .order("pitched_on", { ascending: false }),
+    supabase
+      .from("pitch_stats")
+      .select("total_pitches, positive, customers, conversion_pct")
+      .eq("twin_id", userId)
+      .eq("project_id", projectId)
+      .maybeSingle(),
   ]);
   if (proj.error) throw new Error(proj.error.message);
   if (ev.error) throw new Error(ev.error.message);
+  if (repo.error) throw new Error(repo.error.message);
+  if (pitches.error) throw new Error(pitches.error.message);
+  if (pitchStats.error) throw new Error(pitchStats.error.message);
   if (!proj.data) return null;
-  return { project: proj.data as MyProject, evidence: (ev.data as EvidenceRow[] | null) ?? [] };
+  return {
+    project: proj.data as MyProject,
+    evidence: (ev.data as EvidenceRow[] | null) ?? [],
+    githubRepo: repo.data as GithubRepoRow | null,
+    pitches: (pitches.data as PitchRow[] | null) ?? [],
+    pitchStats: pitchStats.data as PitchStatsRow | null,
+  };
 }
 
 export async function fetchMyOpportunityMatches(): Promise<OpportunityMatch[]> {

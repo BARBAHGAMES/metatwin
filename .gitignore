@@ -2,6 +2,7 @@ node_modules/
 .output/
 .vite/
 .wrangler/
+.tanstack/
 dist/
 .env
 .env.local

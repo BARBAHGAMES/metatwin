@@ -1,15 +1,18 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import heroImg from "@/assets/hero-project.jpg";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ArrowLeft, FileCheck2, MessageSquare } from "lucide-react";
 import { capBySlug, projectById, type Project } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
-import { buildProjectTimeline, fetchMyProject, formatDate, isUuid } from "@/lib/real-data";
+import { buildProjectTimeline, fetchMyProject, formatDate, isUuid, type GithubRepoRow, type MyProject, type PitchRow, type PitchStatsRow } from "@/lib/real-data";
 import { safeHref } from "@/lib/url";
 import { LoadError } from "@/components/LoadError";
 import { Card, PageHero, SampleTag, Section, StatusBadge } from "@/components/site";
 import { Journey } from "@/components/Journey";
 import { Reveal } from "@/components/Reveal";
+import { GitHubCard, PitchTracker, ProjectLinksForm } from "@/components/ProjectExtras";
+import { supabase } from "@/integrations/supabase/client";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/projects/$id")({
@@ -85,7 +88,7 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
     );
   }
 
-  const { project: p, evidence } = data;
+  const { project: p, evidence, githubRepo, pitches, pitchStats } = data;
   const artifact = safeHref(p.artifact_url);
   return (
     <>
@@ -126,8 +129,49 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
               </ul>
             )}
           </Card>
+          <ProjectExtrasPanel userId={userId} projectId={projectId} project={p} githubRepo={githubRepo} pitches={pitches} pitchStats={pitchStats} onReload={() => setReloadKey((k) => k + 1)} />
         </aside>
       </Section>
+    </>
+  );
+}
+
+function ProjectExtrasPanel({
+  userId,
+  projectId,
+  project,
+  githubRepo,
+  pitches,
+  pitchStats,
+  onReload,
+}: {
+  userId: string;
+  projectId: string;
+  project: MyProject;
+  githubRepo: GithubRepoRow | null;
+  pitches: PitchRow[];
+  pitchStats: PitchStatsRow | null;
+  onReload: () => void;
+}) {
+  const [githubField, setGithubField] = useState(project.github_repo ?? "");
+
+  async function saveGithubRepo() {
+    const value = githubField.trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\/$/, "");
+    const { error } = await supabase.from("projects").update({ github_repo: value || null }).eq("id", projectId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setGithubField(value);
+    toast.success("Saved.");
+    onReload();
+  }
+
+  return (
+    <>
+      <GitHubCard repo={githubRepo} githubRepoField={githubField} onFieldChange={setGithubField} onSave={saveGithubRepo} onSynced={onReload} twinId={userId} projectId={projectId} />
+      <ProjectLinksForm project={project} onSaved={onReload} />
+      <PitchTracker pitches={pitches} stats={pitchStats} twinId={userId} projectId={projectId} onChange={onReload} />
     </>
   );
 }
