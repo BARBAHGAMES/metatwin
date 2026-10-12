@@ -291,7 +291,7 @@
     "Build your MetaTwin"
   ],
   "src/routes/pricing.tsx": [
-    "sm:object-[68%_40%]",
+    "sm:object-[62%_52%]",
     "Pricing",
     "Your next opportunity starts with what you can prove.",
     "MetaTwin helps you build a record of your skills, projects, achievements, and contributions. Start with your individual profile or bring your team together to document what you're building.",
@@ -303,6 +303,7 @@
     "Feature",
     "Basic",
     "Guided",
+    "· Most guidance",
     "Builder",
     "Great projects are rarely built alone.",
     "Your team builds together, but every member has their own story to tell. MetaTwin connects a shared project with individual profiles, helping teams document what they build and each person's contribution.",
@@ -325,17 +326,28 @@
     "— Members keep their individual profiles and document their own roles and contributions.",
     "— Features marked \"Planned\" are not live yet.",
     "Bigger team or more projects?",
-    "Contact us",
-    "(contact details coming soon)",
+    "Message us on WhatsApp",
     "MetaTwin Campus · Custom pricing",
     "Help your students make their capabilities visible.",
     "Give student cohorts a structured way to document skills, showcase innovation projects, and build evidence of what they have accomplished.",
     "Discuss an Institutional Partnership",
-    "Contact details coming soon.",
-    "[Contact destination to be connected before launch]",
+    "WhatsApp us",
+    "Prefer WhatsApp?",
     "Potential offerings",
     "Frequently asked questions",
-    "Online payment isn't connected yet. Choosing a plan takes you to the MetaTwin setup flow; no payment is taken."
+    "Online payment isn't connected yet. Choosing a plan takes you to the MetaTwin setup flow; no payment is taken.",
+    "Discuss an institutional partnership",
+    "Tell us a bit about your institution and we'll be in touch. No commitment — this just starts the conversation.",
+    "Institution name",
+    "e.g. Strathmore University",
+    "Your name",
+    "e.g. Dr. Imani Wekesa",
+    "Email",
+    "you@institution.ac.ke",
+    "Phone (optional)",
+    "+254…",
+    "What are you looking for? (optional)",
+    "Cohort size, timeline, what you'd want to pilot…"
   ],
   "src/routes/privacy.tsx": [
     "Legal",
@@ -704,8 +716,7 @@
     "Lead 3D modeller · team of 3",
     "Milestones",
     "Opportunity alignment",
-    "Circular-economy design internship · 3 capabilities with evidence",
-    "New evidence added · 2h ago"
+    "Circular-economy design internship · 3 capabilities with evidence"
   ],
   "src/components/ProjectExtras.tsx": [
     "GitHub repo",
@@ -753,6 +764,11 @@
     "About",
     "Privacy Policy",
     "Terms of Service",
+    "Pitch Deck",
+    "/MetaTwin_Pitch_Deck.pdf",
+    "View the deck (PDF)",
+    "/MetaTwin_Pitch_Deck.mp4",
+    "Watch the pitch (video)",
     "Prototype · All people, projects and reviews shown are fictional demonstration data.",
     "Fictional sample data"
   ],
@@ -773,7 +789,8 @@
     "/api/webhooks/new-user",
     "/api/github/sync",
     "/api/ai/chat",
-    "/api/ai/opportunities"
+    "/api/ai/opportunities",
+    "/api/webhooks/partnership-inquiry"
   ],
   "src/lib/avatar.ts": [
     "image/",
@@ -1248,6 +1265,21 @@
     "content-type",
     "application/json"
   ],
+  "src/lib/partnership-inquiry-webhook-route.server.ts": [
+    "andrew@metaglobetechnologies.co.ke",
+    "Institution",
+    "Contact",
+    "Email",
+    "Phone",
+    "<br>",
+    "authorization",
+    "Unauthorized",
+    "Bad request",
+    "Bad request: incomplete record in payload",
+    "partnership-inquiry",
+    "content-type",
+    "application/json"
+  ],
   "src/lib/pricing.ts": [
     "live",
     "proposed",
@@ -1352,7 +1384,8 @@
     "Not included",
     "Planned feature",
     "en-US",
-    "#contact-placeholder",
+    "https://wa.me/254726227481",
+    "+254 726 227 481",
     "basic",
     "guided",
     "builder",
@@ -1498,6 +1531,7 @@
   ],
   "src/lib/twin-ai-route.server.ts": [
     "@cf/meta/llama-3.1-8b-instruct",
+    "cloudflare:workers",
     "cf-connecting-ip",
     "x-forwarded-for",
     "unknown",
