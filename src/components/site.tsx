@@ -1,7 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { Menu, X, FileText, PlayCircle } from "lucide-react";
+import { Menu, X, FileText, PlayCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { statusMeta, type Status } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
@@ -155,6 +156,8 @@ export function Header() {
 export function Footer() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user } = useAuth();
+  const [deckOpen, setDeckOpen] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
   // The "fictional demonstration data" line is true on marketing/sample pages
   // but false where a real student's data is shown.
   // Signed-in students see their own data on these pages (examples there carry
@@ -192,12 +195,12 @@ export function Footer() {
         </div>
         <div className="space-y-2 text-sm">
           <p className="font-display text-ink-foreground">Pitch Deck</p>
-          <a href="/MetaTwin_Pitch_Deck.pdf" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-ink-foreground">
+          <button type="button" onClick={() => setDeckOpen(true)} className="flex items-center gap-1.5 hover:text-ink-foreground">
             <FileText className="h-3.5 w-3.5 shrink-0" /> View the deck (PDF)
-          </a>
-          <a href="/MetaTwin_Pitch_Deck.mp4" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-ink-foreground">
+          </button>
+          <button type="button" onClick={() => setVideoOpen(true)} className="flex items-center gap-1.5 hover:text-ink-foreground">
             <PlayCircle className="h-3.5 w-3.5 shrink-0" /> Watch the pitch (video)
-          </a>
+          </button>
         </div>
       </div>
       {!showsRealData && (
@@ -205,6 +208,29 @@ export function Footer() {
           Prototype · All people, projects and reviews shown are fictional demonstration data.
         </div>
       )}
+
+      <Dialog open={deckOpen} onOpenChange={setDeckOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between gap-4 pr-6">
+              MetaTwin Pitch Deck
+              <a href="/MetaTwin_Pitch_Deck.pdf" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs font-normal text-muted-foreground hover:text-foreground">
+                Open in a new tab <ExternalLink className="h-3 w-3" />
+              </a>
+            </DialogTitle>
+          </DialogHeader>
+          <iframe src="/MetaTwin_Pitch_Deck.pdf" title="MetaTwin Pitch Deck" className="h-[75vh] w-full rounded-md border" />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>MetaTwin Pitch</DialogTitle></DialogHeader>
+          <video controls preload="metadata" className="w-full rounded-md bg-black" src="/MetaTwin_Pitch_Deck.mp4">
+            Your browser can't play this video — <a href="/MetaTwin_Pitch_Deck.mp4" className="underline">download it</a> instead.
+          </video>
+        </DialogContent>
+      </Dialog>
     </footer>
   );
 }
