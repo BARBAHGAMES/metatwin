@@ -390,6 +390,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      partnership_inquiries: {
+        Row: {
+          contact_name: string;
+          created_at: string;
+          email: string;
+          id: string;
+          institution_name: string;
+          message: string | null;
+          phone: string | null;
+          status: string;
+        };
+        Insert: {
+          contact_name: string;
+          created_at?: string;
+          email: string;
+          id?: string;
+          institution_name: string;
+          message?: string | null;
+          phone?: string | null;
+          status?: string;
+        };
+        Update: {
+          contact_name?: string;
+          created_at?: string;
+          email?: string;
+          id?: string;
+          institution_name?: string;
+          message?: string | null;
+          phone?: string | null;
+          status?: string;
+        };
+        Relationships: [];
+      };
       pitches: {
         Row: {
           business_name: string;
@@ -713,6 +746,16 @@ export type Database = {
       submit_evidence_review: {
         Args: { p_comment: string; p_token: string };
         Returns: boolean;
+      };
+      submit_partnership_inquiry: {
+        Args: {
+          p_contact_name: string;
+          p_email: string;
+          p_institution_name: string;
+          p_message: string;
+          p_phone: string;
+        };
+        Returns: undefined;
       };
       twin_is_adult: { Args: { p_twin_id: string }; Returns: boolean };
     };

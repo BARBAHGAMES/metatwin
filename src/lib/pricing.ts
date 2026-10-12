@@ -123,8 +123,8 @@ export const comparisonRows: { feature: string; basic: string; guided: string; b
 export const perMember = (p: TeamPackage) => Math.round(p.price / p.members);
 export const formatKES = (n: number) => `KES ${n.toLocaleString("en-US")}`;
 
-// Placeholder — replace with the real contact destination before publishing.
-export const CONTACT_PLACEHOLDER = "#contact-placeholder";
+export const WHATSAPP_CONTACT_URL = "https://wa.me/254726227481";
+export const WHATSAPP_CONTACT_DISPLAY = "+254 726 227 481";
 
 // Team service levels. Prices are the confirmed table values from the brief (annual KES).
 export type TeamTier = {

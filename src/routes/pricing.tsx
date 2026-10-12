@@ -1,11 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import heroImg from "@/assets/hero-pricing.jpg";
 import { useState } from "react";
-import { Check, Info, Building2, Users } from "lucide-react";
+import { toast } from "sonner";
+import { Check, Info, Building2, Users, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, PageHero, Section } from "@/components/site";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CONTACT_PLACEHOLDER, comparisonRows, formatKES, individualPlans, teamPackages, teamTiers, teamTierPrice, teamPremium, type Availability, type TeamPackage } from "@/lib/pricing";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { WHATSAPP_CONTACT_URL, WHATSAPP_CONTACT_DISPLAY, comparisonRows, formatKES, individualPlans, teamPackages, teamTiers, teamTierPrice, teamPremium, type Availability, type TeamPackage } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/pricing")({
@@ -37,10 +43,34 @@ const faqs: [string, string][] = [
   ["Can I upgrade later?", "Yes — get in touch and we'll help you move to a different plan. Online plan management isn't available yet."],
 ];
 
+const emptyPartnershipForm = { institution: "", contact: "", email: "", phone: "", message: "" };
+
 function Pricing() {
   const [tab, setTab] = useState<"individual" | "team">("individual");
   const [size, setSize] = useState<TeamPackage["id"]>("studio");
   const pkg = teamPackages.find((p) => p.id === size)!;
+  const [partnershipOpen, setPartnershipOpen] = useState(false);
+  const [partnershipForm, setPartnershipForm] = useState(emptyPartnershipForm);
+  const [submittingPartnership, setSubmittingPartnership] = useState(false);
+
+  async function submitPartnershipInquiry() {
+    setSubmittingPartnership(true);
+    const { error } = await supabase.rpc("submit_partnership_inquiry", {
+      p_institution_name: partnershipForm.institution,
+      p_contact_name: partnershipForm.contact,
+      p_email: partnershipForm.email,
+      p_phone: partnershipForm.phone,
+      p_message: partnershipForm.message,
+    });
+    setSubmittingPartnership(false);
+    if (error) {
+      toast.error(error.message || "Couldn't send that — try again.");
+      return;
+    }
+    toast.success("Thanks — we'll be in touch about a partnership.");
+    setPartnershipOpen(false);
+    setPartnershipForm(emptyPartnershipForm);
+  }
   return (
     <>
       <PageHero
@@ -182,7 +212,7 @@ function Pricing() {
                   <li>— Members keep their individual profiles and document their own roles and contributions.</li>
                   <li>— Features marked "Planned" are not live yet.</li>
                 </ul>
-                <p className="mt-4 text-sm">Bigger team or more projects? <a href={CONTACT_PLACEHOLDER} className="font-medium text-electric underline-offset-4 hover:underline">Contact us</a> <span className="text-xs text-muted-foreground">(contact details coming soon)</span></p>
+                <p className="mt-4 text-sm">Bigger team or more projects? <a href={WHATSAPP_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-electric underline-offset-4 hover:underline">Message us on WhatsApp</a></p>
               </Card>
             </div>
           </div>
@@ -195,9 +225,13 @@ function Pricing() {
             <p className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-electric"><Building2 className="h-4 w-4" /> MetaTwin Campus · Custom pricing</p>
             <h2 className="mt-3 text-3xl font-semibold md:text-4xl">Help your students make their capabilities visible.</h2>
             <p className="mt-4 text-ink-muted">Give student cohorts a structured way to document skills, showcase innovation projects, and build evidence of what they have accomplished.</p>
-            <Button asChild variant="hero" size="lg" className="mt-8"><a href={CONTACT_PLACEHOLDER}>Discuss an Institutional Partnership</a></Button>
-            <p className="mt-2 text-xs opacity-70">Contact details coming soon.</p>
-            <p className="mt-3 text-xs text-ink-muted">[Contact destination to be connected before launch]</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button variant="hero" size="lg" onClick={() => setPartnershipOpen(true)}>Discuss an Institutional Partnership</Button>
+              <Button asChild variant="heroOutline" size="lg">
+                <a href={WHATSAPP_CONTACT_URL} target="_blank" rel="noopener noreferrer"><MessageCircle /> WhatsApp us</a>
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-ink-muted">Prefer WhatsApp? {WHATSAPP_CONTACT_DISPLAY}</p>
           </div>
           <div className="rounded-2xl border border-ink-foreground/10 bg-ink-soft p-6">
             <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Potential offerings</p>
@@ -220,6 +254,43 @@ function Pricing() {
         </Accordion>
         <p className="mt-6 text-xs text-muted-foreground">Online payment isn't connected yet. Choosing a plan takes you to the MetaTwin setup flow; no payment is taken.</p>
       </Section>
+
+      <Dialog open={partnershipOpen} onOpenChange={(open) => { setPartnershipOpen(open); if (!open) setPartnershipForm(emptyPartnershipForm); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Discuss an institutional partnership</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Tell us a bit about your institution and we'll be in touch. No commitment — this just starts the conversation.</p>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="partnership-institution">Institution name</Label>
+              <Input id="partnership-institution" maxLength={200} value={partnershipForm.institution} onChange={(e) => setPartnershipForm({ ...partnershipForm, institution: e.target.value })} placeholder="e.g. Strathmore University" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="partnership-contact">Your name</Label>
+              <Input id="partnership-contact" maxLength={120} value={partnershipForm.contact} onChange={(e) => setPartnershipForm({ ...partnershipForm, contact: e.target.value })} placeholder="e.g. Dr. Imani Wekesa" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="partnership-email">Email</Label>
+              <Input id="partnership-email" type="email" maxLength={254} value={partnershipForm.email} onChange={(e) => setPartnershipForm({ ...partnershipForm, email: e.target.value })} placeholder="you@institution.ac.ke" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="partnership-phone">Phone (optional)</Label>
+              <Input id="partnership-phone" type="tel" maxLength={40} value={partnershipForm.phone} onChange={(e) => setPartnershipForm({ ...partnershipForm, phone: e.target.value })} placeholder="+254…" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="partnership-message">What are you looking for? (optional)</Label>
+              <Textarea id="partnership-message" rows={3} maxLength={2000} value={partnershipForm.message} onChange={(e) => setPartnershipForm({ ...partnershipForm, message: e.target.value })} placeholder="Cohort size, timeline, what you'd want to pilot…" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={submitPartnershipInquiry}
+              disabled={submittingPartnership || !partnershipForm.institution.trim() || !partnershipForm.contact.trim() || !partnershipForm.email.trim()}
+            >
+              {submittingPartnership ? "Sending…" : "Send inquiry"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

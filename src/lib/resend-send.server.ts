@@ -5,6 +5,7 @@ export async function sendResendEmail(
   subject: string,
   html: string,
   label: string,
+  replyTo?: string,
 ): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -24,6 +25,7 @@ export async function sendResendEmail(
         to: [to],
         subject,
         html,
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
     if (!res.ok) {

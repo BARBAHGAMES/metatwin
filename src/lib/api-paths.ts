@@ -7,6 +7,7 @@ export const NEW_USER_WEBHOOK_PATH = "/api/webhooks/new-user";
 export const GITHUB_SYNC_PATH = "/api/github/sync";
 export const TWIN_CHAT_PATH = "/api/ai/chat";
 export const OPPORTUNITIES_SCOUT_PATH = "/api/ai/opportunities";
+export const PARTNERSHIP_INQUIRY_WEBHOOK_PATH = "/api/webhooks/partnership-inquiry";
 
 export type GitHubRepoStats = {
   full_name: string;
