@@ -453,6 +453,18 @@ Verified: `tsc --noEmit`, `eslint .`, `vitest run` (100/100, up from 77), `check
 
 **Not done**: "navigation for the users dashboard" — Andrew's first ask from this round, not yet clarified or built (my read of the reference screenshots: likely the mockup's Solo/Team toggle, but not confirmed).
 
+## Solo builder / Team toggle on /profile (2026-10-13, later same day)
+
+Andrew confirmed the "navigation" ask from above: a toggle between the solo-builder view and a team view, matching the reference mockup. Built it on `/profile`'s `RealProfile`.
+
+- `get_my_teams()` extended (`20261013071228`) with `avatar_url` and each team's tagged `projects` (full pitch-media fields — `artifact_url`/`writeup_url`/`pitch_deck_url`/`pitch_video_url` — so the new team view can reuse `PitchDeckButton`/`PitchVideoButton` directly). Projects and members show regardless of an individual member's own profile visibility — the same "team opt-in is independent" principle already used in `get_team_public_profile()`, extended here to this member-only view. **Verified live** in a rolled-back transaction: a private team's `avatar_url`/`projects`/`pitch_video_url` all come through correctly for a member.
+- `src/lib/teams.ts`: `MyTeam` gained `avatar_url`/`projects: MyTeamProject[]`.
+- **New `src/components/TeamDashboardView.tsx`**: team hero (avatar/name/description/visibility/member+project counts, "Manage team →" link to `/dashboard` for the creator, "View public team page →" if the team has opted public), members grid, tagged projects (with inline pitch deck/video viewers), and pitch competition scores — a private "my team" view distinct from the public `/teams/$slug` page (works for private teams too, which `/teams/$slug` can't show).
+- `/profile`'s `RealProfile` gained a pill toggle ("Solo builder" + one pill per team) shown only when the student belongs to at least one team; selecting a team swaps the whole page body for `TeamDashboardView`.
+- **Process note**: an early pass ran `prettier --write` on `profile.tsx` to fix indentation after a manual edit, which silently reformatted the *entire* file to the project's 100-col `.prettierrc` width — a width this codebase has never actually been written to (every file this session has long, unwrapped JSX lines). That produced a 586+/206- diff against a 42-line intended change. Caught via `git diff --stat` before committing; reverted with `git checkout -- src/routes/profile.tsx` and reapplied the same edits by hand instead. **Lesson for future sessions: don't run `prettier --write` on existing files in this repo** — the actual hand-written style doesn't match `.prettierrc`'s `printWidth: 100`, and the config is seemingly unenforced (no CI/pre-commit check found running it).
+
+Verified: `tsc --noEmit`, `eslint .`, `vitest run` (100/100, unchanged — no new pure-function logic this round), `check-grants`, `check-migrations-sync` (61 migrations, no drift), `check-content-drift` (clean), full `npm run build`. Committed, pushed (fetched first, no divergence), deployed with explicit go-ahead. **Deployed Worker version `e19dfee7-1b78-48b2-92a4-781f3991dcdd`.**
+
 ## Pitch-competition score ingestion from Google Forms, committed & deployed (2026-10-12, later same day)
 
 Built the deferred piece above. Andrew's real constraint, surfaced when asked about the ingestion identifier: **a separate Google Form gets shared per competition event**, not one long-lived Form — which matters because duplicating a Form ("Make a copy") does NOT carry over a bound Apps Script, so a per-Form-bound script would mean rebuilding it every event.
