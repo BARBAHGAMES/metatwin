@@ -153,14 +153,6 @@ function RealProfile({ userId }: { userId: string }) {
 
   return (
     <>
-      <VisionHero signedIn />
-      <ExampleShowcase />
-
-      <Section className="pb-0 md:pb-0">
-        <p className="scroll-mt-24 font-mono text-xs uppercase tracking-[0.2em] text-electric">
-          {isEmpty ? "Now build yours" : "Your real MetaTwin"}
-        </p>
-      </Section>
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
         <div className="absolute inset-0 opacity-50"><CareerGraph /></div>
         <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/30" aria-hidden />
@@ -179,6 +171,7 @@ function RealProfile({ userId }: { userId: string }) {
                   <MapPin className="h-4 w-4" />{[twin.institution, twin.programme].filter(Boolean).join(" · ")}{twin.year ? ` · Year ${twin.year}` : ""}
                 </p>
               )}
+              {isEmpty && <p className="mt-3 text-sm text-electric">Your MetaTwin is empty — add your first capability or project to get started.</p>}
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button asChild variant="hero"><Link to="/dashboard">Edit your MetaTwin</Link></Button>
               </div>
