@@ -10,7 +10,9 @@ MetaTwin is a standalone product for MetaGlobe Technologies, at `metatwin.metagl
 
 Same stack as `barbah-games-platform` (TanStack Start, Cloudflare Worker, Supabase, Resend) but **its own repo and its own Supabase project** — no data is shared between the two products.
 
-v1 scope is **student-only**: students build/edit their own twin; evidence (course results, project artifacts) backs every competency claim; students control visibility. No employer portal, no university integrations, no BARBAH account linking in v1.
+Core v1 scope is **student-only**: students build/edit their own twin; evidence (course results, project artifacts) backs every competency claim; students control visibility. No BARBAH account linking in v1.
+
+**As of 2026-10-13, this expanded on purpose**: **school admin** accounts now exist (Mount Kenya University pilot — `@mku.ac.ke`-verified staff see CBE-rated grades their lecturers submit on student projects via a Google Form, never an in-app form; see `PROJECT_STATE.md` for the full design). A **businesses** role (talent tracking + project challenges) was raised in the same conversation and is explicitly deferred, not built — don't assume it exists.
 
 ## Repo basics
 
