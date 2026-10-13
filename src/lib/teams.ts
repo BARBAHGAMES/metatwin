@@ -2,14 +2,25 @@ import { supabase } from "@/integrations/supabase/client";
 import type { MyPitchScore, PublicPitchScore } from "./pitch-scores";
 
 export type MyTeamMember = { twin_id: string; name: string | null; handle: string | null; role: string | null };
+export type MyTeamProject = {
+  id: string;
+  title: string;
+  description: string | null;
+  artifact_url: string | null;
+  writeup_url: string | null;
+  pitch_deck_url: string | null;
+  pitch_video_url: string | null;
+};
 export type MyTeam = {
   id: string;
   slug: string | null;
   name: string;
   description: string | null;
   visibility: "public" | "private";
+  avatar_url: string | null;
   is_creator: boolean;
   members: MyTeamMember[];
+  projects: MyTeamProject[];
   pitch_scores: MyPitchScore[];
 };
 

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import heroImg from "@/assets/hero-metatwin.jpg";
 import { useEffect, useState } from "react";
-import { ArrowRight, MapPin, Target, Lock, Bot, Briefcase, UserPlus, Sparkles, Search, Handshake } from "lucide-react";
+import { ArrowRight, MapPin, Target, Lock, Bot, Briefcase, UserPlus, Sparkles, Search, Handshake, User, Users2 } from "lucide-react";
 import { toast } from "sonner";
 import { aiEmployees, capabilities, growth, person, projects } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
@@ -16,6 +16,8 @@ import { Card, HeroBackdrop, SampleAvatar, SampleTag, Section, StatusBadge } fro
 import { Reveal } from "@/components/Reveal";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import type { Status } from "@/lib/data";
+import { fetchMyTeams, type MyTeam } from "@/lib/teams";
+import { TeamDashboardView } from "@/components/TeamDashboardView";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -73,6 +75,14 @@ function RealProfile({ userId }: { userId: string }) {
   const [fetching, setFetching] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [teams, setTeams] = useState<MyTeam[]>([]);
+  const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMyTeams()
+      .then(setTeams)
+      .catch((err) => console.error("[profile] load teams failed:", err));
+  }, [userId, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,9 +160,37 @@ function RealProfile({ userId }: { userId: string }) {
     .slice(0, 6);
 
   const isEmpty = !twin.name && competencies.length === 0 && projectList.length === 0;
+  const activeTeam = teams.find((t) => t.id === activeTeamId) ?? null;
 
   return (
     <>
+      {teams.length > 0 && (
+        <div className="border-b bg-muted/30">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-5 py-3">
+            <button
+              type="button"
+              onClick={() => setActiveTeamId(null)}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${!activeTeam ? "border-electric bg-electric/10 text-electric" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              <User className="h-3.5 w-3.5" /> Solo builder
+            </button>
+            {teams.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTeamId(t.id)}
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${activeTeam?.id === t.id ? "border-electric bg-electric/10 text-electric" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              >
+                <Users2 className="h-3.5 w-3.5" /> {t.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {activeTeam ? (
+        <TeamDashboardView team={activeTeam} />
+      ) : (
+        <>
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
         <div className="absolute inset-0 opacity-50"><CareerGraph /></div>
         <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/30" aria-hidden />
@@ -297,6 +335,8 @@ function RealProfile({ userId }: { userId: string }) {
           </Card>
         </aside>
       </Section>
+        </>
+      )}
     </>
   );
 }
