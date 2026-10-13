@@ -32,7 +32,11 @@ const SECURITY_HEADERS: Record<string, string> = {
     "default-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'; " +
     "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; " +
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co;",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co; " +
+    // Inline pitch-deck/video viewers (PitchDeckButton/PitchVideoButton)
+    // embed Google Drive/Docs/Slides previews and YouTube — without this,
+    // default-src 'self' silently blocks those iframes.
+    "frame-src 'self' https://docs.google.com https://drive.google.com https://www.youtube.com;",
 };
 
 function withSecurityHeaders(response: Response): Response {

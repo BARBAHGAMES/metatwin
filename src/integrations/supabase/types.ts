@@ -707,6 +707,7 @@ export type Database = {
           id: string;
           pitch_deck_url: string | null;
           pitch_scores: Json;
+          pitch_video_url: string | null;
           scores_csv_url: string | null;
           scores_synced_at: string | null;
           skill_ids: string[];
@@ -723,6 +724,7 @@ export type Database = {
           id?: string;
           pitch_deck_url?: string | null;
           pitch_scores?: Json;
+          pitch_video_url?: string | null;
           scores_csv_url?: string | null;
           scores_synced_at?: string | null;
           skill_ids?: string[];
@@ -739,6 +741,7 @@ export type Database = {
           id?: string;
           pitch_deck_url?: string | null;
           pitch_scores?: Json;
+          pitch_video_url?: string | null;
           scores_csv_url?: string | null;
           scores_synced_at?: string | null;
           skill_ids?: string[];

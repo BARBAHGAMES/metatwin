@@ -58,6 +58,7 @@ export type PublicProject = {
   artifact_url?: string | null;
   writeup_url?: string | null;
   pitch_deck_url?: string | null;
+  pitch_video_url?: string | null;
   github?: PublicGithubStats | null;
   pitch_stats?: PublicPitchStats | null;
   pitch_feedback?: PublicPitchFeedback | null;

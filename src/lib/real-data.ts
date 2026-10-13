@@ -24,6 +24,7 @@ export type MyProject = {
   github_repo: string | null;
   writeup_url: string | null;
   pitch_deck_url: string | null;
+  pitch_video_url: string | null;
   created_at: string;
   scores_csv_url: string | null;
   pitch_scores: PitchScores | Record<string, never>;
@@ -113,7 +114,7 @@ export async function fetchMyProjects(userId: string) {
   const [proj, ev] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
+      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
       .eq("twin_id", userId)
       .order("created_at", { ascending: false }),
     supabase
@@ -131,7 +132,7 @@ export async function fetchMyProject(userId: string, projectId: string) {
   const [proj, ev, repo, pitches, pitchStats, allGrades] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
+      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
       .eq("twin_id", userId)
       .eq("id", projectId)
       .maybeSingle(),

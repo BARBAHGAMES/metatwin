@@ -7,6 +7,7 @@ import type { GithubRepoRow, MyProject, PitchRow, PitchStatsRow } from "@/lib/re
 import type { PitchScores } from "@/lib/scores";
 import { safeHref } from "@/lib/url";
 import { Card } from "@/components/site";
+import { PitchDeckButton, PitchVideoButton } from "@/components/PitchMedia";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -304,18 +305,21 @@ export function ProjectLinksForm({
   project,
   onSaved,
 }: {
-  project: Pick<MyProject, "id" | "writeup_url" | "pitch_deck_url">;
+  project: Pick<MyProject, "id" | "writeup_url" | "pitch_deck_url" | "pitch_video_url">;
   onSaved: () => void;
 }) {
   const [writeup, setWriteup] = useState(project.writeup_url ?? "");
   const [deck, setDeck] = useState(project.pitch_deck_url ?? "");
+  const [video, setVideo] = useState(project.pitch_video_url ?? "");
   const [saving, setSaving] = useState(false);
+  const savedDeck = safeHref(project.pitch_deck_url);
+  const savedVideo = safeHref(project.pitch_video_url);
 
   async function save() {
     setSaving(true);
     const { error } = await supabase
       .from("projects")
-      .update({ writeup_url: writeup.trim() || null, pitch_deck_url: deck.trim() || null })
+      .update({ writeup_url: writeup.trim() || null, pitch_deck_url: deck.trim() || null, pitch_video_url: video.trim() || null })
       .eq("id", project.id);
     setSaving(false);
     if (error) {
@@ -328,16 +332,24 @@ export function ProjectLinksForm({
 
   return (
     <Card>
-      <h3 className="font-semibold">Write-up & pitch deck</h3>
-      <p className="mt-1 text-xs text-muted-foreground">Paste a link to a Google Doc write-up or Slides deck — no account connection needed.</p>
+      <h3 className="font-semibold">Write-up, deck & pitch video</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Paste links — a Google Doc write-up, a Slides/Drive deck, and a pitch video (YouTube or a direct video link). No account connection needed, and they play inline on your profile.
+      </p>
       <div className="mt-3 space-y-2">
         <div className="space-y-1.5">
           <Label>Write-up (Google Doc, etc.)</Label>
           <Input placeholder="https://docs.google.com/..." value={writeup} onChange={(e) => setWriteup(e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label>Pitch deck (Google Slides, etc.)</Label>
+          <Label>Pitch deck (Google Slides/Drive, etc.)</Label>
           <Input placeholder="https://docs.google.com/presentation/..." value={deck} onChange={(e) => setDeck(e.target.value)} />
+          {savedDeck && <PitchDeckButton url={savedDeck} label="Preview saved deck" className="mt-1 flex items-center gap-1.5 text-xs text-electric hover:underline" />}
+        </div>
+        <div className="space-y-1.5">
+          <Label>Pitch video (YouTube or direct link)</Label>
+          <Input placeholder="https://youtube.com/watch?v=..." value={video} onChange={(e) => setVideo(e.target.value)} />
+          {savedVideo && <PitchVideoButton url={savedVideo} label="Preview saved video" className="mt-1 flex items-center gap-1.5 text-xs text-electric hover:underline" />}
         </div>
         <Button variant="outline" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save links"}</Button>
       </div>

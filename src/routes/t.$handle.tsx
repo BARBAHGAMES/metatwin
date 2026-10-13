@@ -5,6 +5,7 @@ import { safeHref } from "@/lib/url";
 import { Card, HeroBackdrop, SampleAvatar, Section, StatusBadge } from "@/components/site";
 import { Button } from "@/components/ui/button";
 import { TwinChat } from "@/components/TwinChat";
+import { PitchDeckButton, PitchVideoButton } from "@/components/PitchMedia";
 
 export const Route = createFileRoute("/t/$handle")({
   loader: async ({ params }) => {
@@ -256,6 +257,7 @@ function PublicProfilePage() {
                 const href = safeHref(p.artifact_url);
                 const writeup = safeHref(p.writeup_url);
                 const deck = safeHref(p.pitch_deck_url);
+                const video = safeHref(p.pitch_video_url);
                 const githubHref = safeHref(p.github?.url ?? null);
                 return (
                   <li key={p.id}>
@@ -281,7 +283,8 @@ function PublicProfilePage() {
                       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                         {href && <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="text-electric hover:underline">View work</a>}
                         {writeup && <a href={writeup} target="_blank" rel="noopener noreferrer nofollow" className="text-electric hover:underline">Write-up</a>}
-                        {deck && <a href={deck} target="_blank" rel="noopener noreferrer nofollow" className="text-electric hover:underline">Pitch deck</a>}
+                        {deck && <PitchDeckButton url={deck} label="Pitch deck" className="flex items-center gap-1 text-electric hover:underline" />}
+                        {video && <PitchVideoButton url={video} label="Pitch video" className="flex items-center gap-1 text-electric hover:underline" />}
                       </div>
                       {p.github && (
                         <a href={githubHref ?? "#"} target="_blank" rel="noopener noreferrer nofollow" className="mt-3 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
