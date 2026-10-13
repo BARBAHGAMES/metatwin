@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { ExternalLink, GitFork, Github, Plus, RefreshCw, Rocket, Star, Trash2 } from "lucide-react";
+import { ExternalLink, GitFork, Github, MessageSquare, Plus, RefreshCw, Rocket, Star, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { GITHUB_SYNC_PATH, type GitHubRepoStats } from "@/lib/api-paths";
+import { GITHUB_SYNC_PATH, PITCH_FEEDBACK_SYNC_PATH, type GitHubRepoStats } from "@/lib/api-paths";
 import type { GithubRepoRow, MyProject, PitchRow, PitchStatsRow } from "@/lib/real-data";
+import type { PitchScores } from "@/lib/scores";
 import { safeHref } from "@/lib/url";
 import { Card } from "@/components/site";
 import { Button } from "@/components/ui/button";
@@ -214,6 +215,87 @@ export function PitchTracker({
         <Textarea rows={2} placeholder="Notes (optional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         <Button onClick={addPitch} disabled={adding}><Plus /> {adding ? "Adding…" : "Log pitch"}</Button>
       </div>
+    </Card>
+  );
+}
+
+export function PitchFeedbackCard({
+  project,
+  onSynced,
+}: {
+  project: Pick<MyProject, "id" | "scores_csv_url" | "pitch_scores" | "scores_synced_at">;
+  onSynced: () => void;
+}) {
+  const [url, setUrl] = useState(project.scores_csv_url ?? "");
+  const [syncing, setSyncing] = useState(false);
+  const scores = project.pitch_scores as PitchScores | Record<string, never>;
+  const hasScores = "responses" in scores && scores.responses > 0;
+
+  async function sync() {
+    const csvUrl = url.trim();
+    if (!csvUrl) {
+      toast.error("Paste your published Google Sheet link first.");
+      return;
+    }
+    setSyncing(true);
+    try {
+      const res = await fetch(PITCH_FEEDBACK_SYNC_PATH, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ csv_url: csvUrl }),
+      });
+      const body = (await res.json()) as PitchScores | { error: string };
+      if (!res.ok || "error" in body) {
+        toast.error("error" in body ? body.error : "Could not sync feedback.");
+        return;
+      }
+      const { error } = await supabase
+        .from("projects")
+        .update({ scores_csv_url: csvUrl, pitch_scores: body, scores_synced_at: new Date().toISOString() })
+        .eq("id", project.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Pitch feedback synced.");
+      onSynced();
+    } catch {
+      toast.error("Could not reach Google Sheets. Try again.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  return (
+    <Card>
+      <h3 className="flex items-center gap-2 font-semibold"><MessageSquare className="h-4 w-4" /> Pitch feedback</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Paste your Google Form's response sheet, published to the web as a CSV (Sheet → File → Share → Publish to web → CSV). We
+        only read question averages — never the raw responses.
+      </p>
+      <div className="mt-3 flex gap-2">
+        <Input placeholder="https://docs.google.com/spreadsheets/..." value={url} onChange={(e) => setUrl(e.target.value)} />
+      </div>
+      <Button variant="hero" className="mt-2 w-full" onClick={sync} disabled={syncing}>
+        <RefreshCw className={syncing ? "animate-spin" : ""} /> {syncing ? "Syncing…" : hasScores ? "Sync again" : "Sync feedback"}
+      </Button>
+      {hasScores && "overall" in scores && (
+        <div className="mt-4 border-t pt-4">
+          <div className="flex items-baseline justify-between">
+            <p className="text-sm text-muted-foreground">{scores.responses} response{scores.responses === 1 ? "" : "s"}</p>
+            {scores.overall != null && <p className="font-display text-2xl font-semibold">{scores.overall.toFixed(1)}<span className="text-sm text-muted-foreground">/10</span></p>}
+          </div>
+          <div className="mt-3 space-y-2">
+            {scores.questions.map((q) => (
+              <div key={q.label}>
+                <div className="flex justify-between text-xs"><span>{q.label}</span><span className="text-muted-foreground">{q.average.toFixed(1)} / {q.max}</span></div>
+                <div className="mt-1 h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-electric" style={{ width: `${(q.average / q.max) * 100}%` }} /></div>
+              </div>
+            ))}
+          </div>
+          {project.scores_synced_at && <p className="mt-3 text-xs text-muted-foreground">Last synced {new Date(project.scores_synced_at).toLocaleDateString()} · reported by the student</p>}
+        </div>
+      )}
     </Card>
   );
 }

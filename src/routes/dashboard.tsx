@@ -24,6 +24,7 @@ import { OpportunitiesScout } from "@/components/OpportunitiesScout";
 import { GithubActivityCard } from "@/components/GithubActivityCard";
 import { TeamsCard } from "@/components/TeamsCard";
 import { PitchScoresCard } from "@/components/PitchScoresCard";
+import { AiEmployeesCard } from "@/components/AiEmployeesCard";
 import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -552,6 +553,10 @@ function Dashboard() {
 
         <Card className="mt-5">
           <TeamsCard />
+        </Card>
+
+        <Card className="mt-5">
+          {user && <AiEmployeesCard userId={user.id} />}
         </Card>
 
         <PitchScoresCard />

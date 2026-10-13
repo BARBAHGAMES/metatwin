@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Project as SampleProject } from "@/lib/data";
+import type { PitchScores } from "@/lib/scores";
 
 // Real (database-backed) data for the signed-in student's own pages. All of
 // these reads go through the normal client, so RLS scopes them to the owner.
@@ -23,6 +24,9 @@ export type MyProject = {
   writeup_url: string | null;
   pitch_deck_url: string | null;
   created_at: string;
+  scores_csv_url: string | null;
+  pitch_scores: PitchScores | Record<string, never>;
+  scores_synced_at: string | null;
 };
 export type GithubRepoRow = {
   full_name: string;
@@ -108,7 +112,7 @@ export async function fetchMyProjects(userId: string) {
   const [proj, ev] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at")
+      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
       .eq("twin_id", userId)
       .order("created_at", { ascending: false }),
     supabase
@@ -126,7 +130,7 @@ export async function fetchMyProject(userId: string, projectId: string) {
   const [proj, ev, repo, pitches, pitchStats] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at")
+      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
       .eq("twin_id", userId)
       .eq("id", projectId)
       .maybeSingle(),

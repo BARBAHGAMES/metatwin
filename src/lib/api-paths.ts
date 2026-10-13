@@ -11,6 +11,7 @@ export const PARTNERSHIP_INQUIRY_WEBHOOK_PATH = "/api/webhooks/partnership-inqui
 export const GITHUB_CONNECT_PATH = "/api/github/connect";
 export const GITHUB_REFRESH_PATH = "/api/github/refresh";
 export const PITCH_SCORE_WEBHOOK_PATH = "/api/webhooks/pitch-score";
+export const PITCH_FEEDBACK_SYNC_PATH = "/api/projects/sync-pitch-feedback";
 
 export type GithubConnection = {
   github_username: string;

@@ -11,7 +11,7 @@ import { LoadError } from "@/components/LoadError";
 import { Card, PageHero, SampleTag, Section, StatusBadge } from "@/components/site";
 import { Journey } from "@/components/Journey";
 import { Reveal } from "@/components/Reveal";
-import { GitHubCard, PitchTracker, ProjectLinksForm } from "@/components/ProjectExtras";
+import { GitHubCard, PitchFeedbackCard, PitchTracker, ProjectLinksForm } from "@/components/ProjectExtras";
 import { supabase } from "@/integrations/supabase/client";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -171,6 +171,7 @@ function ProjectExtrasPanel({
     <>
       <GitHubCard repo={githubRepo} githubRepoField={githubField} onFieldChange={setGithubField} onSave={saveGithubRepo} onSynced={onReload} twinId={userId} projectId={projectId} />
       <ProjectLinksForm project={project} onSaved={onReload} />
+      <PitchFeedbackCard project={project} onSynced={onReload} />
       <PitchTracker pitches={pitches} stats={pitchStats} twinId={userId} projectId={projectId} onChange={onReload} />
     </>
   );

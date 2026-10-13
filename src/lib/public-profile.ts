@@ -49,6 +49,7 @@ export type PublicGithubStats = {
 };
 export type PublicPitchStats = { total_pitches: number; positive: number; customers: number; conversion_pct: number | null };
 export type PublicProjectTeam = { slug: string; name: string };
+export type PublicPitchFeedback = { responses: number; questions: { label: string; average: number; max: number }[]; overall: number | null };
 export type PublicProject = {
   id: string;
   title: string;
@@ -58,9 +59,11 @@ export type PublicProject = {
   pitch_deck_url?: string | null;
   github?: PublicGithubStats | null;
   pitch_stats?: PublicPitchStats | null;
+  pitch_feedback?: PublicPitchFeedback | null;
   team?: PublicProjectTeam | null;
 };
 export type PublicProfileTeam = { slug: string; name: string };
+export type PublicAiEmployee = { id: string; name: string; role: string | null; platform: string | null; description: string | null; link_url: string | null };
 // Aggregate signals only, deliberately — no repo listing, no token. Shown to
 // anyone viewing a public profile (including recruiters), so it mirrors
 // exactly what GitHub's own public contribution graph exposes: activity
@@ -84,6 +87,7 @@ export type PublicProfile = {
   github_activity: PublicGithubActivity | null;
   teams: PublicProfileTeam[];
   pitch_scores: PublicPitchScore[];
+  ai_employees: PublicAiEmployee[];
   capabilities: PublicCapability[];
   projects: PublicProject[];
 };

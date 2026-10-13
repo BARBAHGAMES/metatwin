@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowRight, ExternalLink, Flame, GitFork, Github, MapPin, Rocket, Star, Users2, Trophy } from "lucide-react";
+import { ArrowRight, Bot, ExternalLink, Flame, GitFork, Github, MapPin, MessageSquare, Rocket, Star, Users2, Trophy } from "lucide-react";
 import { fetchPublicProfile, type PublicCapability, type PublicProfile } from "@/lib/public-profile";
 import { safeHref } from "@/lib/url";
 import { Card, HeroBackdrop, SampleAvatar, Section, StatusBadge } from "@/components/site";
@@ -184,6 +184,28 @@ function PublicProfilePage() {
           </div>
         )}
 
+        {profile.ai_employees.length > 0 && (
+          <div>
+            <h2 className="flex items-center gap-2 text-2xl font-semibold"><Bot className="h-5 w-5" /> AI employees</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Shown separately — AI work never counts as {profile.name?.split(" ")[0] ?? "the student"}'s own evidence.</p>
+            <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+              {profile.ai_employees.map((e) => {
+                const href = safeHref(e.link_url);
+                return (
+                  <li key={e.id}>
+                    <Card className="h-full">
+                      <p className="font-display font-semibold">{e.name} <span className="ml-1 rounded bg-electric-soft px-1.5 py-0.5 font-mono text-[10px] text-accent-foreground">AI</span></p>
+                      <p className="text-xs text-muted-foreground">{[e.role, e.platform].filter(Boolean).join(" · ")}</p>
+                      {e.description && <p className="mt-2 text-sm text-muted-foreground">{e.description}</p>}
+                      {href && <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 flex items-center gap-1 text-sm text-electric hover:underline">View <ExternalLink className="h-3.5 w-3.5" /></a>}
+                    </Card>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         <div>
           <h2 className="text-2xl font-semibold">Capabilities</h2>
           {profile.capabilities.length === 0 ? (
@@ -267,6 +289,13 @@ function PublicProfilePage() {
                       {p.pitch_stats && p.pitch_stats.total_pitches > 0 && (
                         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                           <Rocket className="h-3.5 w-3.5" /> {p.pitch_stats.total_pitches} pitches logged · {p.pitch_stats.conversion_pct ?? 0}% positive (reported by the student)
+                        </p>
+                      )}
+                      {p.pitch_feedback && p.pitch_feedback.responses > 0 && (
+                        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          {p.pitch_feedback.overall != null && <>{p.pitch_feedback.overall.toFixed(1)}/10 · </>}
+                          {p.pitch_feedback.responses} response{p.pitch_feedback.responses === 1 ? "" : "s"} (reported by the student)
                         </p>
                       )}
                     </Card>

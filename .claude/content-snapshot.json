@@ -570,6 +570,11 @@
     "· Solution",
     "· Team",
     "· Ask",
+    "AI employees",
+    "Shown separately — AI work never counts as",
+    "'s own evidence.",
+    "AI",
+    "View",
     "Capabilities",
     "No capabilities listed yet.",
     "Projects",
@@ -579,6 +584,9 @@
     "Pitch deck",
     "pitches logged ·",
     "% positive (reported by the student)",
+    "/10 ·",
+    "response",
+    "(reported by the student)",
     "Capabilities and evidence on this page were added by the student. \"Evidence added\" means the student attached supporting material; it has not been independently reviewed or verified. \"Reviewed\" means an invited reviewer submitted a comment on that specific item.",
     "Students: build your own MetaTwin — a living record of what you can do, backed by evidence.",
     "Build yours"
@@ -675,6 +683,20 @@
     "Year of birth",
     "e.g. 2003",
     "I confirm I am 18 or older."
+  ],
+  "src/components/AiEmployeesCard.tsx": [
+    "Your AI employees",
+    "The agents and tools that work alongside you — a GPT, an automation, a bot you run. Shown separately on your public page and never counted as your own evidence.",
+    "Loading…",
+    "None added yet.",
+    "AI",
+    "Remove",
+    "View",
+    "Name (e.g. Research Analyst)",
+    "Role (optional)",
+    "Platform (optional, e.g. ChatGPT)",
+    "Link (optional)",
+    "What does it do for you? (optional)"
   ],
   "src/components/AITeam.tsx": [
     "AI workforce",
@@ -788,6 +810,13 @@
     "Business name",
     "Sector (optional)",
     "Notes (optional)",
+    "Pitch feedback",
+    "Paste your Google Form's response sheet, published to the web as a CSV (Sheet → File → Share → Publish to web → CSV). We only read question averages — never the raw responses.",
+    "https://docs.google.com/spreadsheets/...",
+    "response",
+    "/10",
+    "Last synced",
+    "· reported by the student",
     "Write-up & pitch deck",
     "Paste a link to a Google Doc write-up or Slides deck — no account connection needed.",
     "Write-up (Google Doc, etc.)",
@@ -890,6 +919,15 @@
     "MetaTwin v1 is for students aged 18 or older.",
     "Enter a valid birth year."
   ],
+  "src/lib/ai-employees.ts": [
+    "ai_employees",
+    "id, name, role, platform, description, link_url",
+    "twin_id",
+    "created_at",
+    "ai_employees",
+    "ai_employees",
+    "id"
+  ],
   "src/lib/api-paths.ts": [
     "/api/webhooks/new-user",
     "/api/github/sync",
@@ -898,7 +936,8 @@
     "/api/webhooks/partnership-inquiry",
     "/api/github/connect",
     "/api/github/refresh",
-    "/api/webhooks/pitch-score"
+    "/api/webhooks/pitch-score",
+    "/api/projects/sync-pitch-feedback"
   ],
   "src/lib/avatar.ts": [
     "image/",
@@ -1436,6 +1475,36 @@
     "content-type",
     "application/json"
   ],
+  "src/lib/pitch-feedback-sync-route.server.ts": [
+    "docs.google.com",
+    "Bad request",
+    "content-type",
+    "application/json",
+    "string",
+    "Enter a valid URL.",
+    "content-type",
+    "application/json",
+    "https:",
+    "Only a published Google Sheets link (docs.google.com) is supported.",
+    "content-type",
+    "application/json",
+    "content-type",
+    "application/json",
+    "content-length",
+    "That sheet is too large to sync.",
+    "content-type",
+    "application/json",
+    "That sheet is too large to sync.",
+    "content-type",
+    "application/json",
+    "content-type",
+    "application/json",
+    "AbortError",
+    "Timed out fetching the sheet.",
+    "Could not reach Google Sheets. Try again.",
+    "content-type",
+    "application/json"
+  ],
   "src/lib/pitch-score-webhook-route.server.ts": [
     "content-type",
     "application/json",
@@ -1667,7 +1736,7 @@
     "competency_id",
     "created_at",
     "projects",
-    "id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at",
+    "id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at, scores_csv_url, pitch_scores, scores_synced_at",
     "twin_id",
     "created_at",
     "evidence",
@@ -1675,7 +1744,7 @@
     "twin_id",
     "created_at",
     "projects",
-    "id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at",
+    "id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at, scores_csv_url, pitch_scores, scores_synced_at",
     "twin_id",
     "id",
     "evidence",
@@ -1714,6 +1783,9 @@
     "Content-Type",
     "application/json",
     "MetaTwin <hello@metaglobetechnologies.co.ke>"
+  ],
+  "src/lib/scores.ts": [
+    "questions"
   ],
   "src/lib/teams.ts": [
     "public",

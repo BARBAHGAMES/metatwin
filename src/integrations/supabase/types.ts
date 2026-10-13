@@ -10,6 +10,47 @@ export type Database = {
   };
   public: {
     Tables: {
+      ai_employees: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          link_url: string | null;
+          name: string;
+          platform: string | null;
+          role: string | null;
+          twin_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          link_url?: string | null;
+          name: string;
+          platform?: string | null;
+          role?: string | null;
+          twin_id: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          link_url?: string | null;
+          name?: string;
+          platform?: string | null;
+          role?: string | null;
+          twin_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ai_employees_twin_id_fkey";
+            columns: ["twin_id"];
+            isOneToOne: false;
+            referencedRelation: "twins";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       assessments: {
         Row: {
           created_at: string;
@@ -601,6 +642,9 @@ export type Database = {
           github_repo: string | null;
           id: string;
           pitch_deck_url: string | null;
+          pitch_scores: Json;
+          scores_csv_url: string | null;
+          scores_synced_at: string | null;
           skill_ids: string[];
           team_id: string | null;
           title: string;
@@ -614,6 +658,9 @@ export type Database = {
           github_repo?: string | null;
           id?: string;
           pitch_deck_url?: string | null;
+          pitch_scores?: Json;
+          scores_csv_url?: string | null;
+          scores_synced_at?: string | null;
           skill_ids?: string[];
           team_id?: string | null;
           title: string;
@@ -627,6 +674,9 @@ export type Database = {
           github_repo?: string | null;
           id?: string;
           pitch_deck_url?: string | null;
+          pitch_scores?: Json;
+          scores_csv_url?: string | null;
+          scores_synced_at?: string | null;
           skill_ids?: string[];
           team_id?: string | null;
           title?: string;
