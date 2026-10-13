@@ -535,6 +535,43 @@
     "What stands out about this work? Any feedback on quality, rigor or presentation?",
     "Submitting marks this specific piece of evidence as reviewed by you. Your name and comment will be shown next to it."
   ],
+  "src/routes/school.dashboard.tsx": [
+    "Loading...",
+    "This account isn't registered as a school admin",
+    "If you're MKU staff, request access with your university email.",
+    "Request access",
+    "School admin",
+    "Grades submitted for your campus via the academic grading Google Form.",
+    "No grades submitted yet.",
+    "/4)"
+  ],
+  "src/routes/school.login.tsx": [
+    "School admin",
+    "Log in",
+    "University email",
+    "Password",
+    "••••••••",
+    "Forgot password?",
+    "Log in",
+    "Not registered yet?",
+    "Request access"
+  ],
+  "src/routes/school.signup.tsx": [
+    "Thanks — you're on the list",
+    "We'll verify your university affiliation and email you once your account is active. This is a manual check, so it may take a day or two.",
+    "Back to MetaTwin",
+    "School admin",
+    "Grade your students' projects",
+    "For Mount Kenya University staff. We verify every account by hand before it can see any student data.",
+    "Full name",
+    "University email",
+    "Phone number",
+    "+254 7xx xxx xxx",
+    "Campus",
+    "Password",
+    "Already verified?",
+    "Log in"
+  ],
   "src/routes/signup.tsx": [
     "Get started",
     "Build your MetaTwin",
@@ -579,6 +616,7 @@
     "No capabilities listed yet.",
     "Projects",
     "No projects listed yet.",
+    "/4)",
     "View work",
     "Write-up",
     "Pitch deck",
@@ -676,6 +714,10 @@
     "Try again",
     "Go home",
     "en"
+  ],
+  "src/components/AcademicGradeCard.tsx": [
+    "Academic grade",
+    "/4)"
   ],
   "src/components/AdultGate.tsx": [
     "One quick step",
@@ -937,7 +979,9 @@
     "/api/github/connect",
     "/api/github/refresh",
     "/api/webhooks/pitch-score",
-    "/api/projects/sync-pitch-feedback"
+    "/api/projects/sync-pitch-feedback",
+    "/api/webhooks/project-grade",
+    "/api/webhooks/school-admin-signup"
   ],
   "src/lib/avatar.ts": [
     "image/",
@@ -1690,6 +1734,33 @@
     "planned",
     "Choose Team Builder"
   ],
+  "src/lib/project-grade-webhook-route.server.ts": [
+    "Exceeds Expectation",
+    "Meets Expectation",
+    "Approaches Expectation",
+    "Below Expectation",
+    "content-type",
+    "application/json",
+    "string",
+    "authorization",
+    "Unauthorized",
+    "Bad request: invalid JSON",
+    "string",
+    "Bad request: missing student_handle/project_title/form_response_id",
+    "twins",
+    "id, university_id",
+    "handle",
+    "projects",
+    "id",
+    "twin_id",
+    "title",
+    "project_grades",
+    "23505",
+    "content-type",
+    "application/json",
+    "content-type",
+    "application/json"
+  ],
   "src/lib/public-profile.ts": [
     "admin",
     "api",
@@ -1783,6 +1854,37 @@
     "Content-Type",
     "application/json",
     "MetaTwin <hello@metaglobetechnologies.co.ke>"
+  ],
+  "src/lib/school-admin-signup-webhook-route.server.ts": [
+    "andrew@metaglobetechnologies.co.ke",
+    "Name",
+    "Email",
+    "Phone",
+    "Campus",
+    "authorization",
+    "Unauthorized",
+    "Bad request",
+    "Bad request: incomplete record in payload",
+    "school-admin-signup",
+    "content-type",
+    "application/json"
+  ],
+  "src/lib/school-admin.ts": [
+    "mku.ac.ke",
+    "\\.",
+    "universities",
+    "id, name",
+    "name",
+    "%Mount Kenya University%",
+    "sort_order",
+    "pending",
+    "verified",
+    "rejected",
+    "school_admins",
+    "status, full_name, university_id",
+    "id",
+    "get_my_institution_grades",
+    "get_my_project_grades"
   ],
   "src/lib/scores.ts": [
     "questions"

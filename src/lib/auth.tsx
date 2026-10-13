@@ -9,6 +9,8 @@ type SignUpResult =
   | { outcome: "signed_in" }
   | { outcome: "already_registered" };
 
+type SchoolAdminSignUpFields = { fullName: string; phone: string; universityId: string };
+
 type AuthCtx = {
   user: User | null;
   session: Session | null;
@@ -18,6 +20,12 @@ type AuthCtx = {
     email: string,
     password: string,
     birthYear: number,
+    emailRedirectTo?: string,
+  ) => Promise<SignUpResult>;
+  signUpSchoolAdmin: (
+    email: string,
+    password: string,
+    fields: SchoolAdminSignUpFields,
     emailRedirectTo?: string,
   ) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
@@ -93,6 +101,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { outcome: "confirm" };
   }
 
+  // Separate from signUp() — different metadata shape, different error
+  // copy, and handle_new_user() branches on account_type to create a
+  // school_admins row instead of a twins row. The @mku.ac.ke domain check is
+  // enforced server-side too (the actual security boundary); this is just
+  // faster feedback.
+  async function signUpSchoolAdmin(
+    email: string,
+    password: string,
+    fields: SchoolAdminSignUpFields,
+    emailRedirectTo?: string,
+  ): Promise<SignUpResult> {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          account_type: "school_admin",
+          full_name: fields.fullName,
+          phone: fields.phone,
+          university_id: fields.universityId,
+        },
+        emailRedirectTo,
+      },
+    });
+    if (error) {
+      return { outcome: "error", message: error.message };
+    }
+    if (data.session) return { outcome: "signed_in" };
+    if (data.user && data.user.identities?.length === 0) return { outcome: "already_registered" };
+    return { outcome: "confirm" };
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
   }
@@ -125,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, signInWithOAuth, resetPassword, passwordRecovery, updatePassword }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signUpSchoolAdmin, signOut, signInWithOAuth, resetPassword, passwordRecovery, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

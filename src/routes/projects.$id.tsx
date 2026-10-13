@@ -12,6 +12,7 @@ import { Card, PageHero, SampleTag, Section, StatusBadge } from "@/components/si
 import { Journey } from "@/components/Journey";
 import { Reveal } from "@/components/Reveal";
 import { GitHubCard, PitchFeedbackCard, PitchTracker, ProjectLinksForm } from "@/components/ProjectExtras";
+import { AcademicGradeCard } from "@/components/AcademicGradeCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -88,7 +89,7 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
     );
   }
 
-  const { project: p, evidence, githubRepo, pitches, pitchStats } = data;
+  const { project: p, evidence, githubRepo, pitches, pitchStats, grade } = data;
   const artifact = safeHref(p.artifact_url);
   return (
     <>
@@ -129,6 +130,7 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
               </ul>
             )}
           </Card>
+          <AcademicGradeCard grade={grade} />
           <ProjectExtrasPanel userId={userId} projectId={projectId} project={p} githubRepo={githubRepo} pitches={pitches} pitchStats={pitchStats} onReload={() => setReloadKey((k) => k + 1)} />
         </aside>
       </Section>

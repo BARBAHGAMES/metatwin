@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowRight, Bot, ExternalLink, Flame, GitFork, Github, MapPin, MessageSquare, Rocket, Star, Users2, Trophy } from "lucide-react";
+import { ArrowRight, Bot, ExternalLink, Flame, GitFork, Github, GraduationCap, MapPin, MessageSquare, Rocket, Star, Users2, Trophy } from "lucide-react";
 import { fetchPublicProfile, type PublicCapability, type PublicProfile } from "@/lib/public-profile";
 import { safeHref } from "@/lib/url";
 import { Card, HeroBackdrop, SampleAvatar, Section, StatusBadge } from "@/components/site";
@@ -262,6 +262,11 @@ function PublicProfilePage() {
                     <Card className="h-full">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-display font-semibold">{p.title}</p>
+                        {p.grade && (
+                          <span className="flex items-center gap-1 rounded-full bg-electric-soft px-2 py-0.5 text-xs text-accent-foreground">
+                            <GraduationCap className="h-3 w-3" /> {p.grade.rating_label} ({p.grade.rating_score}/4)
+                          </span>
+                        )}
                         {p.team && (
                           <Link
                             to="/teams/$slug"

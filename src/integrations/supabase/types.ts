@@ -634,6 +634,70 @@ export type Database = {
           },
         ];
       };
+      project_grades: {
+        Row: {
+          comment: string | null;
+          created_at: string;
+          form_response_id: string;
+          graded_at: string;
+          grader_name: string | null;
+          id: string;
+          project_id: string;
+          rating_label: string;
+          rating_score: number;
+          twin_id: string;
+          university_id: string;
+        };
+        Insert: {
+          comment?: string | null;
+          created_at?: string;
+          form_response_id: string;
+          graded_at?: string;
+          grader_name?: string | null;
+          id?: string;
+          project_id: string;
+          rating_label: string;
+          rating_score: number;
+          twin_id: string;
+          university_id: string;
+        };
+        Update: {
+          comment?: string | null;
+          created_at?: string;
+          form_response_id?: string;
+          graded_at?: string;
+          grader_name?: string | null;
+          id?: string;
+          project_id?: string;
+          rating_label?: string;
+          rating_score?: number;
+          twin_id?: string;
+          university_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "project_grades_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_grades_twin_id_fkey";
+            columns: ["twin_id"];
+            isOneToOne: false;
+            referencedRelation: "twins";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "project_grades_university_id_fkey";
+            columns: ["university_id"];
+            isOneToOne: false;
+            referencedRelation: "universities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       projects: {
         Row: {
           artifact_url: string | null;
@@ -696,6 +760,44 @@ export type Database = {
             columns: ["twin_id"];
             isOneToOne: false;
             referencedRelation: "twins";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      school_admins: {
+        Row: {
+          full_name: string;
+          id: string;
+          phone: string;
+          requested_at: string;
+          status: string;
+          university_id: string;
+          verified_at: string | null;
+        };
+        Insert: {
+          full_name: string;
+          id: string;
+          phone: string;
+          requested_at?: string;
+          status?: string;
+          university_id: string;
+          verified_at?: string | null;
+        };
+        Update: {
+          full_name?: string;
+          id?: string;
+          phone?: string;
+          requested_at?: string;
+          status?: string;
+          university_id?: string;
+          verified_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "school_admins_university_id_fkey";
+            columns: ["university_id"];
+            isOneToOne: false;
+            referencedRelation: "universities";
             referencedColumns: ["id"];
           },
         ];
@@ -965,6 +1067,7 @@ export type Database = {
       declare_adult: { Args: { p_birth_year: number }; Returns: undefined };
       disconnect_github: { Args: never; Returns: undefined };
       get_my_github_connection: { Args: never; Returns: Json };
+      get_my_institution_grades: { Args: never; Returns: Json };
       get_my_opportunity_matches: {
         Args: never;
         Returns: {
@@ -981,6 +1084,7 @@ export type Database = {
         }[];
       };
       get_my_pitch_scores: { Args: never; Returns: Json };
+      get_my_project_grades: { Args: never; Returns: Json };
       get_my_teams: { Args: never; Returns: Json };
       get_public_profile: { Args: { p_handle: string }; Returns: Json };
       get_review_invite: {

@@ -50,6 +50,7 @@ export type PublicGithubStats = {
 export type PublicPitchStats = { total_pitches: number; positive: number; customers: number; conversion_pct: number | null };
 export type PublicProjectTeam = { slug: string; name: string };
 export type PublicPitchFeedback = { responses: number; questions: { label: string; average: number; max: number }[]; overall: number | null };
+export type PublicProjectGrade = { rating_label: string; rating_score: number };
 export type PublicProject = {
   id: string;
   title: string;
@@ -60,6 +61,7 @@ export type PublicProject = {
   github?: PublicGithubStats | null;
   pitch_stats?: PublicPitchStats | null;
   pitch_feedback?: PublicPitchFeedback | null;
+  grade?: PublicProjectGrade | null;
   team?: PublicProjectTeam | null;
 };
 export type PublicProfileTeam = { slug: string; name: string };

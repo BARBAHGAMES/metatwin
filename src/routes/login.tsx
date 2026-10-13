@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +32,17 @@ function LoginPage() {
     if (error) {
       toast.error(error);
       return;
+    }
+    // A school admin account has no twins row at all (handle_new_user
+    // branches on signup, never creates both) — route them to their own
+    // dashboard instead of the student one.
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      const { data: admin } = await supabase.from("school_admins").select("id").eq("id", data.user.id).maybeSingle();
+      if (admin) {
+        navigate({ to: "/school/dashboard" });
+        return;
+      }
     }
     navigate({ to: "/dashboard" });
   }

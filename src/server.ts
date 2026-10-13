@@ -1,4 +1,4 @@
-import { NEW_USER_WEBHOOK_PATH, GITHUB_SYNC_PATH, TWIN_CHAT_PATH, OPPORTUNITIES_SCOUT_PATH, PARTNERSHIP_INQUIRY_WEBHOOK_PATH, GITHUB_CONNECT_PATH, GITHUB_REFRESH_PATH, PITCH_SCORE_WEBHOOK_PATH, PITCH_FEEDBACK_SYNC_PATH } from "./lib/api-paths";
+import { NEW_USER_WEBHOOK_PATH, GITHUB_SYNC_PATH, TWIN_CHAT_PATH, OPPORTUNITIES_SCOUT_PATH, PARTNERSHIP_INQUIRY_WEBHOOK_PATH, GITHUB_CONNECT_PATH, GITHUB_REFRESH_PATH, PITCH_SCORE_WEBHOOK_PATH, PITCH_FEEDBACK_SYNC_PATH, PROJECT_GRADE_WEBHOOK_PATH, SCHOOL_ADMIN_SIGNUP_WEBHOOK_PATH } from "./lib/api-paths";
 import { handleNewUserWebhook } from "./lib/new-user-webhook-route.server";
 import { handleGitHubSync } from "./lib/github-sync-route.server";
 import { handleTwinChat, handleOpportunitiesScout } from "./lib/twin-ai-route.server";
@@ -6,6 +6,8 @@ import { handlePartnershipInquiryWebhook } from "./lib/partnership-inquiry-webho
 import { handleGithubConnect, handleGithubRefresh } from "./lib/github-connect-route.server";
 import { handlePitchScoreWebhook } from "./lib/pitch-score-webhook-route.server";
 import { handlePitchFeedbackSync } from "./lib/pitch-feedback-sync-route.server";
+import { handleProjectGradeWebhook } from "./lib/project-grade-webhook-route.server";
+import { handleSchoolAdminSignupWebhook } from "./lib/school-admin-signup-webhook-route.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -148,6 +150,30 @@ export default {
         return await handlePitchFeedbackSync(request);
       } catch (error) {
         console.error("[pitch-feedback-sync route]", error);
+        return new Response(JSON.stringify({ error: "Internal error" }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
+
+    if (url.pathname === PROJECT_GRADE_WEBHOOK_PATH && request.method === "POST") {
+      try {
+        return await handleProjectGradeWebhook(request);
+      } catch (error) {
+        console.error("[project-grade-webhook route]", error);
+        return new Response(JSON.stringify({ error: "Internal error" }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
+
+    if (url.pathname === SCHOOL_ADMIN_SIGNUP_WEBHOOK_PATH && request.method === "POST") {
+      try {
+        return await handleSchoolAdminSignupWebhook(request);
+      } catch (error) {
+        console.error("[school-admin-signup-webhook route]", error);
         return new Response(JSON.stringify({ error: "Internal error" }), {
           status: 500,
           headers: { "content-type": "application/json" },

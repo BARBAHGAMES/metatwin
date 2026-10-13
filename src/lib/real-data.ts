@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Project as SampleProject } from "@/lib/data";
 import type { PitchScores } from "@/lib/scores";
+import { fetchMyProjectGrades, type MyProjectGrade } from "@/lib/school-admin";
 
 // Real (database-backed) data for the signed-in student's own pages. All of
 // these reads go through the normal client, so RLS scopes them to the owner.
@@ -127,7 +128,7 @@ export async function fetchMyProjects(userId: string) {
 }
 
 export async function fetchMyProject(userId: string, projectId: string) {
-  const [proj, ev, repo, pitches, pitchStats] = await Promise.all([
+  const [proj, ev, repo, pitches, pitchStats, allGrades] = await Promise.all([
     supabase
       .from("projects")
       .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
@@ -158,6 +159,7 @@ export async function fetchMyProject(userId: string, projectId: string) {
       .eq("twin_id", userId)
       .eq("project_id", projectId)
       .maybeSingle(),
+    fetchMyProjectGrades(),
   ]);
   if (proj.error) throw new Error(proj.error.message);
   if (ev.error) throw new Error(ev.error.message);
@@ -165,12 +167,14 @@ export async function fetchMyProject(userId: string, projectId: string) {
   if (pitches.error) throw new Error(pitches.error.message);
   if (pitchStats.error) throw new Error(pitchStats.error.message);
   if (!proj.data) return null;
+  const grade = allGrades.filter((g) => g.project_id === projectId).sort((a, b) => (a.graded_at < b.graded_at ? 1 : -1))[0] ?? null;
   return {
     project: proj.data as MyProject,
     evidence: (ev.data as EvidenceRow[] | null) ?? [],
     githubRepo: repo.data as GithubRepoRow | null,
     pitches: (pitches.data as PitchRow[] | null) ?? [],
     pitchStats: pitchStats.data as PitchStatsRow | null,
+    grade: grade as MyProjectGrade | null,
   };
 }
 
