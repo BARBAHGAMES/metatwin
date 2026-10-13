@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import heroImg from "@/assets/hero-dashboard.jpg";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FolderPlus, FilePlus2, Layers, ArrowRight, Info, Bot, Camera, UserRound } from "lucide-react";
+import { FolderPlus, FilePlus2, Layers, ArrowRight, Info, Bot, Camera, UserRound, FileText, PlayCircle, Rocket, GraduationCap } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { aiEmployees } from "@/lib/data";
@@ -25,6 +25,7 @@ import { GithubActivityCard } from "@/components/GithubActivityCard";
 import { TeamsCard } from "@/components/TeamsCard";
 import { PitchScoresCard } from "@/components/PitchScoresCard";
 import { AiEmployeesCard } from "@/components/AiEmployeesCard";
+import { fetchMyProjectGrades, type MyProjectGrade } from "@/lib/school-admin";
 import type { Status } from "@/lib/data";
 
 export const Route = createFileRoute("/dashboard")({
@@ -68,7 +69,12 @@ type Project = {
   title: string;
   description: string | null;
   created_at: string;
+  pitch_deck_url: string | null;
+  pitch_video_url: string | null;
+  github_repo: string | null;
 };
+
+type PitchStatsRow = { project_id: string; total_pitches: number; conversion_pct: number | null };
 
 type Evidence = {
   id: string;
@@ -104,6 +110,8 @@ function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [reviews, setReviews] = useState<EvidenceReview[]>([]);
+  const [pitchStats, setPitchStats] = useState<PitchStatsRow[]>([]);
+  const [projectGrades, setProjectGrades] = useState<MyProjectGrade[]>([]);
   const [fetching, setFetching] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -129,7 +137,7 @@ function Dashboard() {
   }, [authLoading, user, navigate]);
 
   async function loadAll(userId: string) {
-    const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes, reviewsRes] = await Promise.all([
+    const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes, reviewsRes, pitchStatsRes] = await Promise.all([
       supabase.from("twins").select("id, name, first_name, institution, programme, year, headline, visibility, is_adult, handle, public_show_evidence_details, photo_url").eq("id", userId).maybeSingle(),
       supabase.from("skills").select("id, name, category").order("name"),
       supabase
@@ -137,7 +145,11 @@ function Dashboard() {
         .select("id, skill_id, level, evidence_count, updated_at, skills(name)")
         .eq("twin_id", userId)
         .order("updated_at", { ascending: false }),
-      supabase.from("projects").select("id, title, description, created_at").eq("twin_id", userId).order("created_at", { ascending: false }),
+      supabase
+        .from("projects")
+        .select("id, title, description, created_at, pitch_deck_url, pitch_video_url, github_repo")
+        .eq("twin_id", userId)
+        .order("created_at", { ascending: false }),
       supabase
         .from("evidence")
         .select("id, competency_id, title, link, note, created_at")
@@ -149,6 +161,7 @@ function Dashboard() {
         .from("evidence_reviews")
         .select("id, evidence_id, reviewer_name, reviewer_role, comment, submitted_at")
         .eq("twin_id", userId),
+      supabase.from("pitch_stats").select("project_id, total_pitches, conversion_pct").eq("twin_id", userId),
     ]);
     if (twinRes.error) console.error("[dashboard] load twin failed:", twinRes.error.message);
     if (skillsRes.error) console.error("[dashboard] load skills failed:", skillsRes.error.message);
@@ -156,6 +169,7 @@ function Dashboard() {
     if (projectsRes.error) console.error("[dashboard] load projects failed:", projectsRes.error.message);
     if (evidenceRes.error) console.error("[dashboard] load evidence failed:", evidenceRes.error.message);
     if (reviewsRes.error) console.error("[dashboard] load evidence reviews failed:", reviewsRes.error.message);
+    if (pitchStatsRes.error) console.error("[dashboard] load pitch stats failed:", pitchStatsRes.error.message);
 
     // A failed load must not render as an empty account (it reads as lost data).
     if ([twinRes, skillsRes, compsRes, projectsRes, evidenceRes, reviewsRes].some((r) => r.error)) {
@@ -164,6 +178,10 @@ function Dashboard() {
       return;
     }
     setLoadError(false);
+    setPitchStats((pitchStatsRes.data as PitchStatsRow[] | null) ?? []);
+    fetchMyProjectGrades()
+      .then(setProjectGrades)
+      .catch((err) => console.error("[dashboard] load project grades failed:", err));
 
     setTwin(
       (twinRes.data as Twin | null) ?? {
@@ -386,7 +404,8 @@ function Dashboard() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">Build your MetaTwin</p>
+        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
           <button onClick={() => setProjectDialog(true)} className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition-all duration-200 hover:border-electric/50 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2">
             <FolderPlus className="h-5 w-5 shrink-0 text-electric" />Add a project
           </button>
@@ -424,14 +443,50 @@ function Dashboard() {
           <Card>
             <p className="text-sm text-muted-foreground">Projects</p>
             <p className="mt-1 font-display text-4xl font-semibold">{projects.length}</p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {projects.slice(0, 3).map((p) => (
-                <li key={p.id} className="truncate rounded-lg bg-muted px-3 py-2">{p.title}</li>
-              ))}
-              {projects.length === 0 && <li className="text-xs text-muted-foreground">None yet</li>}
-            </ul>
+            <p className="mt-3 text-xs text-muted-foreground">See the full list, and what each one's still missing, below.</p>
           </Card>
         </div>
+
+        <Card className="mt-5">
+          <h3 className="font-semibold">Your projects</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Open a project to attach its pitch deck, pitch video, log businesses you've pitched to, or sync GitHub stats.
+          </p>
+          {projects.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">No projects yet — add one above to get started.</p>
+          ) : (
+            <ul className="mt-4 space-y-2">
+              {projects.map((p) => {
+                const stats = pitchStats.find((s) => s.project_id === p.id);
+                const grade = projectGrades.find((g) => g.project_id === p.id);
+                const hasDeck = !!safeHref(p.pitch_deck_url);
+                const hasVideo = !!safeHref(p.pitch_video_url);
+                return (
+                  <li key={p.id}>
+                    <Link
+                      to="/projects/$id"
+                      params={{ id: p.id }}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-4 transition-all duration-200 hover:border-electric/50 motion-safe:hover:-translate-y-0.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{p.title}</p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                          <span className={`flex items-center gap-1 ${hasDeck ? "text-electric" : "text-muted-foreground"}`}><FileText className="h-3 w-3" /> {hasDeck ? "Deck added" : "No deck yet"}</span>
+                          <span className={`flex items-center gap-1 ${hasVideo ? "text-electric" : "text-muted-foreground"}`}><PlayCircle className="h-3 w-3" /> {hasVideo ? "Video added" : "No video yet"}</span>
+                          <span className={`flex items-center gap-1 ${stats && stats.total_pitches > 0 ? "text-electric" : "text-muted-foreground"}`}>
+                            <Rocket className="h-3 w-3" /> {stats?.total_pitches ?? 0} business{stats?.total_pitches === 1 ? "" : "es"} pitched
+                          </span>
+                          {grade && <span className="flex items-center gap-1 text-electric"><GraduationCap className="h-3 w-3" /> {grade.rating_label}</span>}
+                        </div>
+                      </div>
+                      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
 
         <div className="mt-5 grid gap-5 lg:grid-cols-2">
           <Card className="min-w-0">
@@ -498,7 +553,8 @@ function Dashboard() {
           </Card>
         </div>
 
-        <Card className="mt-5">
+        <p className="mt-10 font-mono text-xs uppercase tracking-[0.2em] text-electric">Proof &amp; opportunities</p>
+        <Card className="mt-3">
           <h3 className="font-semibold">Opportunities for you</h3>
           <p className="mt-1 text-xs text-muted-foreground">
             Matches compare the skills an opportunity asks for with your capabilities. Evidence-backed skills count fully; self-reported
@@ -551,7 +607,8 @@ function Dashboard() {
           <GithubActivityCard />
         </Card>
 
-        <Card className="mt-5">
+        <p className="mt-10 font-mono text-xs uppercase tracking-[0.2em] text-electric">Team &amp; AI</p>
+        <Card className="mt-3">
           <TeamsCard />
         </Card>
 
@@ -561,7 +618,8 @@ function Dashboard() {
 
         <PitchScoresCard />
 
-        <Card className="mt-5">
+        <p className="mt-10 font-mono text-xs uppercase tracking-[0.2em] text-electric">Profile &amp; public page</p>
+        <Card className="mt-3">
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-semibold">Profile</h3>
             <Button

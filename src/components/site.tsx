@@ -73,7 +73,7 @@ export function Logo() {
 const nav = [
   { to: "/", label: "Home" },
   { to: "/profile", label: "My MetaTwin" },
-  { to: "/projects", label: "Explore Capabilities" },
+  { to: "/projects", label: "Projects" },
   { to: "/talent", label: "Find Talent" },
   { to: "/how-it-works", label: "How It Works" },
   { to: "/pricing", label: "Pricing" },

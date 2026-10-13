@@ -292,10 +292,12 @@ function RealProfile({ userId }: { userId: string }) {
             ) : (
               <Reveal stagger={0.08} className="mt-5 space-y-3">
                 {projectList.map((p) => (
-                  <Card key={p.id} className="transition-shadow duration-200 hover:shadow-card">
-                    <p className="font-display font-semibold">{p.title}</p>
-                    {p.description && <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>}
-                  </Card>
+                  <Link key={p.id} to="/projects/$id" params={{ id: p.id }} className="block">
+                    <Card className="transition-all duration-200 hover:border-electric/50 hover:shadow-card motion-safe:hover:-translate-y-0.5">
+                      <p className="font-display font-semibold">{p.title}</p>
+                      {p.description && <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>}
+                    </Card>
+                  </Link>
                 ))}
               </Reveal>
             )}
