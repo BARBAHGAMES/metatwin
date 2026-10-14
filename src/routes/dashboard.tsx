@@ -14,6 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AdultGate } from "@/components/AdultGate";
+import { DeactivatedGate } from "@/components/DeactivatedGate";
+import { PaywallGate } from "@/components/PaywallGate";
+import { hasActivePlan } from "@/lib/plan";
 import { LINK_ERROR, isHttpUrl, safeHref } from "@/lib/url";
 import { LIMITS, validateStudyYear } from "@/lib/limits";
 import { LoadError } from "@/components/LoadError";
@@ -48,6 +51,9 @@ type Twin = {
   headline: string | null;
   visibility: "private" | "public";
   is_adult: boolean;
+  is_active: boolean;
+  plan_status: string;
+  plan_paid_until: string | null;
   handle: string | null;
   public_show_evidence_details: boolean;
   photo_url: string | null;
@@ -144,7 +150,7 @@ function Dashboard() {
 
   async function loadAll(userId: string) {
     const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes, reviewsRes, pitchStatsRes] = await Promise.all([
-      supabase.from("twins").select("id, name, first_name, institution, programme, year, headline, visibility, is_adult, handle, public_show_evidence_details, photo_url").eq("id", userId).maybeSingle(),
+      supabase.from("twins").select("id, name, first_name, institution, programme, year, headline, visibility, is_adult, is_active, plan_status, plan_paid_until, handle, public_show_evidence_details, photo_url").eq("id", userId).maybeSingle(),
       supabase.from("skills").select("id, name, category").order("name"),
       supabase
         .from("competencies")
@@ -200,6 +206,9 @@ function Dashboard() {
         headline: null,
         visibility: "private",
         is_adult: false,
+        is_active: true,
+        plan_status: "unpaid",
+        plan_paid_until: null,
         handle: null,
         public_show_evidence_details: false,
         photo_url: null,
@@ -445,8 +454,16 @@ function Dashboard() {
     return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
   }
 
+  if (!twin.is_active) {
+    return <DeactivatedGate />;
+  }
+
   if (!twin.is_adult) {
     return <AdultGate onDeclared={() => user && loadAll(user.id)} />;
+  }
+
+  if (!hasActivePlan(twin)) {
+    return <PaywallGate onPaid={() => user && loadAll(user.id)} />;
   }
 
   if (!twin.first_name) {

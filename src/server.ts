@@ -1,4 +1,4 @@
-import { NEW_USER_WEBHOOK_PATH, GITHUB_SYNC_PATH, TWIN_CHAT_PATH, OPPORTUNITIES_SCOUT_PATH, PARTNERSHIP_INQUIRY_WEBHOOK_PATH, GITHUB_CONNECT_PATH, GITHUB_REFRESH_PATH, PITCH_SCORE_WEBHOOK_PATH, PITCH_FEEDBACK_SYNC_PATH, PROJECT_GRADE_WEBHOOK_PATH, SCHOOL_ADMIN_SIGNUP_WEBHOOK_PATH } from "./lib/api-paths";
+import { NEW_USER_WEBHOOK_PATH, GITHUB_SYNC_PATH, TWIN_CHAT_PATH, OPPORTUNITIES_SCOUT_PATH, PARTNERSHIP_INQUIRY_WEBHOOK_PATH, GITHUB_CONNECT_PATH, GITHUB_REFRESH_PATH, PITCH_SCORE_WEBHOOK_PATH, PITCH_FEEDBACK_SYNC_PATH, PROJECT_GRADE_WEBHOOK_PATH, SCHOOL_ADMIN_SIGNUP_WEBHOOK_PATH, PLATFORM_ADMIN_SIGNUP_WEBHOOK_PATH, MPESA_INITIATE_PATH, MPESA_STATUS_PATH, MPESA_CALLBACK_WEBHOOK_PATH } from "./lib/api-paths";
 import { handleNewUserWebhook } from "./lib/new-user-webhook-route.server";
 import { handleGitHubSync } from "./lib/github-sync-route.server";
 import { handleTwinChat, handleOpportunitiesScout } from "./lib/twin-ai-route.server";
@@ -8,6 +8,9 @@ import { handlePitchScoreWebhook } from "./lib/pitch-score-webhook-route.server"
 import { handlePitchFeedbackSync } from "./lib/pitch-feedback-sync-route.server";
 import { handleProjectGradeWebhook } from "./lib/project-grade-webhook-route.server";
 import { handleSchoolAdminSignupWebhook } from "./lib/school-admin-signup-webhook-route.server";
+import { handlePlatformAdminSignupWebhook } from "./lib/platform-admin-signup-webhook-route.server";
+import { handleMpesaInitiate, handleMpesaStatus } from "./lib/mpesa-route.server";
+import { handleMpesaCallback } from "./lib/mpesa-callback-route.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -178,6 +181,54 @@ export default {
         return await handleSchoolAdminSignupWebhook(request);
       } catch (error) {
         console.error("[school-admin-signup-webhook route]", error);
+        return new Response(JSON.stringify({ error: "Internal error" }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
+
+    if (url.pathname === PLATFORM_ADMIN_SIGNUP_WEBHOOK_PATH && request.method === "POST") {
+      try {
+        return await handlePlatformAdminSignupWebhook(request);
+      } catch (error) {
+        console.error("[platform-admin-signup-webhook route]", error);
+        return new Response(JSON.stringify({ error: "Internal error" }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
+
+    if (url.pathname === MPESA_INITIATE_PATH && request.method === "POST") {
+      try {
+        return await handleMpesaInitiate(request);
+      } catch (error) {
+        console.error("[mpesa-initiate route]", error);
+        return new Response(JSON.stringify({ error: "Internal error" }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
+
+    if (url.pathname === MPESA_STATUS_PATH && request.method === "GET") {
+      try {
+        return await handleMpesaStatus(request);
+      } catch (error) {
+        console.error("[mpesa-status route]", error);
+        return new Response(JSON.stringify({ error: "Internal error" }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
+
+    if (url.pathname === MPESA_CALLBACK_WEBHOOK_PATH && request.method === "POST") {
+      try {
+        return await handleMpesaCallback(request);
+      } catch (error) {
+        console.error("[mpesa-callback route]", error);
         return new Response(JSON.stringify({ error: "Internal error" }), {
           status: 500,
           headers: { "content-type": "application/json" },

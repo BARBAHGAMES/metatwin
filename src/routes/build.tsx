@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import heroImg from "@/assets/hero-build.jpg";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { isHttpUrl } from "@/lib/url";
 import { uploadAvatar } from "@/lib/avatar";
 import { HANDLE_HELP, normalizeHandle, validateHandle } from "@/lib/public-profile";
 import { cn } from "@/lib/utils";
+import { hasActivePlan } from "@/lib/plan";
 
 export const Route = createFileRoute("/build")({
   head: () => ({
@@ -67,9 +68,31 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
 
 function Build() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Signed-in users save real data straight to their twins row from this
+  // wizard (see handleFinish below) — without this check, an unpaid account
+  // could build a full profile here without ever hitting PaywallGate on
+  // /dashboard. Signed-out visitors are unaffected (preview-only, saves nothing).
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    supabase
+      .from("twins")
+      .select("plan_status, plan_paid_until")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        if (!hasActivePlan(data)) navigate({ to: "/dashboard" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, navigate]);
 
   // Reference data (public-read, fetched regardless of sign-in state).
   const [cities, setCities] = useState<City[]>([]);

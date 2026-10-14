@@ -7,6 +7,9 @@ import { aiEmployees, capabilities, growth, person, projects } from "@/lib/data"
 import { useAuth } from "@/lib/auth";
 import { safeHref } from "@/lib/url";
 import { LoadError } from "@/components/LoadError";
+import { DeactivatedGate } from "@/components/DeactivatedGate";
+import { PaywallGate } from "@/components/PaywallGate";
+import { hasActivePlan } from "@/lib/plan";
 import { supabase } from "@/integrations/supabase/client";
 import { AITeam } from "@/components/AITeam";
 import { CareerGraph } from "@/components/CareerGraph";
@@ -48,6 +51,9 @@ type Twin = {
   headline: string | null;
   visibility: "private" | "public";
   handle: string | null;
+  is_active: boolean;
+  plan_status: string;
+  plan_paid_until: string | null;
 };
 type Competency = {
   id: string;
@@ -88,7 +94,7 @@ function RealProfile({ userId }: { userId: string }) {
     let cancelled = false;
     async function load() {
       const [twinRes, compsRes, projectsRes, evidenceRes, reviewsRes] = await Promise.all([
-        supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, handle").eq("id", userId).maybeSingle(),
+        supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, handle, is_active, plan_status, plan_paid_until").eq("id", userId).maybeSingle(),
         supabase
           .from("competencies")
           .select("id, level, evidence_count, updated_at, skills(name, category)")
@@ -117,7 +123,7 @@ function RealProfile({ userId }: { userId: string }) {
         return;
       }
       setLoadError(false);
-      setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private", handle: null });
+      setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private", handle: null, is_active: true, plan_status: "unpaid", plan_paid_until: null });
       setCompetencies((compsRes.data as unknown as Competency[] | null) ?? []);
       setProjectList((projectsRes.data as Project[] | null) ?? []);
       setEvidence((evidenceRes.data as Evidence[] | null) ?? []);
@@ -142,6 +148,10 @@ function RealProfile({ userId }: { userId: string }) {
   }
 
   if (fetching || !twin) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+
+  if (!twin.is_active) return <DeactivatedGate />;
+
+  if (!hasActivePlan(twin)) return <PaywallGate onPaid={() => setReloadKey((k) => k + 1)} />;
 
   const reviewedCount = competencies.filter((c) => competencyStatus(c, evidence, reviews) === "reviewed").length;
   const evidenceCount = competencies.filter((c) => c.evidence_count > 0).length;

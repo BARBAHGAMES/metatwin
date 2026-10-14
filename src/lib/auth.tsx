@@ -10,6 +10,7 @@ type SignUpResult =
   | { outcome: "already_registered" };
 
 type SchoolAdminSignUpFields = { fullName: string; phone: string; universityId: string };
+type PlatformAdminSignUpFields = { fullName: string };
 
 type AuthCtx = {
   user: User | null;
@@ -26,6 +27,12 @@ type AuthCtx = {
     email: string,
     password: string,
     fields: SchoolAdminSignUpFields,
+    emailRedirectTo?: string,
+  ) => Promise<SignUpResult>;
+  signUpPlatformAdmin: (
+    email: string,
+    password: string,
+    fields: PlatformAdminSignUpFields,
     emailRedirectTo?: string,
   ) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
@@ -133,6 +140,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { outcome: "confirm" };
   }
 
+  // Separate from signUp()/signUpSchoolAdmin() — simplest metadata of the
+  // three (no domain to pick, no phone), and handle_new_user() branches on
+  // account_type to create a platform_admins row instead of a twins row.
+  // The email allowlist is enforced server-side (the actual security
+  // boundary); this is just faster feedback.
+  async function signUpPlatformAdmin(
+    email: string,
+    password: string,
+    fields: PlatformAdminSignUpFields,
+    emailRedirectTo?: string,
+  ): Promise<SignUpResult> {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          account_type: "platform_admin",
+          full_name: fields.fullName,
+        },
+        emailRedirectTo,
+      },
+    });
+    if (error) {
+      return { outcome: "error", message: error.message };
+    }
+    if (data.session) return { outcome: "signed_in" };
+    if (data.user && data.user.identities?.length === 0) return { outcome: "already_registered" };
+    return { outcome: "confirm" };
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
   }
@@ -165,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signUpSchoolAdmin, signOut, signInWithOAuth, resetPassword, passwordRecovery, updatePassword }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signUpSchoolAdmin, signUpPlatformAdmin, signOut, signInWithOAuth, resetPassword, passwordRecovery, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

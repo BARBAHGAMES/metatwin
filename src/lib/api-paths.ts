@@ -14,6 +14,10 @@ export const PITCH_SCORE_WEBHOOK_PATH = "/api/webhooks/pitch-score";
 export const PITCH_FEEDBACK_SYNC_PATH = "/api/projects/sync-pitch-feedback";
 export const PROJECT_GRADE_WEBHOOK_PATH = "/api/webhooks/project-grade";
 export const SCHOOL_ADMIN_SIGNUP_WEBHOOK_PATH = "/api/webhooks/school-admin-signup";
+export const PLATFORM_ADMIN_SIGNUP_WEBHOOK_PATH = "/api/webhooks/platform-admin-signup";
+export const MPESA_INITIATE_PATH = "/api/payments/mpesa/initiate";
+export const MPESA_STATUS_PATH = "/api/payments/mpesa/status";
+export const MPESA_CALLBACK_WEBHOOK_PATH = "/api/webhooks/mpesa-callback";
 
 export type GithubConnection = {
   github_username: string;

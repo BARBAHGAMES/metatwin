@@ -33,11 +33,16 @@ function LoginPage() {
       toast.error(error);
       return;
     }
-    // A school admin account has no twins row at all (handle_new_user
+    // A school/platform admin account has no twins row at all (handle_new_user
     // branches on signup, never creates both) — route them to their own
     // dashboard instead of the student one.
     const { data } = await supabase.auth.getUser();
     if (data.user) {
+      const { data: platformAdmin } = await supabase.from("platform_admins").select("id").eq("id", data.user.id).maybeSingle();
+      if (platformAdmin) {
+        navigate({ to: "/admin/dashboard" });
+        return;
+      }
       const { data: admin } = await supabase.from("school_admins").select("id").eq("id", data.user.id).maybeSingle();
       if (admin) {
         navigate({ to: "/school/dashboard" });
