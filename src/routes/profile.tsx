@@ -51,6 +51,7 @@ type Twin = {
   headline: string | null;
   visibility: "private" | "public";
   handle: string | null;
+  photo_url: string | null;
   is_active: boolean;
   plan_status: string;
   plan_paid_until: string | null;
@@ -96,7 +97,7 @@ function RealProfile({ userId }: { userId: string }) {
     let cancelled = false;
     async function load() {
       const [twinRes, compsRes, projectsRes, evidenceRes, reviewsRes] = await Promise.all([
-        supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, handle, is_active, plan_status, plan_paid_until").eq("id", userId).maybeSingle(),
+        supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, handle, is_active, plan_status, plan_paid_until, photo_url").eq("id", userId).maybeSingle(),
         supabase
           .from("competencies")
           .select("id, level, evidence_count, updated_at, skills(name, category)")
@@ -125,7 +126,7 @@ function RealProfile({ userId }: { userId: string }) {
         return;
       }
       setLoadError(false);
-      setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private", handle: null, is_active: true, plan_status: "unpaid", plan_paid_until: null });
+      setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private", handle: null, is_active: true, plan_status: "unpaid", plan_paid_until: null, photo_url: null });
       setCompetencies((compsRes.data as unknown as Competency[] | null) ?? []);
       setProjectList((projectsRes.data as Project[] | null) ?? []);
       setEvidence((evidenceRes.data as Evidence[] | null) ?? []);
@@ -212,7 +213,15 @@ function RealProfile({ userId }: { userId: string }) {
             <Link to="/dashboard" className="text-xs text-ink-muted underline-offset-4 hover:text-ink-foreground hover:underline">Owner view →</Link>
           </div>
           <div className="hero-rise mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
-            <SampleAvatar initials={initials} className="h-64 w-52 rounded-3xl text-5xl shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64" />
+            {twin.photo_url ? (
+              <img
+                src={twin.photo_url}
+                alt=""
+                className="h-64 w-52 rounded-3xl object-cover shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64"
+              />
+            ) : (
+              <SampleAvatar initials={initials} className="h-64 w-52 rounded-3xl text-5xl shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64" />
+            )}
             <div className="min-w-0">
               <h1 className="mt-4 text-4xl font-extrabold tracking-[-0.03em] md:text-6xl">{twin.name || "Add your name"}</h1>
               <p className="mt-2 text-lg text-ink-muted">{twin.headline || "Add a headline from your dashboard"}</p>
