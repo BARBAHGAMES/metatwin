@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Trophy } from "lucide-react";
 import { fetchMyPitchScores, type MyPitchScore } from "@/lib/pitch-scores";
-import { Card } from "@/components/site";
 
 function formatDate(d: string): string {
   return new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -38,7 +37,7 @@ export function PitchScoresCard() {
   if (scores !== undefined && scores.length === 0) return null;
 
   return (
-    <Card className="mt-5">
+    <>
       <h3 className="flex items-center gap-2 font-semibold"><Trophy className="h-4 w-4" /> Pitch competition scores</h3>
       {scores === undefined ? (
         <p className="mt-3 text-sm text-muted-foreground">Loading…</p>
@@ -47,6 +46,6 @@ export function PitchScoresCard() {
           {scores.map((s) => <ScoreRow key={s.id} score={s} />)}
         </ul>
       )}
-    </Card>
+    </>
   );
 }

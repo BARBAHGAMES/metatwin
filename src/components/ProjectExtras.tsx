@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, ExternalLink, GitFork, Github, History, MessageSquare, Pencil, Plus, RefreshCw, Rocket, Star, Trash2, UserPlus, Users } from "lucide-react";
+import { CheckCircle2, Circle, ExternalLink, FileText, GitFork, Github, History, MessageSquare, Pencil, PlayCircle, Plus, RefreshCw, Rocket, Star, Trash2, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GITHUB_SYNC_PATH, PITCH_FEEDBACK_SYNC_PATH, type GitHubRepoStats } from "@/lib/api-paths";
 import { LIMITS } from "@/lib/limits";
@@ -287,6 +287,51 @@ export function PitchTracker({
   );
 }
 
+// Three equal tiles for pitch video / pitch deck / project write-up — video
+// and deck play inline via the same dialogs used everywhere else (PitchMedia.tsx);
+// write-up has no inline "player" (it's a doc link) so it opens in a new tab.
+export function MediaTiles({
+  writeupUrl,
+  pitchDeckUrl,
+  pitchVideoUrl,
+}: {
+  writeupUrl: string | null;
+  pitchDeckUrl: string | null;
+  pitchVideoUrl: string | null;
+}) {
+  const writeup = safeHref(writeupUrl);
+  const deck = safeHref(pitchDeckUrl);
+  const video = safeHref(pitchVideoUrl);
+  const tileClass = "flex min-h-[88px] flex-col items-center justify-center gap-2 rounded-xl border bg-card p-4 text-center text-sm transition-colors hover:border-electric/50";
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      <div className={tileClass}>
+        {video ? (
+          <PitchVideoButton url={video} label="Pitch video" className="flex flex-col items-center gap-2 text-electric" />
+        ) : (
+          <><PlayCircle className="h-5 w-5 text-muted-foreground" /><span className="text-muted-foreground">No pitch video yet</span></>
+        )}
+      </div>
+      <div className={tileClass}>
+        {deck ? (
+          <PitchDeckButton url={deck} label="Pitch deck" className="flex flex-col items-center gap-2 text-electric" />
+        ) : (
+          <><FileText className="h-5 w-5 text-muted-foreground" /><span className="text-muted-foreground">No pitch deck yet</span></>
+        )}
+      </div>
+      <div className={tileClass}>
+        {writeup ? (
+          <a href={writeup} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 text-electric">
+            <FileText className="h-5 w-5" /> Project write-up
+          </a>
+        ) : (
+          <><FileText className="h-5 w-5 text-muted-foreground" /><span className="text-muted-foreground">No write-up yet</span></>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ProblemSolutionCards({ problemStatement, proposedSolution }: { problemStatement: string | null; proposedSolution: string | null }) {
   if (!problemStatement && !proposedSolution) return null;
   return (
@@ -424,13 +469,27 @@ export function PitchFeedbackCard({
   project,
   onSynced,
 }: {
-  project: Pick<MyProject, "id" | "scores_csv_url" | "pitch_scores" | "scores_synced_at">;
+  project: Pick<MyProject, "id" | "scores_csv_url" | "pitch_scores" | "scores_synced_at" | "pitch_feedback_summary">;
   onSynced: () => void;
 }) {
   const [url, setUrl] = useState(project.scores_csv_url ?? "");
   const [syncing, setSyncing] = useState(false);
+  const [summary, setSummary] = useState(project.pitch_feedback_summary ?? "");
+  const [savingSummary, setSavingSummary] = useState(false);
   const scores = project.pitch_scores as PitchScores | Record<string, never>;
   const hasScores = "responses" in scores && scores.responses > 0;
+
+  async function saveSummary() {
+    setSavingSummary(true);
+    const { error } = await supabase.from("projects").update({ pitch_feedback_summary: summary.trim() || null }).eq("id", project.id);
+    setSavingSummary(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Summary saved.");
+    onSynced();
+  }
 
   async function sync() {
     const csvUrl = url.trim();
@@ -497,6 +556,18 @@ export function PitchFeedbackCard({
           {project.scores_synced_at && <p className="mt-3 text-xs text-muted-foreground">Last synced {new Date(project.scores_synced_at).toLocaleDateString()} · reported by the student</p>}
         </div>
       )}
+      <div className="mt-4 space-y-1.5 border-t pt-4">
+        <Label htmlFor="pitch-feedback-summary">Summary, in your own words</Label>
+        <Textarea
+          id="pitch-feedback-summary"
+          rows={2}
+          maxLength={LIMITS.pitchFeedbackSummary}
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          placeholder="What's the headline takeaway from the feedback you've gotten so far?"
+        />
+        <Button variant="outline" size="sm" onClick={saveSummary} disabled={savingSummary}>{savingSummary ? "Saving…" : "Save summary"}</Button>
+      </div>
     </Card>
   );
 }
@@ -752,8 +823,6 @@ export function ProjectLinksForm({
   const [deck, setDeck] = useState(project.pitch_deck_url ?? "");
   const [video, setVideo] = useState(project.pitch_video_url ?? "");
   const [saving, setSaving] = useState(false);
-  const savedDeck = safeHref(project.pitch_deck_url);
-  const savedVideo = safeHref(project.pitch_video_url);
 
   async function save() {
     setSaving(true);
@@ -780,7 +849,8 @@ export function ProjectLinksForm({
     <Card>
       <h3 className="font-semibold">Write-up, deck & pitch video</h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        Paste links — a Google Doc write-up, a Slides/Drive deck, and a pitch video (YouTube or a direct video link). No account connection needed, and they play inline on your profile.
+        Paste links — a Google Doc write-up, a Slides/Drive deck, and a pitch video (YouTube or a direct video link). They'll play
+        inline from the tiles above once saved.
       </p>
       <div className="mt-3 space-y-2">
         <div className="space-y-1.5">
@@ -790,12 +860,10 @@ export function ProjectLinksForm({
         <div className="space-y-1.5">
           <Label>Pitch deck (Google Slides/Drive, etc.)</Label>
           <Input placeholder="https://docs.google.com/presentation/..." value={deck} onChange={(e) => setDeck(e.target.value)} />
-          {savedDeck && <PitchDeckButton url={savedDeck} label="Preview saved deck" className="mt-1 flex items-center gap-1.5 text-xs text-electric hover:underline" />}
         </div>
         <div className="space-y-1.5">
           <Label>Pitch video (YouTube or direct link)</Label>
           <Input placeholder="https://youtube.com/watch?v=..." value={video} onChange={(e) => setVideo(e.target.value)} />
-          {savedVideo && <PitchVideoButton url={savedVideo} label="Preview saved video" className="mt-1 flex items-center gap-1.5 text-xs text-electric hover:underline" />}
         </div>
         <Button variant="outline" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save links"}</Button>
       </div>

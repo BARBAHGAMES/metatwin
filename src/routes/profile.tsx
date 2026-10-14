@@ -1,26 +1,17 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import heroImg from "@/assets/hero-metatwin.jpg";
-import { useEffect, useState } from "react";
-import { ArrowRight, MapPin, Target, Lock, Bot, Briefcase, UserPlus, Sparkles, Search, Handshake, User, Users2 } from "lucide-react";
+import { useEffect } from "react";
+import { ArrowRight, MapPin, Target, Lock, Bot, Briefcase, UserPlus, Sparkles, Search, Handshake } from "lucide-react";
 import { toast } from "sonner";
 import { aiEmployees, capabilities, growth, person, projects } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
-import { safeHref } from "@/lib/url";
-import { LoadError } from "@/components/LoadError";
-import { DeactivatedGate } from "@/components/DeactivatedGate";
-import { PaywallGate } from "@/components/PaywallGate";
-import { hasActivePlan, fetchHasTeamPlanAccess } from "@/lib/plan";
-import { supabase } from "@/integrations/supabase/client";
 import { AITeam } from "@/components/AITeam";
 import { CareerGraph } from "@/components/CareerGraph";
 import { Button } from "@/components/ui/button";
 import sampleProfilePhoto from "@/assets/sample-profile.jpg";
-import { Card, HeroBackdrop, SampleAvatar, SampleTag, Section, StatusBadge } from "@/components/site";
+import { Card, HeroBackdrop, SampleTag, Section, StatusBadge } from "@/components/site";
 import { Reveal } from "@/components/Reveal";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import type { Status } from "@/lib/data";
-import { fetchMyTeams, type MyTeam } from "@/lib/teams";
-import { TeamDashboardView } from "@/components/TeamDashboardView";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -36,332 +27,19 @@ export const Route = createFileRoute("/profile")({
 
 const groups = ["Technical", "Creative", "Problem-solving", "Collaboration", "Domain"] as const;
 
+// A signed-in student's own real profile now lives at /dashboard (Overview
+// tab carries the Growth Timeline and capability map this page used to show).
+// Signed-out visitors still see the fictional vision/sample page below.
 function Profile() {
   const { user, loading: authLoading } = useAuth();
-  if (authLoading) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
-  return user ? <RealProfile userId={user.id} /> : <SampleProfile />;
-}
-
-type Twin = {
-  id: string;
-  name: string | null;
-  institution: string | null;
-  programme: string | null;
-  year: number | null;
-  headline: string | null;
-  visibility: "private" | "public";
-  handle: string | null;
-  photo_url: string | null;
-  is_active: boolean;
-  plan_status: string;
-  plan_paid_until: string | null;
-};
-type Competency = {
-  id: string;
-  level: number;
-  evidence_count: number;
-  updated_at: string;
-  skills: { name: string; category: string | null } | null;
-};
-type Project = { id: string; title: string; description: string | null; created_at: string };
-type Evidence = { id: string; competency_id: string; title: string; link: string | null; note: string | null; created_at: string };
-type EvidenceReview = { id: string; evidence_id: string; reviewer_name: string; reviewer_role: string | null; comment: string | null };
-
-function competencyStatus(c: Competency, evidence: Evidence[], reviews: EvidenceReview[]): Status {
-  const evidenceIds = evidence.filter((e) => e.competency_id === c.id).map((e) => e.id);
-  if (reviews.some((r) => evidenceIds.includes(r.evidence_id))) return "reviewed";
-  return c.evidence_count > 0 ? "evidence" : "self";
-}
-
-function RealProfile({ userId }: { userId: string }) {
-  const [twin, setTwin] = useState<Twin | null>(null);
-  const [competencies, setCompetencies] = useState<Competency[]>([]);
-  const [projectList, setProjectList] = useState<Project[]>([]);
-  const [evidence, setEvidence] = useState<Evidence[]>([]);
-  const [reviews, setReviews] = useState<EvidenceReview[]>([]);
-  const [fetching, setFetching] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [teams, setTeams] = useState<MyTeam[]>([]);
-  const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
-  const [teamPlanAccess, setTeamPlanAccess] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchMyTeams()
-      .then(setTeams)
-      .catch((err) => console.error("[profile] load teams failed:", err));
-    fetchHasTeamPlanAccess().then(setTeamPlanAccess);
-  }, [userId, reloadKey]);
+    if (!authLoading && user) navigate({ to: "/dashboard" });
+  }, [authLoading, user, navigate]);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const [twinRes, compsRes, projectsRes, evidenceRes, reviewsRes] = await Promise.all([
-        supabase.from("twins").select("id, name, institution, programme, year, headline, visibility, handle, is_active, plan_status, plan_paid_until, photo_url").eq("id", userId).maybeSingle(),
-        supabase
-          .from("competencies")
-          .select("id, level, evidence_count, updated_at, skills(name, category)")
-          .eq("twin_id", userId)
-          .order("updated_at", { ascending: false }),
-        supabase.from("projects").select("id, title, description, created_at").eq("twin_id", userId).order("created_at", { ascending: false }),
-        supabase
-          .from("evidence")
-          .select("id, competency_id, title, link, note, created_at")
-          .eq("twin_id", userId)
-          .order("created_at", { ascending: false }),
-        // RLS only ever returns rows with submitted_at set for the owner — see
-        // "evidence_reviews: owner select submitted" policy.
-        supabase.from("evidence_reviews").select("id, evidence_id, reviewer_name, reviewer_role, comment").eq("twin_id", userId),
-      ]);
-      if (cancelled) return;
-      if (twinRes.error) console.error("[profile] load twin failed:", twinRes.error.message);
-      if (compsRes.error) console.error("[profile] load competencies failed:", compsRes.error.message);
-      if (projectsRes.error) console.error("[profile] load projects failed:", projectsRes.error.message);
-      if (evidenceRes.error) console.error("[profile] load evidence failed:", evidenceRes.error.message);
-      if (reviewsRes.error) console.error("[profile] load evidence reviews failed:", reviewsRes.error.message);
-      // A failed load must not render as an empty profile (it reads as lost data).
-      if ([twinRes, compsRes, projectsRes, evidenceRes, reviewsRes].some((r) => r.error)) {
-        setLoadError(true);
-        setFetching(false);
-        return;
-      }
-      setLoadError(false);
-      setTwin((twinRes.data as Twin | null) ?? { id: userId, name: null, institution: null, programme: null, year: null, headline: null, visibility: "private", handle: null, is_active: true, plan_status: "unpaid", plan_paid_until: null, photo_url: null });
-      setCompetencies((compsRes.data as unknown as Competency[] | null) ?? []);
-      setProjectList((projectsRes.data as Project[] | null) ?? []);
-      setEvidence((evidenceRes.data as Evidence[] | null) ?? []);
-      setReviews((reviewsRes.data as EvidenceReview[] | null) ?? []);
-      setFetching(false);
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, reloadKey]);
-
-  if (loadError) {
-    return (
-      <LoadError
-        onRetry={() => {
-          setFetching(true);
-          setReloadKey((k) => k + 1);
-        }}
-      />
-    );
-  }
-
-  if (fetching || !twin) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
-
-  if (!twin.is_active) return <DeactivatedGate />;
-
-  if (!hasActivePlan(twin) && !teamPlanAccess) return <PaywallGate onPaid={() => setReloadKey((k) => k + 1)} />;
-
-  const reviewedCount = competencies.filter((c) => competencyStatus(c, evidence, reviews) === "reviewed").length;
-  const evidenceCount = competencies.filter((c) => c.evidence_count > 0).length;
-  const initials = (twin.name ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
-  const recentActivity = [
-    ...competencies
-      .filter((c) => c.evidence_count === 0)
-      .map((c) => ({ at: c.updated_at, text: `${c.skills?.name ?? "A capability"} — self-reported` })),
-    ...projectList.map((p) => ({ at: p.created_at, text: `Started project: ${p.title}` })),
-    ...evidence.map((e) => {
-      const skillName = competencies.find((c) => c.id === e.competency_id)?.skills?.name;
-      return { at: e.created_at, text: `${e.title}${skillName ? ` — evidence for ${skillName}` : ""}` };
-    }),
-  ]
-    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-    .slice(0, 6);
-
-  const isEmpty = !twin.name && competencies.length === 0 && projectList.length === 0;
-  const activeTeam = teams.find((t) => t.id === activeTeamId) ?? null;
-
-  return (
-    <>
-      {teams.length > 0 && (
-        <div className="border-b bg-muted/30">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-5 py-3">
-            <button
-              type="button"
-              onClick={() => setActiveTeamId(null)}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${!activeTeam ? "border-electric bg-electric/10 text-electric" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-            >
-              <User className="h-3.5 w-3.5" /> Solo builder
-            </button>
-            {teams.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveTeamId(t.id)}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${activeTeam?.id === t.id ? "border-electric bg-electric/10 text-electric" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-              >
-                <Users2 className="h-3.5 w-3.5" /> {t.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      {activeTeam ? (
-        <TeamDashboardView team={activeTeam} onReload={() => setReloadKey((k) => k + 1)} />
-      ) : (
-        <>
-      <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
-        <div className="absolute inset-0 opacity-50"><CareerGraph /></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/85 to-ink/30" aria-hidden />
-        <div className="relative mx-auto max-w-7xl px-5 py-12 md:py-16">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="font-mono text-xs text-ink-muted">Your MetaTwin</p>
-            <Link to="/dashboard" className="text-xs text-ink-muted underline-offset-4 hover:text-ink-foreground hover:underline">Owner view →</Link>
-          </div>
-          <div className="hero-rise mt-8 grid gap-8 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
-            {twin.photo_url ? (
-              <img
-                src={twin.photo_url}
-                alt=""
-                className="h-64 w-52 rounded-3xl object-cover shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64"
-              />
-            ) : (
-              <SampleAvatar initials={initials} className="h-64 w-52 rounded-3xl text-5xl shadow-glow ring-2 ring-electric/40 md:h-80 md:w-64" />
-            )}
-            <div className="min-w-0">
-              <h1 className="mt-4 text-4xl font-extrabold tracking-[-0.03em] md:text-6xl">{twin.name || "Add your name"}</h1>
-              <p className="mt-2 text-lg text-ink-muted">{twin.headline || "Add a headline from your dashboard"}</p>
-              {(twin.institution || twin.programme) && (
-                <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-muted">
-                  <MapPin className="h-4 w-4" />{[twin.institution, twin.programme].filter(Boolean).join(" · ")}{twin.year ? ` · Year ${twin.year}` : ""}
-                </p>
-              )}
-              {isEmpty && <p className="mt-3 text-sm text-electric">Your MetaTwin is empty — add your first capability or project to get started.</p>}
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild variant="hero"><Link to="/dashboard">Edit your MetaTwin</Link></Button>
-              </div>
-              <div className="mt-6 flex flex-wrap gap-6 text-sm">
-                {[[String(competencies.length), "Capabilities"], [String(evidenceCount), "Evidence added"], [String(reviewedCount), "Reviewed"], [String(projectList.length), "Projects"]].map(([v, l]) => (
-                  <div key={l}><p className="font-display text-xl font-semibold">{v}</p><p className="text-xs text-ink-muted">{l}</p></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <Section className="grid gap-8 lg:grid-cols-[1fr_340px]">
-        <div className="min-w-0 space-y-12">
-          <div>
-            <h2 className="text-2xl font-semibold">Capability Map</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Each capability shows its evidence status.</p>
-            {competencies.length === 0 ? (
-              <Card className="mt-6 border-dashed">
-                <p className="text-sm text-muted-foreground">No capabilities added yet. Add some from your <Link to="/dashboard" className="text-electric">dashboard</Link>.</p>
-              </Card>
-            ) : (
-              <Reveal stagger={0.05} className="mt-6 space-y-6">
-                {groups
-                  .filter((g) => competencies.some((c) => c.skills?.category === g))
-                  .map((g) => (
-                    <div key={g}>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{g}</p>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {competencies.filter((c) => c.skills?.category === g).map((c) => {
-                          const items = evidence.filter((e) => e.competency_id === c.id);
-                          return (
-                            <div key={c.id} className="rounded-xl border bg-card p-4 transition-shadow duration-200 hover:shadow-card">
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="font-medium">{c.skills?.name ?? "Unknown skill"}</p>
-                                <StatusBadge status={competencyStatus(c, evidence, reviews)} />
-                              </div>
-                              {items.length > 0 && (
-                                <ul className="mt-2 space-y-2 border-t pt-2">
-                                  {items.map((e) => {
-                                    const href = safeHref(e.link);
-                                    const review = reviews.find((r) => r.evidence_id === e.id);
-                                    return (
-                                      <li key={e.id}>
-                                        {href ? (
-                                          <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs text-electric hover:underline">
-                                            {e.title}
-                                          </a>
-                                        ) : (
-                                          <span className="text-xs text-muted-foreground">{e.title}</span>
-                                        )}
-                                        {review && (
-                                          <div className="mt-1 rounded-md bg-status-reviewed-bg p-2 text-xs text-status-reviewed">
-                                            <p className="font-medium">Review · {review.reviewer_name}{review.reviewer_role ? ` · ${review.reviewer_role}` : ""}</p>
-                                            {review.comment && <p className="mt-0.5 text-muted-foreground">{review.comment}</p>}
-                                          </div>
-                                        )}
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-              </Reveal>
-            )}
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-semibold">Projects</h2>
-            {projectList.length === 0 ? (
-              <Card className="mt-6 border-dashed">
-                <p className="text-sm text-muted-foreground">No projects added yet. Add some from your <Link to="/dashboard" className="text-electric">dashboard</Link>.</p>
-              </Card>
-            ) : (
-              <Reveal stagger={0.08} className="mt-5 space-y-3">
-                {projectList.map((p) => (
-                  <Link key={p.id} to="/projects/$id" params={{ id: p.id }} className="block">
-                    <Card className="transition-all duration-200 hover:border-electric/50 hover:shadow-card motion-safe:hover:-translate-y-0.5">
-                      <p className="font-display font-semibold">{p.title}</p>
-                      {p.description && <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>}
-                    </Card>
-                  </Link>
-                ))}
-              </Reveal>
-            )}
-          </div>
-
-          {recentActivity.length > 0 && (
-            <div>
-              <h2 className="text-2xl font-semibold">Growth Timeline</h2>
-              <Reveal as="ol" stagger={0.06} className="mt-5 space-y-0 border-l-2 border-electric/20 pl-6">
-                {recentActivity.map((g, i) => (
-                  <li key={i} className="relative pb-6">
-                    <span className="absolute -left-[31px] top-1 h-3 w-3 rounded-full border-2 border-background bg-electric" />
-                    <p className="font-mono text-xs text-muted-foreground">{new Date(g.at).toLocaleDateString()}</p>
-                    <p className="mt-0.5">{g.text}</p>
-                  </li>
-                ))}
-              </Reveal>
-            </div>
-          )}
-        </div>
-
-        <aside className="min-w-0 space-y-5">
-          <Card className="bg-muted/50">
-            <p className="flex items-start gap-2 text-sm text-muted-foreground">
-              <Lock className="mt-0.5 h-4 w-4 shrink-0" />
-              {twin.visibility === "public" && twin.handle ? (
-                <span>
-                  Your profile is public. Anyone with your link can view it:{" "}
-                  <Link to="/t/$handle" params={{ handle: twin.handle }} className="text-electric underline-offset-4 hover:underline">
-                    /t/{twin.handle}
-                  </Link>
-                </span>
-              ) : (
-                "This profile is private — only you can see it. You can share a public page from your dashboard."
-              )}
-            </p>
-          </Card>
-        </aside>
-      </Section>
-        </>
-      )}
-    </>
-  );
+  if (authLoading || user) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  return <SampleProfile />;
 }
 
 function VisionHero({ signedIn }: { signedIn: boolean }) {

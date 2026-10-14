@@ -22,6 +22,10 @@ export const LIMITS = {
   developmentGoal: 300,
   collaborationRequestMessage: 500,
   genderSelfDescribed: 60,
+  courseName: 120,
+  courseGrade: 20,
+  courseTerm: 160,
+  pitchFeedbackSummary: 500,
 } as const;
 
 export const MIN_PASSWORD_LENGTH = 8;

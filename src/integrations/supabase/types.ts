@@ -209,6 +209,7 @@ export type Database = {
       }
       courses: {
         Row: {
+          certificate_url: string | null
           created_at: string
           grade: string | null
           id: string
@@ -218,6 +219,7 @@ export type Database = {
           twin_id: string
         }
         Insert: {
+          certificate_url?: string | null
           created_at?: string
           grade?: string | null
           id?: string
@@ -227,6 +229,7 @@ export type Database = {
           twin_id: string
         }
         Update: {
+          certificate_url?: string | null
           created_at?: string
           grade?: string | null
           id?: string
@@ -923,6 +926,7 @@ export type Database = {
           interviews_synced_at: string | null
           open_to_collaborators: boolean
           pitch_deck_url: string | null
+          pitch_feedback_summary: string | null
           pitch_scores: Json
           pitch_video_url: string | null
           problem_statement: string | null
@@ -949,6 +953,7 @@ export type Database = {
           interviews_synced_at?: string | null
           open_to_collaborators?: boolean
           pitch_deck_url?: string | null
+          pitch_feedback_summary?: string | null
           pitch_scores?: Json
           pitch_video_url?: string | null
           problem_statement?: string | null
@@ -975,6 +980,7 @@ export type Database = {
           interviews_synced_at?: string | null
           open_to_collaborators?: boolean
           pitch_deck_url?: string | null
+          pitch_feedback_summary?: string | null
           pitch_scores?: Json
           pitch_video_url?: string | null
           problem_statement?: string | null

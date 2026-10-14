@@ -28,6 +28,7 @@ import {
   GitHubCard,
   InterviewTrackerCard,
   MarkCompleteButton,
+  MediaTiles,
   PitchFeedbackCard,
   PitchTracker,
   ProblemSolutionCards,
@@ -121,16 +122,10 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
         {p.description && <p>{p.description}</p>}
       </PageHero>
       <Section className="grid gap-8 lg:grid-cols-[1fr_320px]">
-        <div className="min-w-0 space-y-10">
+        <div className="min-w-0 space-y-6">
           <Link to="/projects" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> My projects</Link>
+          <MediaTiles writeupUrl={p.writeup_url} pitchDeckUrl={p.pitch_deck_url} pitchVideoUrl={p.pitch_video_url} />
           <ProblemSolutionCards problemStatement={p.problem_statement} proposedSolution={p.proposed_solution} />
-          <div>
-            <h2 className="text-2xl font-semibold">Journey</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Built from the dates you actually added things.</p>
-            <div className="mt-6"><Journey steps={buildProjectTimeline(p, evidence, updates, grades, pitches)} /></div>
-          </div>
-        </div>
-        <aside className="min-w-0 space-y-5">
           {artifact && (
             <Card>
               <p className="text-xs font-semibold uppercase text-muted-foreground">Project link</p>
@@ -167,6 +162,13 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
             incomingRequests={incomingRequests}
             onReload={() => setReloadKey((k) => k + 1)}
           />
+        </div>
+        <aside className="min-w-0 space-y-5">
+          <div>
+            <h2 className="text-xl font-semibold">Journey</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Built from the dates you actually added things.</p>
+            <div className="mt-5"><Journey steps={buildProjectTimeline(p, evidence, updates, grades, pitches)} /></div>
+          </div>
         </aside>
       </Section>
     </>
