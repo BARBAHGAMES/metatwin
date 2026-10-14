@@ -11,6 +11,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
+    "test:db": "node supabase/tests/local/run.mjs",
+    "db:audit": "node supabase/tests/local/audit.mjs",
     "format": "prettier --write .",
     "check-grants": "node scripts/check-grants.mjs",
     "check-migrations-sync": "node scripts/check-migrations-sync.mjs",
@@ -73,6 +75,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.16",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/vite": "^4.2.1",
     "@types/node": "^22.16.5",

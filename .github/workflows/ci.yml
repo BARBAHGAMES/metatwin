@@ -77,6 +77,14 @@ jobs:
         run: npm run lint
       - name: Unit tests
         run: npm test
+      - name: Database security suite (local throwaway Postgres)
+        # Applies every migration to an in-memory PGlite database with Supabase stubs and
+        # runs supabase/tests/security_regression.sql + supabase/tests/local/*.local.sql.
+        # No real database is involved. A migration that breaks RLS, grants or a column
+        # guard fails here, before anyone applies it to production.
+        run: npm run test:db
+      - name: Database security audit (RLS on every table)
+        run: npm run db:audit
       - name: Content drift
         # Catches page copy silently disappearing (a bad merge, a stale asset
         # sync, etc.) that still compiles and lints clean. Not a blocker for

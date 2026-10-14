@@ -16,18 +16,20 @@
 
 ---
 
-## Stage 0 — Patch up tight (security and integrity) · *in progress*
+## Stage 0 — Patch up tight (security and integrity) · *in progress — plan approved 2026-10-14*
+
+Execution needs database/Cloudflare access, so it continues in a **local Claude Code session**: [`LOCAL_SESSION_RUNBOOK.md`](LOCAL_SESSION_RUNBOOK.md).
 
 Must be finished before new features, because the product's value **is** trustworthy proof.
 
 | # | Item | Status |
 |---|---|---|
-| 0.1 | **Close the `twins` hole** — students could self-grant a paid plan or undo a deactivation (UPDATE), or delete and recreate their row (DELETE+INSERT). Migration `20261014200000_guard_twin_plan_and_activation_columns`; 11 new regression assertions. | Done on branch; **[approval]** apply + deploy |
+| 0.1 | **Close the `twins` hole** — students could self-grant a paid plan or undo a deactivation (UPDATE), or delete and recreate their row (DELETE+INSERT). Migration `20261014200000_guard_twin_plan_and_activation_columns`; 11 new regression assertions. | Done on branch; approved; apply via [`LOCAL_SESSION_RUNBOOK.md`](LOCAL_SESSION_RUNBOOK.md) (DB-only, no deploy needed) |
 | 0.2 | **Repo security** — gitleaks full-history scan in CI, `npm audit` in CI, SHA-pinned actions, Dependabot, hardened `.gitignore`, `SECURITY.md`. | Done on branch |
 | 0.3 | **Owner GitHub settings** — `main` ruleset (PR + green CI required, no force push), secret scanning + push protection, 2FA, access review. Checklist: [`REPO_SECURITY.md`](REPO_SECURITY.md). | Owner action |
 | 0.4 | **Rotate the Supabase service-role key** (was pasted into chat on 2026-10-10). | Owner action **[approval]** |
-| 0.5 | **Server-only "measured" proof numbers** — `projects.interviews_count`/`interviews_synced_at` (they advance project stage), `projects.pitch_scores`/`scores_synced_at`, `github_repos` stats, `ai_employees.github_*`. The sync routes write them with the service role after checking the caller owns the row; a guard trigger stops browser writes. | Planned **[approval]** |
-| 0.6 | **Run the security suite in CI** — add the local Postgres harness used today (PGlite + Supabase stubs, all migrations in order) to the repo as `npm run test:db`, wired into CI. It catches what went unnoticed this time: the suite has been failing since the MBTI migration and was never run because the only database was production. Adds one dev dependency (`@electric-sql/pglite`). | Planned **[decision]** |
+| 0.5 | **Server-only "measured" proof numbers** — `projects.interviews_count`/`interviews_synced_at` (they advance project stage), `projects.pitch_scores`/`scores_synced_at`, `github_repos` stats, `ai_employees.github_*`. The sync routes write them with the service role after checking the caller owns the row; a guard trigger stops browser writes. | Next: design in the runbook, Step 5 |
+| 0.6 | **Security suite in CI** — `npm run test:db` applies every migration to a throwaway in-memory Postgres (PGlite + Supabase stubs, `supabase/tests/local/`) and runs the security suite; `npm run db:audit` fails if any table lacks RLS. Both run in CI. It would have caught the suite being broken since the MBTI migration. Adds one dev dependency (`@electric-sql/pglite`). | Done on branch |
 | 0.7 | **A non-production database** — a Supabase dev project or branch for migrations and live smoke tests; production is never a test bed again (14 Oct data-loss incident). | **[decision]** (cost) |
 | 0.8 | **Supabase Pro** — the free plan auto-pauses after 7 idle days and has no backups/PITR; one real data-loss event has already happened. | **[decision]** (cost) |
 | 0.9 | **Abuse controls before wider launch** — Cloudflare Turnstile on signup, leaked-password protection (Pro), handle-impersonation takedown in the admin dashboard, rate limits on public RPCs and AI routes. | Planned |
@@ -97,7 +99,7 @@ on the builder's profile.
 
 ## Open decisions (summary)
 
-1. Apply + deploy Stage 0.1 (approval). 2. Repo public or private. 3. Dev database (0.7) and Supabase Pro (0.8).
-4. Add the DB test harness to CI (0.6). 5. Audience: students only vs students + independent builders (1.1).
+1. ~~Apply Stage 0.1~~ approved. 2. Repo public or private. 3. Dev database (0.7) and Supabase Pro (0.8).
+4. ~~DB test harness in CI (0.6)~~ approved and done on branch. 5. Audience: students only vs students + independent builders (1.1).
 6. MBTI and gender (1.3). 7. Score vs "never a single score" (2.5). 8. Paywall vs discoverability (3.5).
 9. Card provider and escrow model (4.3).

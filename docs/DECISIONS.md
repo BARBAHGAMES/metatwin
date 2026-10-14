@@ -38,9 +38,22 @@ approved, already-proven migrations.
 gitleaks full-history scan + `npm audit` in CI, SHA-pinned actions, Dependabot, hardened `.gitignore`, `SECURITY.md`.
 Uses the gitleaks CLI (not the action, which needs a paid licence for org repos).
 
-### D-009 · Docs layout — Proposed (2026-10-14)
+### D-009 · Docs layout — Accepted (2026-10-14, with the plan)
 `docs/SPEC.md` (what it is / what exists), `docs/BUILD_PLAN.md` (what's next), `docs/DECISIONS.md` (this file),
-`docs/REPO_SECURITY.md` (owner checklist). `.claude/PROJECT_STATE.md` stays as the per-session engineering log.
+`docs/REPO_SECURITY.md` (owner checklist), `docs/LOCAL_SESSION_RUNBOOK.md` (Stage 0 hand-off). `.claude/PROJECT_STATE.md`
+stays as the per-session engineering log.
+
+### D-010 · Build plan approved; Stage 0 continues in a local Claude Code session — Accepted (2026-10-14)
+Andrew approved `docs/BUILD_PLAN.md` and gave permission to complete Stage 0 using database and tool access. The
+cloud session has neither, so it built everything that can be verified offline (0.1 migration, 0.2 repo security,
+0.6 DB test harness) and hands off to a local session via `docs/LOCAL_SESSION_RUNBOOK.md`. The local session may apply
+migration 0.1 and run read-only production queries; merges, deploys, key rotation and other migrations still need
+Andrew's in-session OK.
+
+### D-011 · Local DB test harness in the repo and CI — Accepted (2026-10-14)
+`npm run test:db` / `npm run db:audit` (PGlite, Postgres 17 in WASM, with Supabase stubs). Dev dependency
+`@electric-sql/pglite` pinned to 0.3.16. Production may run a different Postgres major version; the harness is a
+safety net, not a replacement for a dev database (Build Plan 0.7).
 
 ## Pending owner decisions
 See the "Open decisions" list at the end of `docs/BUILD_PLAN.md`.
