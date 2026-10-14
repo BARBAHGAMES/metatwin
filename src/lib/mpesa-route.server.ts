@@ -7,6 +7,16 @@ import { individualPlans } from "./pricing";
 
 const BASIC_PLAN_PRICE = individualPlans.find((p) => p.id === "basic")!.price;
 
+// Optional ops lever, not a pricing change: lets a real STK push be tested
+// end-to-end (including against a real phone / a future real paybill)
+// without actually moving the full KES 2,000 each time. Unset in normal
+// operation — falls back to the real price. Never shown to the client;
+// PaywallGate's copy always quotes the real price regardless.
+function chargeAmount(): number {
+  const override = Number(process.env.MPESA_TEST_AMOUNT);
+  return Number.isFinite(override) && override > 0 ? override : BASIC_PLAN_PRICE;
+}
+
 const DARAJA_BASE_URL = "https://sandbox.safaricom.co.ke";
 const CALLBACK_URL = "https://metatwin.metaglobetechnologies.co.ke/api/webhooks/mpesa-callback";
 
@@ -87,6 +97,7 @@ export async function handleMpesaInitiate(request: Request): Promise<Response> {
 
   const timestamp = darajaTimestamp();
   const password = btoa(`${shortcode}${passkey}${timestamp}`);
+  const amount = chargeAmount();
 
   const stkRes = await fetch(`${DARAJA_BASE_URL}/mpesa/stkpush/v1/processrequest`, {
     method: "POST",
@@ -96,7 +107,7 @@ export async function handleMpesaInitiate(request: Request): Promise<Response> {
       Password: password,
       Timestamp: timestamp,
       TransactionType: "CustomerPayBillOnline",
-      Amount: BASIC_PLAN_PRICE,
+      Amount: amount,
       PartyA: msisdn,
       PartyB: shortcode,
       PhoneNumber: msisdn,
@@ -119,7 +130,7 @@ export async function handleMpesaInitiate(request: Request): Promise<Response> {
   const { error: insertError } = await supabaseAdmin.from("payments").insert({
     twin_id: twinId,
     phone: msisdn,
-    amount: BASIC_PLAN_PRICE,
+    amount,
     mpesa_merchant_request_id: stkData.MerchantRequestID,
     mpesa_checkout_request_id: stkData.CheckoutRequestID,
     status: "pending",
