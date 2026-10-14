@@ -34,6 +34,23 @@ export async function addAiEmployee(
   if (error) throw new Error(error.message);
 }
 
+export async function updateAiEmployee(
+  id: string,
+  fields: { name: string; role: string; platform: string; description: string; link_url: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from("ai_employees")
+    .update({
+      name: fields.name.trim(),
+      role: fields.role.trim() || null,
+      platform: fields.platform.trim() || null,
+      description: fields.description.trim() || null,
+      link_url: fields.link_url.trim() || null,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 export async function removeAiEmployee(id: string): Promise<void> {
   const { error } = await supabase.from("ai_employees").delete().eq("id", id);
   if (error) throw new Error(error.message);

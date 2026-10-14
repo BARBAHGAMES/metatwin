@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { ExternalLink, GitFork, Github, MessageSquare, Plus, RefreshCw, Rocket, Star, Trash2 } from "lucide-react";
+import { ExternalLink, GitFork, Github, MessageSquare, Pencil, Plus, RefreshCw, Rocket, Star, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GITHUB_SYNC_PATH, PITCH_FEEDBACK_SYNC_PATH, type GitHubRepoStats } from "@/lib/api-paths";
 import type { GithubRepoRow, MyProject, PitchRow, PitchStatsRow } from "@/lib/real-data";
@@ -149,6 +149,9 @@ export function PitchTracker({
 }) {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ business_name: "", sector: "", outcome: "follow-up" as string, notes: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ business_name: "", sector: "", outcome: "follow-up" as string, notes: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   async function addPitch() {
     if (!form.business_name.trim()) {
@@ -173,6 +176,32 @@ export function PitchTracker({
     onChange();
   }
 
+  function startEdit(p: PitchRow) {
+    setEditingId(p.id);
+    setEditForm({ business_name: p.business_name, sector: p.sector ?? "", outcome: p.outcome, notes: p.notes ?? "" });
+  }
+
+  async function saveEdit() {
+    if (!editingId || !editForm.business_name.trim()) return;
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from("pitches")
+      .update({
+        business_name: editForm.business_name.trim(),
+        sector: editForm.sector.trim() || null,
+        outcome: editForm.outcome,
+        notes: editForm.notes.trim() || null,
+      })
+      .eq("id", editingId);
+    setSavingEdit(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setEditingId(null);
+    onChange();
+  }
+
   async function removePitch(id: string) {
     const { error } = await supabase.from("pitches").delete().eq("id", id);
     if (error) {
@@ -194,16 +223,36 @@ export function PitchTracker({
         </div>
       )}
       <ul className="mt-4 space-y-2">
-        {pitches.map((p) => (
-          <li key={p.id} className="flex items-start justify-between gap-2 rounded-lg border p-2.5 text-sm">
-            <div className="min-w-0">
-              <p className="truncate font-medium">{p.business_name}{p.sector ? ` · ${p.sector}` : ""}</p>
-              <p className="text-xs text-muted-foreground">{p.pitched_on} · {OUTCOMES.find((o) => o.value === p.outcome)?.label ?? p.outcome}</p>
-              {p.notes && <p className="mt-1 text-xs text-muted-foreground">{p.notes}</p>}
-            </div>
-            <button onClick={() => removePitch(p.id)} aria-label="Remove" className="shrink-0 cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
-          </li>
-        ))}
+        {pitches.map((p) =>
+          editingId === p.id ? (
+            <li key={p.id} className="space-y-2 rounded-lg border p-2.5 text-sm">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input placeholder="Business name" value={editForm.business_name} onChange={(e) => setEditForm({ ...editForm, business_name: e.target.value })} />
+                <Input placeholder="Sector (optional)" value={editForm.sector} onChange={(e) => setEditForm({ ...editForm, sector: e.target.value })} />
+              </div>
+              <select value={editForm.outcome} onChange={(e) => setEditForm({ ...editForm, outcome: e.target.value })} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                {OUTCOMES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <Textarea rows={2} placeholder="Notes (optional)" value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? "Saving…" : "Save"}</Button>
+                <Button size="sm" variant="outline" onClick={() => setEditingId(null)} disabled={savingEdit}>Cancel</Button>
+              </div>
+            </li>
+          ) : (
+            <li key={p.id} className="flex items-start justify-between gap-2 rounded-lg border p-2.5 text-sm">
+              <div className="min-w-0">
+                <p className="truncate font-medium">{p.business_name}{p.sector ? ` · ${p.sector}` : ""}</p>
+                <p className="text-xs text-muted-foreground">{p.pitched_on} · {OUTCOMES.find((o) => o.value === p.outcome)?.label ?? p.outcome}</p>
+                {p.notes && <p className="mt-1 text-xs text-muted-foreground">{p.notes}</p>}
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button onClick={() => startEdit(p)} aria-label="Edit" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => removePitch(p.id)} aria-label="Remove" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            </li>
+          ),
+        )}
       </ul>
       <div className="mt-4 space-y-2 border-t pt-4">
         <div className="grid gap-2 sm:grid-cols-2">

@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import heroImg from "@/assets/hero-dashboard.jpg";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FolderPlus, FilePlus2, Layers, ArrowRight, Info, Bot, Camera, UserRound, FileText, PlayCircle, Rocket, GraduationCap } from "lucide-react";
+import { FolderPlus, FilePlus2, Layers, ArrowRight, Info, Bot, Camera, UserRound, FileText, PlayCircle, Rocket, GraduationCap, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { aiEmployees } from "@/lib/data";
@@ -117,11 +117,15 @@ function Dashboard() {
 
   const [projectDialog, setProjectDialog] = useState(false);
   const [projectForm, setProjectForm] = useState({ title: "", description: "" });
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [capabilityDialog, setCapabilityDialog] = useState(false);
   const [capabilitySkillId, setCapabilitySkillId] = useState("");
+  const [capabilityLevel, setCapabilityLevel] = useState(1);
+  const [editingCompetencyId, setEditingCompetencyId] = useState<string | null>(null);
   const [evidenceDialog, setEvidenceDialog] = useState(false);
   const [evidenceCompetencyId, setEvidenceCompetencyId] = useState("");
   const [evidenceProjectId, setEvidenceProjectId] = useState("");
+  const [editingEvidenceId, setEditingEvidenceId] = useState<string | null>(null);
   const [matches, setMatches] = useState<OpportunityMatch[]>([]);
   const [matchesState, setMatchesState] = useState<"loading" | "error" | "ready">("loading");
   const [matchesReload, setMatchesReload] = useState(0);
@@ -131,6 +135,8 @@ function Dashboard() {
   const [reviewerForm, setReviewerForm] = useState({ name: "", role: "" });
   const [reviewLink, setReviewLink] = useState<string | null>(null);
   const [invitingReviewer, setInvitingReviewer] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ kind: "project" | "capability" | "evidence"; id: string; label: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/login" });
@@ -235,32 +241,79 @@ function Dashboard() {
     };
   }, [user, isAdult, capabilityCount, evidenceSignature, matchesReload]);
 
-  async function addProject() {
+  function openAddProjectDialog() {
+    setEditingProjectId(null);
+    setProjectForm({ title: "", description: "" });
+    setProjectDialog(true);
+  }
+
+  function openEditProjectDialog(p: Project) {
+    setEditingProjectId(p.id);
+    setProjectForm({ title: p.title, description: p.description ?? "" });
+    setProjectDialog(true);
+  }
+
+  async function saveProject() {
     if (!user || !projectForm.title.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from("projects").insert({
-      twin_id: user.id,
-      title: projectForm.title.trim(),
-      description: projectForm.description.trim() || null,
-    });
+    const payload = { title: projectForm.title.trim(), description: projectForm.description.trim() || null };
+    if (editingProjectId) {
+      const { error } = await supabase.from("projects").update(payload).eq("id", editingProjectId);
+      setSaving(false);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Project updated.");
+      setProjectDialog(false);
+      loadAll(user.id);
+      return;
+    }
+    const { data, error } = await supabase.from("projects").insert({ twin_id: user.id, ...payload }).select("id").single();
     setSaving(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    toast.success("Project added.");
+    toast.success("Project added — let's attach a pitch deck or video.");
     setProjectForm({ title: "", description: "" });
     setProjectDialog(false);
-    loadAll(user.id);
+    if (data) navigate({ to: "/projects/$id", params: { id: data.id } });
   }
 
-  async function addCapability() {
+  function openAddCapabilityDialog() {
+    setEditingCompetencyId(null);
+    setCapabilitySkillId("");
+    setCapabilityLevel(1);
+    setCapabilityDialog(true);
+  }
+
+  function openEditCapabilityDialog(c: Competency) {
+    setEditingCompetencyId(c.id);
+    setCapabilitySkillId(c.skill_id);
+    setCapabilityLevel(c.level);
+    setCapabilityDialog(true);
+  }
+
+  async function saveCapability() {
     if (!user || !capabilitySkillId) return;
     setSaving(true);
+    if (editingCompetencyId) {
+      const { error } = await supabase.from("competencies").update({ level: capabilityLevel }).eq("id", editingCompetencyId);
+      setSaving(false);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Capability updated.");
+      setCapabilityDialog(false);
+      loadAll(user.id);
+      return;
+    }
     const { error } = await supabase.from("competencies").insert({
       twin_id: user.id,
       skill_id: capabilitySkillId,
-      level: 1,
+      level: capabilityLevel,
     });
     setSaving(false);
     if (error) {
@@ -273,7 +326,23 @@ function Dashboard() {
     loadAll(user.id);
   }
 
-  async function addEvidence() {
+  function openAddEvidenceDialog() {
+    setEditingEvidenceId(null);
+    setEvidenceCompetencyId("");
+    setEvidenceProjectId("");
+    setEvidenceForm({ title: "", link: "", note: "" });
+    setEvidenceDialog(true);
+  }
+
+  function openEditEvidenceDialog(e: Evidence) {
+    setEditingEvidenceId(e.id);
+    setEvidenceCompetencyId(e.competency_id);
+    setEvidenceProjectId("");
+    setEvidenceForm({ title: e.title, link: e.link ?? "", note: e.note ?? "" });
+    setEvidenceDialog(true);
+  }
+
+  async function saveEvidence() {
     if (!user || !evidenceCompetencyId || !evidenceForm.title.trim()) return;
     const link = evidenceForm.link.trim();
     if (link && !isHttpUrl(link)) {
@@ -281,6 +350,21 @@ function Dashboard() {
       return;
     }
     setSaving(true);
+    if (editingEvidenceId) {
+      const { error } = await supabase
+        .from("evidence")
+        .update({ title: evidenceForm.title.trim(), link: link || null, note: evidenceForm.note.trim() || null })
+        .eq("id", editingEvidenceId);
+      setSaving(false);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Evidence updated.");
+      setEvidenceDialog(false);
+      loadAll(user.id);
+      return;
+    }
     const { error } = await supabase.from("evidence").insert({
       twin_id: user.id,
       competency_id: evidenceCompetencyId,
@@ -299,6 +383,21 @@ function Dashboard() {
     setEvidenceProjectId("");
     setEvidenceForm({ title: "", link: "", note: "" });
     setEvidenceDialog(false);
+    loadAll(user.id);
+  }
+
+  async function confirmDelete() {
+    if (!user || !deleteConfirm) return;
+    setDeleting(true);
+    const table = deleteConfirm.kind === "project" ? "projects" : deleteConfirm.kind === "capability" ? "competencies" : "evidence";
+    const { error } = await supabase.from(table).delete().eq("id", deleteConfirm.id);
+    setDeleting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`${deleteConfirm.kind === "project" ? "Project" : deleteConfirm.kind === "capability" ? "Capability" : "Evidence"} deleted.`);
+    setDeleteConfirm(null);
     loadAll(user.id);
   }
 
@@ -406,14 +505,14 @@ function Dashboard() {
 
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-electric">Build your MetaTwin</p>
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
-          <button onClick={() => setProjectDialog(true)} className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition-all duration-200 hover:border-electric/50 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2">
+          <button onClick={openAddProjectDialog} className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition-all duration-200 hover:border-electric/50 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2">
             <FolderPlus className="h-5 w-5 shrink-0 text-electric" />Add a project
           </button>
-          <button onClick={() => setCapabilityDialog(true)} className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition-all duration-200 hover:border-electric/50 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2">
+          <button onClick={openAddCapabilityDialog} className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition-all duration-200 hover:border-electric/50 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2">
             <Layers className="h-5 w-5 shrink-0 text-electric" />Add a capability
           </button>
           <button
-            onClick={() => (competencies.length === 0 ? toast.info("Add a capability first.") : setEvidenceDialog(true))}
+            onClick={() => (competencies.length === 0 ? toast.info("Add a capability first.") : openAddEvidenceDialog())}
             className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium shadow-card transition-all duration-200 hover:border-electric/50 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2"
           >
             <FilePlus2 className="h-5 w-5 shrink-0 text-electric" />Add evidence
@@ -462,12 +561,8 @@ function Dashboard() {
                 const hasDeck = !!safeHref(p.pitch_deck_url);
                 const hasVideo = !!safeHref(p.pitch_video_url);
                 return (
-                  <li key={p.id}>
-                    <Link
-                      to="/projects/$id"
-                      params={{ id: p.id }}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card p-4 transition-all duration-200 hover:border-electric/50 motion-safe:hover:-translate-y-0.5"
-                    >
+                  <li key={p.id} className="flex items-center gap-2 rounded-xl border bg-card transition-all duration-200 hover:border-electric/50">
+                    <Link to="/projects/$id" params={{ id: p.id }} className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 p-4">
                       <div className="min-w-0">
                         <p className="truncate font-medium">{p.title}</p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -481,6 +576,24 @@ function Dashboard() {
                       </div>
                       <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                     </Link>
+                    <div className="flex shrink-0 items-center gap-1 pr-3">
+                      <button
+                        type="button"
+                        onClick={() => openEditProjectDialog(p)}
+                        aria-label="Edit project"
+                        className="cursor-pointer rounded p-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirm({ kind: "project", id: p.id, label: p.title })}
+                        aria-label="Delete project"
+                        className="cursor-pointer rounded p-1.5 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </li>
                 );
               })}
@@ -498,7 +611,15 @@ function Dashboard() {
                   <li key={c.id} className="rounded-lg border px-3 py-2 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate">{c.skills?.name ?? "Unknown skill"}</span>
-                      <StatusBadge status={competencyStatus(c, evidence, reviews)} />
+                      <div className="flex shrink-0 items-center gap-2">
+                        <StatusBadge status={competencyStatus(c, evidence, reviews)} />
+                        <button type="button" onClick={() => openEditCapabilityDialog(c)} aria-label="Edit capability" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button type="button" onClick={() => setDeleteConfirm({ kind: "capability", id: c.id, label: c.skills?.name ?? "this capability" })} aria-label="Delete capability" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
                     {items.length > 0 && (
                       <ul className="mt-2 space-y-2 border-t pt-2">
@@ -515,15 +636,23 @@ function Dashboard() {
                                 ) : (
                                   <span className="truncate text-xs text-muted-foreground">{e.title}</span>
                                 )}
-                                {!review && (
-                                  <button
-                                    type="button"
-                                    onClick={() => openReviewDialog(e.id)}
-                                    className="shrink-0 cursor-pointer text-xs text-electric hover:underline"
-                                  >
-                                    Invite a reviewer
+                                <div className="flex shrink-0 items-center gap-2">
+                                  {!review && (
+                                    <button
+                                      type="button"
+                                      onClick={() => openReviewDialog(e.id)}
+                                      className="cursor-pointer text-xs text-electric hover:underline"
+                                    >
+                                      Invite a reviewer
+                                    </button>
+                                  )}
+                                  <button type="button" onClick={() => openEditEvidenceDialog(e)} aria-label="Edit evidence" className="cursor-pointer rounded p-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
+                                    <Pencil className="h-3 w-3" />
                                   </button>
-                                )}
+                                  <button type="button" onClick={() => setDeleteConfirm({ kind: "evidence", id: e.id, label: e.title })} aria-label="Delete evidence" className="cursor-pointer rounded p-0.5 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
                               </div>
                               {review && (
                                 <div className="mt-1 rounded-md bg-status-reviewed-bg p-2 text-xs text-status-reviewed">
@@ -638,7 +767,7 @@ function Dashboard() {
 
       <Dialog open={projectDialog} onOpenChange={setProjectDialog}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Add a project</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingProjectId ? "Edit project" : "Add a project"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="project-title">Title</Label>
@@ -649,38 +778,57 @@ function Dashboard() {
               <Textarea id="project-description" rows={3} maxLength={LIMITS.projectDescription} value={projectForm.description} onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })} placeholder="What is it, and what's your role?" />
             </div>
           </div>
-          <DialogFooter><Button onClick={addProject} disabled={saving || !projectForm.title.trim()}>Save</Button></DialogFooter>
+          <DialogFooter><Button onClick={saveProject} disabled={saving || !projectForm.title.trim()}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={capabilityDialog} onOpenChange={setCapabilityDialog}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Add a capability</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingCompetencyId ? "Edit capability" : "Add a capability"}</DialogTitle></DialogHeader>
           <div className="space-y-1.5">
             <Label htmlFor="capability-select">Capability</Label>
-            <select
-              id="capability-select"
-              value={capabilitySkillId}
-              onChange={(e) => setCapabilitySkillId(e.target.value)}
-              className="h-11 w-full rounded-md border bg-background px-3 text-sm"
-            >
-              <option value="">Choose…</option>
-              {availableSkillsForCapability.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-            {availableSkillsForCapability.length === 0 && (
-              <p className="text-xs text-muted-foreground">You've added every capability in the current list.</p>
+            {editingCompetencyId ? (
+              <p className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                {competencies.find((c) => c.id === editingCompetencyId)?.skills?.name ?? "Unknown skill"}
+              </p>
+            ) : (
+              <>
+                <select
+                  id="capability-select"
+                  value={capabilitySkillId}
+                  onChange={(e) => setCapabilitySkillId(e.target.value)}
+                  className="h-11 w-full rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="">Choose…</option>
+                  {availableSkillsForCapability.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                {availableSkillsForCapability.length === 0 && (
+                  <p className="text-xs text-muted-foreground">You've added every capability in the current list.</p>
+                )}
+              </>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">New capabilities start as Self-Reported — add evidence next to back it up.</p>
-          <DialogFooter><Button onClick={addCapability} disabled={saving || !capabilitySkillId}>Save</Button></DialogFooter>
+          <div className="mt-3 space-y-1.5">
+            <Label htmlFor="capability-level">Level (1-5, self-rated)</Label>
+            <select
+              id="capability-level"
+              value={capabilityLevel}
+              onChange={(e) => setCapabilityLevel(Number(e.target.value))}
+              className="h-11 w-full rounded-md border bg-background px-3 text-sm"
+            >
+              {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Capabilities start as Self-Reported — add evidence next to back it up.</p>
+          <DialogFooter><Button onClick={saveCapability} disabled={saving || !capabilitySkillId}>Save</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={evidenceDialog} onOpenChange={setEvidenceDialog}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Add evidence</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingEvidenceId ? "Edit evidence" : "Add evidence"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="evidence-select">Supports capability</Label>
@@ -745,7 +893,29 @@ function Dashboard() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">File attachments aren't built yet — link to where the evidence already lives (Drive, GitHub, a write-up, etc).</p>
-          <DialogFooter><Button onClick={addEvidence} disabled={saving || !evidenceCompetencyId || !evidenceForm.title.trim()}>Save</Button></DialogFooter>
+          <DialogFooter><Button onClick={saveEvidence} disabled={saving || !evidenceCompetencyId || !evidenceForm.title.trim()}>Save</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete {deleteConfirm?.kind}?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {deleteConfirm?.kind === "project" && (
+              <>Deleting <strong>{deleteConfirm.label}</strong> also deletes its logged business pitches, GitHub sync, and academic grade (if any). Evidence linked to it stays on your MetaTwin, just unlinked from this project.</>
+            )}
+            {deleteConfirm?.kind === "capability" && (() => {
+              const count = evidence.filter((e) => e.competency_id === deleteConfirm.id).length;
+              return (
+                <>Deleting <strong>{deleteConfirm.label}</strong> also permanently deletes the {count} evidence item{count === 1 ? "" : "s"} attached to it — that's real proof content, not just a link.</>
+              );
+            })()}
+            {deleteConfirm?.kind === "evidence" && <>This evidence item will be permanently removed.</>}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>{deleting ? "Deleting…" : "Delete"}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
