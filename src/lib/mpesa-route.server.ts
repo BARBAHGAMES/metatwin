@@ -81,6 +81,15 @@ export async function handleMpesaInitiate(request: Request): Promise<Response> {
     return new Response(JSON.stringify({ error: "Enter a valid Kenyan phone number (e.g. 07XXXXXXXX)." }), { status: 400, headers: { "content-type": "application/json" } });
   }
 
+  // A non-student account (platform_admins, school_admins) has no twins row
+  // at all — fail here, before bothering Safaricom, rather than after a
+  // real STK push has already gone to someone's phone for a payment that
+  // was always going to fail the payments.twin_id foreign key.
+  const { data: twinExists } = await supabaseAdmin.from("twins").select("id").eq("id", twinId).maybeSingle();
+  if (!twinExists) {
+    return new Response(JSON.stringify({ error: "This account doesn't have a MetaTwin student profile to pay for." }), { status: 400, headers: { "content-type": "application/json" } });
+  }
+
   const shortcode = process.env.MPESA_SHORTCODE;
   const passkey = process.env.MPESA_PASSKEY;
   if (!shortcode || !passkey) {
