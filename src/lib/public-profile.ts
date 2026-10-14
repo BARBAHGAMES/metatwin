@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PublicPitchScore } from "./pitch-scores";
+import { formatDate } from "./real-data";
+import type { Project as SampleProject } from "./data";
 
 // Mirrors twins_handle_format in the public_profile_handle_and_function
 // migration (P1-5): 3-30 chars, lowercase letters/digits/hyphens, starting and
@@ -51,10 +53,15 @@ export type PublicPitchStats = { total_pitches: number; positive: number; custom
 export type PublicProjectTeam = { slug: string; name: string };
 export type PublicPitchFeedback = { responses: number; questions: { label: string; average: number; max: number }[]; overall: number | null };
 export type PublicProjectGrade = { rating_label: string; rating_score: number };
+export type PublicProjectGradeEvent = { rating_label: string; rating_score: number; graded_at: string };
+export type PublicProjectUpdate = { id: string; kind: "iteration" | "pivot"; title: string; description: string | null; created_at: string };
 export type PublicProject = {
   id: string;
   title: string;
   description: string | null;
+  created_at: string;
+  problem_statement: string | null;
+  proposed_solution: string | null;
   artifact_url?: string | null;
   writeup_url?: string | null;
   pitch_deck_url?: string | null;
@@ -63,6 +70,8 @@ export type PublicProject = {
   pitch_stats?: PublicPitchStats | null;
   pitch_feedback?: PublicPitchFeedback | null;
   grade?: PublicProjectGrade | null;
+  grades?: PublicProjectGradeEvent[] | null;
+  project_updates?: PublicProjectUpdate[] | null;
   team?: PublicProjectTeam | null;
 };
 export type PublicProfileTeam = { slug: string; name: string };
@@ -113,6 +122,27 @@ export async function fetchPublicProfile(handle: string): Promise<PublicProfile 
   const { data, error } = await supabase.rpc("get_public_profile", { p_handle: handle });
   if (error) throw new Error(error.message);
   return (data as PublicProfile | null) ?? null;
+}
+
+// A public project's journey: the same shape as the signed-in student's own
+// timeline (buildProjectTimeline in real-data.ts), built only from what's
+// already public — when the project started, the student's own logged
+// updates (iterations and pivots), and academic grades received. Pitches
+// stay off the public timeline: individual business names and notes aren't
+// exposed publicly (only the aggregate pitch_stats card is).
+export function buildPublicProjectJourney(project: PublicProject): SampleProject["journey"] {
+  const events = [
+    { at: project.created_at, step: "Project started", text: project.description || project.title },
+    ...(project.project_updates ?? []).map((u) => ({
+      at: u.created_at,
+      step: u.kind === "pivot" ? "Pivot" : "Iteration",
+      text: u.description ? `${u.title} — ${u.description}` : u.title,
+    })),
+    ...(project.grades ?? []).map((g) => ({ at: g.graded_at, step: "Academic grade", text: g.rating_label })),
+  ];
+  return events
+    .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+    .map((e) => ({ step: e.step, date: formatDate(e.at), text: e.text }));
 }
 
 export type PublicTwinListItem = {

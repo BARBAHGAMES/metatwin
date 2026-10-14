@@ -809,6 +809,51 @@ export type Database = {
           },
         ]
       }
+      project_updates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          kind: string
+          project_id: string
+          title: string
+          twin_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind: string
+          project_id: string
+          title: string
+          twin_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          project_id?: string
+          title?: string
+          twin_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_updates_project_owner_fkey"
+            columns: ["project_id", "twin_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "twin_id"]
+          },
+          {
+            foreignKeyName: "project_updates_twin_id_fkey"
+            columns: ["twin_id"]
+            isOneToOne: false
+            referencedRelation: "twins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           artifact_url: string | null
@@ -819,6 +864,8 @@ export type Database = {
           pitch_deck_url: string | null
           pitch_scores: Json
           pitch_video_url: string | null
+          problem_statement: string | null
+          proposed_solution: string | null
           scores_csv_url: string | null
           scores_synced_at: string | null
           skill_ids: string[]
@@ -836,6 +883,8 @@ export type Database = {
           pitch_deck_url?: string | null
           pitch_scores?: Json
           pitch_video_url?: string | null
+          problem_statement?: string | null
+          proposed_solution?: string | null
           scores_csv_url?: string | null
           scores_synced_at?: string | null
           skill_ids?: string[]
@@ -853,6 +902,8 @@ export type Database = {
           pitch_deck_url?: string | null
           pitch_scores?: Json
           pitch_video_url?: string | null
+          problem_statement?: string | null
+          proposed_solution?: string | null
           scores_csv_url?: string | null
           scores_synced_at?: string | null
           skill_ids?: string[]

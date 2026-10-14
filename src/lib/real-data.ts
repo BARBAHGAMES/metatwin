@@ -20,6 +20,8 @@ export type MyProject = {
   id: string;
   title: string;
   description: string | null;
+  problem_statement: string | null;
+  proposed_solution: string | null;
   artifact_url: string | null;
   github_repo: string | null;
   writeup_url: string | null;
@@ -29,6 +31,13 @@ export type MyProject = {
   scores_csv_url: string | null;
   pitch_scores: PitchScores | Record<string, never>;
   scores_synced_at: string | null;
+};
+export type ProjectUpdateRow = {
+  id: string;
+  kind: "iteration" | "pivot";
+  title: string;
+  description: string | null;
+  created_at: string;
 };
 export type GithubRepoRow = {
   full_name: string;
@@ -114,7 +123,7 @@ export async function fetchMyProjects(userId: string) {
   const [proj, ev] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
+      .select("id, title, description, problem_statement, proposed_solution, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
       .eq("twin_id", userId)
       .order("created_at", { ascending: false }),
     supabase
@@ -129,10 +138,10 @@ export async function fetchMyProjects(userId: string) {
 }
 
 export async function fetchMyProject(userId: string, projectId: string) {
-  const [proj, ev, repo, pitches, pitchStats, allGrades] = await Promise.all([
+  const [proj, ev, repo, pitches, pitchStats, allGrades, updates] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
+      .select("id, title, description, problem_statement, proposed_solution, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
       .eq("twin_id", userId)
       .eq("id", projectId)
       .maybeSingle(),
@@ -161,21 +170,30 @@ export async function fetchMyProject(userId: string, projectId: string) {
       .eq("project_id", projectId)
       .maybeSingle(),
     fetchMyProjectGrades(),
+    supabase
+      .from("project_updates")
+      .select("id, kind, title, description, created_at")
+      .eq("twin_id", userId)
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false }),
   ]);
   if (proj.error) throw new Error(proj.error.message);
   if (ev.error) throw new Error(ev.error.message);
   if (repo.error) throw new Error(repo.error.message);
   if (pitches.error) throw new Error(pitches.error.message);
   if (pitchStats.error) throw new Error(pitchStats.error.message);
+  if (updates.error) throw new Error(updates.error.message);
   if (!proj.data) return null;
-  const grade = allGrades.filter((g) => g.project_id === projectId).sort((a, b) => (a.graded_at < b.graded_at ? 1 : -1))[0] ?? null;
+  const grades = allGrades.filter((g) => g.project_id === projectId).sort((a, b) => (a.graded_at < b.graded_at ? 1 : -1));
   return {
     project: proj.data as MyProject,
     evidence: (ev.data as EvidenceRow[] | null) ?? [],
     githubRepo: repo.data as GithubRepoRow | null,
     pitches: (pitches.data as PitchRow[] | null) ?? [],
     pitchStats: pitchStats.data as PitchStatsRow | null,
-    grade: grade as MyProjectGrade | null,
+    grade: (grades[0] as MyProjectGrade | undefined) ?? null,
+    grades: grades as MyProjectGrade[],
+    updates: (updates.data as ProjectUpdateRow[] | null) ?? [],
   };
 }
 
@@ -186,10 +204,15 @@ export async function fetchMyOpportunityMatches(): Promise<OpportunityMatch[]> {
 }
 
 // A real project's journey, built only from dates we actually have: when the
-// project was created and when each linked piece of evidence was added.
+// project was created, when each linked piece of evidence was added, and —
+// where the caller has them — the student's own logged updates (iterations
+// and pivots), pitches given, and grades received.
 export function buildProjectTimeline(
   project: Pick<MyProject, "title" | "description" | "created_at">,
   evidence: Pick<EvidenceRow, "title" | "note" | "link" | "created_at">[],
+  updates: Pick<ProjectUpdateRow, "kind" | "title" | "description" | "created_at">[] = [],
+  grades: Pick<MyProjectGrade, "rating_label" | "graded_at">[] = [],
+  pitches: Pick<PitchRow, "business_name" | "outcome" | "pitched_on">[] = [],
 ): SampleProject["journey"] {
   const hostOf = (link: string | null): string | undefined => {
     if (!link) return undefined;
@@ -199,9 +222,23 @@ export function buildProjectTimeline(
       return undefined;
     }
   };
+  const OUTCOME_LABELS: Record<string, string> = { interested: "Interested", "follow-up": "Follow-up", customer: "Customer", no: "No" };
   const events = [
     { at: project.created_at, step: "Project started", text: project.description || project.title, material: undefined as string | undefined },
     ...evidence.map((e) => ({ at: e.created_at, step: "Evidence added", text: e.note ? `${e.title} — ${e.note}` : e.title, material: hostOf(e.link) })),
+    ...updates.map((u) => ({
+      at: u.created_at,
+      step: u.kind === "pivot" ? "Pivot" : "Iteration",
+      text: u.description ? `${u.title} — ${u.description}` : u.title,
+      material: undefined as string | undefined,
+    })),
+    ...grades.map((g) => ({ at: g.graded_at, step: "Academic grade", text: g.rating_label, material: undefined as string | undefined })),
+    ...pitches.map((p) => ({
+      at: p.pitched_on,
+      step: "Pitched",
+      text: `${p.business_name} — ${OUTCOME_LABELS[p.outcome] ?? p.outcome}`,
+      material: undefined as string | undefined,
+    })),
   ];
   return events
     .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())

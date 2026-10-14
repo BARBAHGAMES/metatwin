@@ -1,11 +1,13 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowRight, Bot, ExternalLink, Flame, GitFork, Github, GraduationCap, MapPin, MessageSquare, Rocket, Star, Users2, Trophy } from "lucide-react";
-import { fetchPublicProfile, type PublicCapability, type PublicProfile } from "@/lib/public-profile";
+import { buildPublicProjectJourney, fetchPublicProfile, type PublicCapability, type PublicProfile } from "@/lib/public-profile";
 import { safeHref } from "@/lib/url";
 import { Card, HeroBackdrop, SampleAvatar, Section, StatusBadge } from "@/components/site";
 import { Button } from "@/components/ui/button";
 import { TwinChat } from "@/components/TwinChat";
 import { PitchDeckButton, PitchVideoButton } from "@/components/PitchMedia";
+import { Journey } from "@/components/Journey";
+import { ProblemSolutionCards } from "@/components/ProjectExtras";
 
 export const Route = createFileRoute("/t/$handle")({
   loader: async ({ params }) => {
@@ -287,6 +289,11 @@ function PublicProfilePage() {
                         )}
                       </div>
                       {p.description && <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>}
+                      {(p.problem_statement || p.proposed_solution) && (
+                        <div className="mt-3">
+                          <ProblemSolutionCards problemStatement={p.problem_statement} proposedSolution={p.proposed_solution} />
+                        </div>
+                      )}
                       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                         {href && <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="text-electric hover:underline">View work</a>}
                         {writeup && <a href={writeup} target="_blank" rel="noopener noreferrer nofollow" className="text-electric hover:underline">Write-up</a>}
@@ -312,6 +319,12 @@ function PublicProfilePage() {
                           {p.pitch_feedback.overall != null && <>{p.pitch_feedback.overall.toFixed(1)}/10 · </>}
                           {p.pitch_feedback.responses} response{p.pitch_feedback.responses === 1 ? "" : "s"} (reported by the student)
                         </p>
+                      )}
+                      {(p.project_updates?.length ?? 0) > 0 && (
+                        <div className="mt-4 border-t pt-4">
+                          <p className="text-xs font-semibold uppercase text-muted-foreground">Journey</p>
+                          <div className="mt-3"><Journey steps={buildPublicProjectJourney(p)} /></div>
+                        </div>
                       )}
                     </Card>
                   </li>

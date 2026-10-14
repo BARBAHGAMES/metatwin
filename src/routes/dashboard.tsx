@@ -73,6 +73,8 @@ type Project = {
   id: string;
   title: string;
   description: string | null;
+  problem_statement: string | null;
+  proposed_solution: string | null;
   created_at: string;
   pitch_deck_url: string | null;
   pitch_video_url: string | null;
@@ -122,7 +124,7 @@ function Dashboard() {
   const [teamPlanAccess, setTeamPlanAccess] = useState(false);
 
   const [projectDialog, setProjectDialog] = useState(false);
-  const [projectForm, setProjectForm] = useState({ title: "", description: "" });
+  const [projectForm, setProjectForm] = useState({ title: "", description: "", problemStatement: "", proposedSolution: "" });
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [capabilityDialog, setCapabilityDialog] = useState(false);
   const [capabilitySkillId, setCapabilitySkillId] = useState("");
@@ -160,7 +162,7 @@ function Dashboard() {
         .order("updated_at", { ascending: false }),
       supabase
         .from("projects")
-        .select("id, title, description, created_at, pitch_deck_url, pitch_video_url, github_repo")
+        .select("id, title, description, problem_statement, proposed_solution, created_at, pitch_deck_url, pitch_video_url, github_repo")
         .eq("twin_id", userId)
         .order("created_at", { ascending: false }),
       supabase
@@ -253,20 +255,30 @@ function Dashboard() {
 
   function openAddProjectDialog() {
     setEditingProjectId(null);
-    setProjectForm({ title: "", description: "" });
+    setProjectForm({ title: "", description: "", problemStatement: "", proposedSolution: "" });
     setProjectDialog(true);
   }
 
   function openEditProjectDialog(p: Project) {
     setEditingProjectId(p.id);
-    setProjectForm({ title: p.title, description: p.description ?? "" });
+    setProjectForm({
+      title: p.title,
+      description: p.description ?? "",
+      problemStatement: p.problem_statement ?? "",
+      proposedSolution: p.proposed_solution ?? "",
+    });
     setProjectDialog(true);
   }
 
   async function saveProject() {
     if (!user || !projectForm.title.trim()) return;
     setSaving(true);
-    const payload = { title: projectForm.title.trim(), description: projectForm.description.trim() || null };
+    const payload = {
+      title: projectForm.title.trim(),
+      description: projectForm.description.trim() || null,
+      problem_statement: projectForm.problemStatement.trim() || null,
+      proposed_solution: projectForm.proposedSolution.trim() || null,
+    };
     if (editingProjectId) {
       const { error } = await supabase.from("projects").update(payload).eq("id", editingProjectId);
       setSaving(false);
@@ -286,7 +298,7 @@ function Dashboard() {
       return;
     }
     toast.success("Project added — let's attach a pitch deck or video.");
-    setProjectForm({ title: "", description: "" });
+    setProjectForm({ title: "", description: "", problemStatement: "", proposedSolution: "" });
     setProjectDialog(false);
     if (data) navigate({ to: "/projects/$id", params: { id: data.id } });
   }
@@ -786,6 +798,14 @@ function Dashboard() {
             <div className="space-y-1.5">
               <Label htmlFor="project-description">Description</Label>
               <Textarea id="project-description" rows={3} maxLength={LIMITS.projectDescription} value={projectForm.description} onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })} placeholder="What is it, and what's your role?" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="project-problem">Problem statement</Label>
+              <Textarea id="project-problem" rows={3} maxLength={LIMITS.projectProblemStatement} value={projectForm.problemStatement} onChange={(e) => setProjectForm({ ...projectForm, problemStatement: e.target.value })} placeholder="What problem were you solving?" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="project-solution">Proposed solution</Label>
+              <Textarea id="project-solution" rows={3} maxLength={LIMITS.projectProposedSolution} value={projectForm.proposedSolution} onChange={(e) => setProjectForm({ ...projectForm, proposedSolution: e.target.value })} placeholder="How does your project solve it?" />
             </div>
           </div>
           <DialogFooter><Button onClick={saveProject} disabled={saving || !projectForm.title.trim()}>Save</Button></DialogFooter>

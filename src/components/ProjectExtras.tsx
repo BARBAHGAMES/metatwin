@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { ExternalLink, GitFork, Github, MessageSquare, Pencil, Plus, RefreshCw, Rocket, Star, Trash2 } from "lucide-react";
+import { ExternalLink, GitFork, Github, History, MessageSquare, Pencil, Plus, RefreshCw, Rocket, Star, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GITHUB_SYNC_PATH, PITCH_FEEDBACK_SYNC_PATH, type GitHubRepoStats } from "@/lib/api-paths";
-import type { GithubRepoRow, MyProject, PitchRow, PitchStatsRow } from "@/lib/real-data";
+import { LIMITS } from "@/lib/limits";
+import type { GithubRepoRow, MyProject, PitchRow, PitchStatsRow, ProjectUpdateRow } from "@/lib/real-data";
 import type { PitchScores } from "@/lib/scores";
 import { safeHref } from "@/lib/url";
 import { Card } from "@/components/site";
@@ -18,6 +19,11 @@ const OUTCOMES = [
   { value: "follow-up", label: "Follow-up" },
   { value: "customer", label: "Customer" },
   { value: "no", label: "No" },
+] as const;
+
+const UPDATE_KINDS = [
+  { value: "iteration", label: "Iteration" },
+  { value: "pivot", label: "Pivot" },
 ] as const;
 
 export function GitHubCard({
@@ -264,6 +270,139 @@ export function PitchTracker({
         </select>
         <Textarea rows={2} placeholder="Notes (optional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         <Button onClick={addPitch} disabled={adding}><Plus /> {adding ? "Adding…" : "Log pitch"}</Button>
+      </div>
+    </Card>
+  );
+}
+
+export function ProblemSolutionCards({ problemStatement, proposedSolution }: { problemStatement: string | null; proposedSolution: string | null }) {
+  if (!problemStatement && !proposedSolution) return null;
+  return (
+    <div className="grid gap-5 md:grid-cols-2">
+      {problemStatement && (
+        <Card><p className="text-xs font-semibold uppercase text-muted-foreground">Problem</p><p className="mt-2">{problemStatement}</p></Card>
+      )}
+      {proposedSolution && (
+        <Card><p className="text-xs font-semibold uppercase text-muted-foreground">Proposed solution</p><p className="mt-2">{proposedSolution}</p></Card>
+      )}
+    </div>
+  );
+}
+
+export function ProjectUpdatesCard({
+  updates,
+  twinId,
+  projectId,
+  onChange,
+}: {
+  updates: ProjectUpdateRow[];
+  twinId: string;
+  projectId: string;
+  onChange: () => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ kind: "iteration" as string, title: "", description: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ kind: "iteration" as string, title: "", description: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  async function addUpdate() {
+    if (!form.title.trim()) {
+      toast.error("Add a title for this update.");
+      return;
+    }
+    setAdding(true);
+    const { error } = await supabase.from("project_updates").insert({
+      twin_id: twinId,
+      project_id: projectId,
+      kind: form.kind,
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+    });
+    setAdding(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setForm({ kind: "iteration", title: "", description: "" });
+    onChange();
+  }
+
+  function startEdit(u: ProjectUpdateRow) {
+    setEditingId(u.id);
+    setEditForm({ kind: u.kind, title: u.title, description: u.description ?? "" });
+  }
+
+  async function saveEdit() {
+    if (!editingId || !editForm.title.trim()) return;
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from("project_updates")
+      .update({ kind: editForm.kind, title: editForm.title.trim(), description: editForm.description.trim() || null })
+      .eq("id", editingId);
+    setSavingEdit(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setEditingId(null);
+    onChange();
+  }
+
+  async function removeUpdate(id: string) {
+    const { error } = await supabase.from("project_updates").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    onChange();
+  }
+
+  return (
+    <Card>
+      <h3 className="flex items-center gap-2 font-semibold"><History className="h-4 w-4" /> Project updates</h3>
+      <p className="mt-1 text-xs text-muted-foreground">Log iterations as you go, and mark it a pivot when you change direction — these feed your journey timeline.</p>
+      <ul className="mt-4 space-y-2">
+        {updates.map((u) =>
+          editingId === u.id ? (
+            <li key={u.id} className="space-y-2 rounded-lg border p-2.5 text-sm">
+              <select value={editForm.kind} onChange={(e) => setEditForm({ ...editForm, kind: e.target.value })} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                {UPDATE_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
+              </select>
+              <Input placeholder="Title" maxLength={LIMITS.projectUpdateTitle} value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+              <Textarea rows={2} placeholder="Description (optional)" maxLength={LIMITS.projectUpdateDescription} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? "Saving…" : "Save"}</Button>
+                <Button size="sm" variant="outline" onClick={() => setEditingId(null)} disabled={savingEdit}>Cancel</Button>
+              </div>
+            </li>
+          ) : (
+            <li key={u.id} className="flex items-start justify-between gap-2 rounded-lg border p-2.5 text-sm">
+              <div className="min-w-0">
+                <p className="truncate font-medium">
+                  {u.title}
+                  <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] uppercase ${u.kind === "pivot" ? "bg-electric-soft text-accent-foreground" : "bg-muted text-muted-foreground"}`}>
+                    {UPDATE_KINDS.find((k) => k.value === u.kind)?.label ?? u.kind}
+                  </span>
+                </p>
+                <p className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</p>
+                {u.description && <p className="mt-1 text-xs text-muted-foreground">{u.description}</p>}
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button onClick={() => startEdit(u)} aria-label="Edit" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => removeUpdate(u.id)} aria-label="Remove" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            </li>
+          ),
+        )}
+      </ul>
+      <div className="mt-4 space-y-2 border-t pt-4">
+        <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+          {UPDATE_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
+        </select>
+        <Input placeholder="Title" maxLength={LIMITS.projectUpdateTitle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <Textarea rows={2} placeholder="Description (optional)" maxLength={LIMITS.projectUpdateDescription} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <Button onClick={addUpdate} disabled={adding}><Plus /> {adding ? "Logging…" : "Log update"}</Button>
       </div>
     </Card>
   );

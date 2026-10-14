@@ -37,4 +37,22 @@ describe("buildProjectTimeline", () => {
     expect(steps[0].text).toBe("AquaLoop");
     expect(steps[1]).not.toHaveProperty("material");
   });
+
+  it("merges student-logged updates, grades, and pitches into the same timeline, ordered by date", () => {
+    const steps = buildProjectTimeline(
+      project,
+      [],
+      [
+        { kind: "iteration", title: "Swapped the filter media", description: "Charcoal instead of sand", created_at: "2026-09-10T00:00:00Z" },
+        { kind: "pivot", title: "Dropped the hardware, went software-only", description: null, created_at: "2026-10-01T00:00:00Z" },
+      ],
+      [{ rating_label: "Exceeds expectations", graded_at: "2026-09-20" }],
+      [{ business_name: "Acme Co", outcome: "interested", pitched_on: "2026-09-15" }],
+    );
+    expect(steps.map((s) => s.step)).toEqual(["Project started", "Iteration", "Pitched", "Academic grade", "Pivot"]);
+    expect(steps[1]).toMatchObject({ text: "Swapped the filter media — Charcoal instead of sand" });
+    expect(steps[2]).toMatchObject({ text: "Acme Co — Interested" });
+    expect(steps[3]).toMatchObject({ text: "Exceeds expectations" });
+    expect(steps[4]).toMatchObject({ text: "Dropped the hardware, went software-only" });
+  });
 });
