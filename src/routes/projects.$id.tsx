@@ -5,13 +5,36 @@ import { toast } from "sonner";
 import { ArrowLeft, FileCheck2, MessageSquare } from "lucide-react";
 import { capBySlug, projectById, type Project } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
-import { buildProjectTimeline, fetchMyProject, formatDate, isUuid, type GithubRepoRow, type MyProject, type PitchRow, type PitchStatsRow, type ProjectUpdateRow } from "@/lib/real-data";
+import {
+  buildProjectTimeline,
+  fetchMyProject,
+  formatDate,
+  isUuid,
+  type GithubRepoRow,
+  type IncomingCollaborationRequest,
+  type MyProject,
+  type PitchRow,
+  type PitchStatsRow,
+  type ProjectUpdateRow,
+} from "@/lib/real-data";
+import { STAGE_LABELS, type ProjectStage } from "@/lib/project-stage";
 import { safeHref } from "@/lib/url";
 import { LoadError } from "@/components/LoadError";
 import { Card, PageHero, SampleTag, Section, StatusBadge } from "@/components/site";
 import { Journey } from "@/components/Journey";
 import { Reveal } from "@/components/Reveal";
-import { GitHubCard, PitchFeedbackCard, PitchTracker, ProblemSolutionCards, ProjectLinksForm, ProjectUpdatesCard } from "@/components/ProjectExtras";
+import {
+  CollaborationCard,
+  GitHubCard,
+  InterviewTrackerCard,
+  MarkCompleteButton,
+  PitchFeedbackCard,
+  PitchTracker,
+  ProblemSolutionCards,
+  ProjectLinksForm,
+  ProjectUpdatesCard,
+  PrototypeChecklistCard,
+} from "@/components/ProjectExtras";
 import { AcademicGradeCard } from "@/components/AcademicGradeCard";
 import { supabase } from "@/integrations/supabase/client";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -89,11 +112,12 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
     );
   }
 
-  const { project: p, evidence, githubRepo, pitches, pitchStats, grade, grades, updates } = data;
+  const { project: p, evidence, githubRepo, pitches, pitchStats, grade, grades, updates, incomingRequests } = data;
   const artifact = safeHref(p.artifact_url);
+  const stage = p.stage as ProjectStage;
   return (
     <>
-      <PageHero image={heroImg} eyebrow={`My project · Started ${formatDate(p.created_at)}`} title={p.title}>
+      <PageHero image={heroImg} eyebrow={`${STAGE_LABELS[stage]} · Started ${formatDate(p.created_at)}`} title={p.title}>
         {p.description && <p>{p.description}</p>}
       </PageHero>
       <Section className="grid gap-8 lg:grid-cols-[1fr_320px]">
@@ -132,7 +156,17 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
             )}
           </Card>
           <AcademicGradeCard grade={grade} />
-          <ProjectExtrasPanel userId={userId} projectId={projectId} project={p} githubRepo={githubRepo} pitches={pitches} pitchStats={pitchStats} updates={updates} onReload={() => setReloadKey((k) => k + 1)} />
+          <ProjectExtrasPanel
+            userId={userId}
+            projectId={projectId}
+            project={p}
+            githubRepo={githubRepo}
+            pitches={pitches}
+            pitchStats={pitchStats}
+            updates={updates}
+            incomingRequests={incomingRequests}
+            onReload={() => setReloadKey((k) => k + 1)}
+          />
         </aside>
       </Section>
     </>
@@ -147,6 +181,7 @@ function ProjectExtrasPanel({
   pitches,
   pitchStats,
   updates,
+  incomingRequests,
   onReload,
 }: {
   userId: string;
@@ -156,9 +191,11 @@ function ProjectExtrasPanel({
   pitches: PitchRow[];
   pitchStats: PitchStatsRow | null;
   updates: ProjectUpdateRow[];
+  incomingRequests: IncomingCollaborationRequest[];
   onReload: () => void;
 }) {
   const [githubField, setGithubField] = useState(project.github_repo ?? "");
+  const stage = project.stage as ProjectStage;
 
   async function saveGithubRepo() {
     const value = githubField.trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\/$/, "");
@@ -174,11 +211,24 @@ function ProjectExtrasPanel({
 
   return (
     <>
+      <InterviewTrackerCard project={project} onSynced={onReload} />
+      <CollaborationCard
+        projectId={projectId}
+        stage={stage}
+        hasTeam={!!project.team_id}
+        openToCollaborators={project.open_to_collaborators}
+        incomingRequests={incomingRequests}
+        onChange={onReload}
+      />
       <GitHubCard repo={githubRepo} githubRepoField={githubField} onFieldChange={setGithubField} onSave={saveGithubRepo} onSynced={onReload} twinId={userId} projectId={projectId} />
       <ProjectLinksForm project={project} onSaved={onReload} />
       <PitchFeedbackCard project={project} onSynced={onReload} />
       <PitchTracker pitches={pitches} stats={pitchStats} twinId={userId} projectId={projectId} onChange={onReload} />
       <ProjectUpdatesCard updates={updates} twinId={userId} projectId={projectId} onChange={onReload} />
+      {(stage === "prototype" || stage === "completed") && (
+        <PrototypeChecklistCard artifactUrl={project.artifact_url} hasPitchFeedback={"responses" in project.pitch_scores && project.pitch_scores.responses > 0} pitchCount={pitches.length} />
+      )}
+      <MarkCompleteButton projectId={projectId} stage={stage} completionReason={project.completion_reason} onChange={onReload} />
     </>
   );
 }

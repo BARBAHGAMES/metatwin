@@ -20,6 +20,8 @@ export const LIMITS = {
   evidenceTitle: 120,
   evidenceNote: 1000,
   developmentGoal: 300,
+  collaborationRequestMessage: 500,
+  genderSelfDescribed: 60,
 } as const;
 
 export const MIN_PASSWORD_LENGTH = 8;

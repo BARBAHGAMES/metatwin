@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Project as SampleProject } from "@/lib/data";
 import type { PitchScores } from "@/lib/scores";
+import type { ProjectStage } from "@/lib/project-stage";
 import { fetchMyProjectGrades, type MyProjectGrade } from "@/lib/school-admin";
 
 // Real (database-backed) data for the signed-in student's own pages. All of
@@ -31,6 +32,45 @@ export type MyProject = {
   scores_csv_url: string | null;
   pitch_scores: PitchScores | Record<string, never>;
   scores_synced_at: string | null;
+  stage: ProjectStage;
+  interviews_csv_url: string | null;
+  interviews_count: number;
+  interviews_synced_at: string | null;
+  open_to_collaborators: boolean;
+  completion_reason: string | null;
+  completed_at: string | null;
+  team_id: string | null;
+};
+export type IncomingCollaborationRequest = {
+  id: string;
+  project_id: string;
+  project_title: string;
+  status: string;
+  message: string | null;
+  created_at: string;
+  requester_handle: string | null;
+  requester_name: string | null;
+  requester_headline: string | null;
+};
+export type SentCollaborationRequest = {
+  id: string;
+  project_id: string;
+  project_title: string;
+  status: string;
+  message: string | null;
+  created_at: string;
+  owner_handle: string | null;
+  owner_name: string | null;
+};
+export type OpenCollaborationProject = {
+  project_id: string;
+  title: string;
+  problem_statement: string | null;
+  owner_twin_id: string;
+  owner_handle: string | null;
+  owner_name: string | null;
+  owner_headline: string | null;
+  owner_institution: string | null;
 };
 export type ProjectUpdateRow = {
   id: string;
@@ -123,7 +163,7 @@ export async function fetchMyProjects(userId: string) {
   const [proj, ev] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, problem_statement, proposed_solution, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
+      .select("id, title, description, problem_statement, proposed_solution, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at, stage, interviews_csv_url, interviews_count, interviews_synced_at, open_to_collaborators, completion_reason, completed_at, team_id")
       .eq("twin_id", userId)
       .order("created_at", { ascending: false }),
     supabase
@@ -138,10 +178,10 @@ export async function fetchMyProjects(userId: string) {
 }
 
 export async function fetchMyProject(userId: string, projectId: string) {
-  const [proj, ev, repo, pitches, pitchStats, allGrades, updates] = await Promise.all([
+  const [proj, ev, repo, pitches, pitchStats, allGrades, updates, incomingRequests] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, problem_statement, proposed_solution, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at")
+      .select("id, title, description, problem_statement, proposed_solution, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at, stage, interviews_csv_url, interviews_count, interviews_synced_at, open_to_collaborators, completion_reason, completed_at, team_id")
       .eq("twin_id", userId)
       .eq("id", projectId)
       .maybeSingle(),
@@ -176,6 +216,7 @@ export async function fetchMyProject(userId: string, projectId: string) {
       .eq("twin_id", userId)
       .eq("project_id", projectId)
       .order("created_at", { ascending: false }),
+    fetchMyIncomingCollaborationRequests(),
   ]);
   if (proj.error) throw new Error(proj.error.message);
   if (ev.error) throw new Error(ev.error.message);
@@ -194,7 +235,61 @@ export async function fetchMyProject(userId: string, projectId: string) {
     grade: (grades[0] as MyProjectGrade | undefined) ?? null,
     grades: grades as MyProjectGrade[],
     updates: (updates.data as ProjectUpdateRow[] | null) ?? [],
+    incomingRequests: incomingRequests.filter((r) => r.project_id === projectId),
   };
+}
+
+export async function fetchMyIncomingCollaborationRequests(): Promise<IncomingCollaborationRequest[]> {
+  const { data, error } = await supabase.rpc("list_my_incoming_collaboration_requests");
+  if (error) throw new Error(error.message);
+  return (data as IncomingCollaborationRequest[] | null) ?? [];
+}
+
+export async function fetchMySentCollaborationRequests(): Promise<SentCollaborationRequest[]> {
+  const { data, error } = await supabase.rpc("list_my_sent_collaboration_requests");
+  if (error) throw new Error(error.message);
+  return (data as SentCollaborationRequest[] | null) ?? [];
+}
+
+export async function fetchOpenCollaborationProjects(): Promise<OpenCollaborationProject[]> {
+  const { data, error } = await supabase.rpc("list_open_collaboration_projects");
+  if (error) throw new Error(error.message);
+  return (data as OpenCollaborationProject[] | null) ?? [];
+}
+
+export async function recomputeProjectStage(projectId: string): Promise<void> {
+  const { error } = await supabase.rpc("recompute_project_stage", { p_project_id: projectId });
+  if (error) throw new Error(error.message);
+}
+
+export async function markProjectComplete(projectId: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc("mark_project_complete", { p_project_id: projectId, p_reason: reason });
+  if (error) throw new Error(error.message);
+}
+
+export async function acceptCollaborationRequest(requestId: string): Promise<void> {
+  const { error } = await supabase.rpc("accept_collaboration_request", { p_request_id: requestId });
+  if (error) throw new Error(error.message);
+}
+
+export async function sendCollaborationRequest(opts: {
+  requesterTwinId: string;
+  projectId: string;
+  ownerTwinId: string;
+  message: string;
+}): Promise<void> {
+  const { error } = await supabase.from("collaboration_requests").insert({
+    requester_twin_id: opts.requesterTwinId,
+    project_id: opts.projectId,
+    owner_twin_id: opts.ownerTwinId,
+    message: opts.message.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function withdrawCollaborationRequest(requestId: string): Promise<void> {
+  const { error } = await supabase.from("collaboration_requests").delete().eq("id", requestId);
+  if (error) throw new Error(error.message);
 }
 
 export async function fetchMyOpportunityMatches(): Promise<OpportunityMatch[]> {

@@ -35,6 +35,7 @@ describe("buildPublicProjectJourney", () => {
     created_at: "2026-09-01T10:00:00Z",
     problem_statement: null,
     proposed_solution: null,
+    stage: "idea",
   };
 
   it("never includes pitches (business names/notes aren't public) but does include updates and grades", () => {

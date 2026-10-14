@@ -1,6 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowRight, Bot, ExternalLink, Flame, GitFork, Github, GraduationCap, MapPin, MessageSquare, Rocket, Star, Users2, Trophy } from "lucide-react";
 import { buildPublicProjectJourney, fetchPublicProfile, type PublicCapability, type PublicProfile } from "@/lib/public-profile";
+import { STAGE_LABELS, type ProjectStage } from "@/lib/project-stage";
 import { safeHref } from "@/lib/url";
 import { Card, HeroBackdrop, SampleAvatar, Section, StatusBadge } from "@/components/site";
 import { Button } from "@/components/ui/button";
@@ -273,6 +274,7 @@ function PublicProfilePage() {
                     <Card className="h-full">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-display font-semibold">{p.title}</p>
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{STAGE_LABELS[p.stage as ProjectStage]}</span>
                         {p.grade && (
                           <span className="flex items-center gap-1 rounded-full bg-electric-soft px-2 py-0.5 text-xs text-accent-foreground">
                             <GraduationCap className="h-3 w-3" /> {p.grade.rating_label} ({p.grade.rating_score}/4)

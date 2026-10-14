@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import heroImg from "@/assets/hero-build.jpg";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Camera, Check, FileCheck2, GraduationCap, Lock, Plus, School, Sparkles, Trash2, UserRound, Layers, Paperclip, Target, Eye } from "lucide-react";
+import { ArrowLeft, ArrowRight, Brain, Camera, Check, FileCheck2, GraduationCap, Lock, Plus, School, Sparkles, Trash2, UserRound, Layers, Paperclip, Target, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +18,7 @@ import { uploadAvatar } from "@/lib/avatar";
 import { HANDLE_HELP, normalizeHandle, validateHandle } from "@/lib/public-profile";
 import { cn } from "@/lib/utils";
 import { hasActivePlan, fetchHasTeamPlanAccess } from "@/lib/plan";
+import { GENDER_OPTIONS, MBTI_TYPES } from "@/lib/profile-traits";
 
 export const Route = createFileRoute("/build")({
   head: () => ({
@@ -44,6 +45,7 @@ const steps = [
   { t: "Capabilities", d: "What can you do?", i: Layers },
   { t: "Evidence", d: "Can you show it?", i: Paperclip },
   { t: "Goals", d: "Where can it take you?", i: Target },
+  { t: "MBTI", d: "How do you work?", i: Brain },
   { t: "Privacy", d: "Who can see it?", i: Lock },
 ];
 
@@ -111,6 +113,8 @@ function Build() {
   const [institution, setInstitution] = useState("");
   const [headline, setHeadline] = useState("");
   const [bio, setBio] = useState("");
+  const [gender, setGender] = useState("");
+  const [genderSelfDescribed, setGenderSelfDescribed] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -127,7 +131,11 @@ function Build() {
   const [fieldSel, setFieldSel] = useState<string[]>([]);
   const [seekSel, setSeekSel] = useState<string[]>([]);
 
-  // Step 4: Privacy
+  // Step 4: MBTI (taken at the student's own pace — never blocks Continue;
+  // only going public in the next step requires it, see handleFinish).
+  const [mbtiType, setMbtiType] = useState("");
+
+  // Step 5: Privacy
   const [vis, setVis] = useState<Visibility>("private");
   const [handle, setHandle] = useState("");
 
@@ -185,7 +193,7 @@ function Build() {
   };
 
   const profileValid = firstName.trim() && lastName.trim() && cityId && (isUniversityStatus ? universityId : institution.trim());
-  const canNext = [profileValid, caps.length > 0, true, true, true][step];
+  const canNext = [profileValid, caps.length > 0, true, true, true, true][step];
 
   const completion = Math.round(
     ([firstName, lastName, headline, bio].filter(Boolean).length / 4) * 20 +
@@ -205,11 +213,28 @@ function Build() {
       const handleError = validateHandle(normalizedHandle);
       if (handleError) {
         toast.error(handleError);
+        setStep(5);
+        return;
+      }
+      if (!mbtiType) {
+        toast.error("Add your MBTI type before making your profile public.");
         setStep(4);
         return;
       }
     }
     setSubmitting(true);
+
+    // Submitted before the twins update below so its sync trigger has already
+    // denormalized mbti_type onto twins by the time that update's own
+    // guard_twin_public_requires_mbti check runs.
+    if (mbtiType) {
+      const { error: mbtiError } = await supabase.from("assessments").insert({ twin_id: user.id, trait_type: "mbti", trait_value: mbtiType });
+      if (mbtiError) {
+        setSubmitting(false);
+        toast.error(mbtiError.message);
+        return;
+      }
+    }
 
     const selectedUniversity = universities.find((u) => u.id === universityId);
     const twinPayload = {
@@ -223,6 +248,8 @@ function Build() {
       headline: headline.trim() || null,
       bio: bio.trim() || null,
       photo_url: photoUrl,
+      gender: gender || null,
+      gender_self_described: gender === "self_described" ? genderSelfDescribed.trim() || null : null,
       development_goal: developmentGoal.trim() || null,
       fields_of_interest: fieldSel.length ? fieldSel : null,
       seeking: seekSel.length ? seekSel : null,
@@ -379,6 +406,21 @@ function Build() {
 
               <Field label="Headline (your career choice)"><Input maxLength={LIMITS.headline} value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="e.g. Aspiring Software Engineer" /></Field>
               <Field label="A short description of who you are"><Textarea rows={4} maxLength={LIMITS.bio} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="What drives you? How do you like to learn and build?" /></Field>
+              <Field label="Gender (private — never shown publicly)">
+                <select value={gender} onChange={(e) => setGender(e.target.value)} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
+                  <option value="">Prefer not to answer</option>
+                  {GENDER_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+                </select>
+                {gender === "self_described" && (
+                  <Input
+                    className="mt-2"
+                    maxLength={LIMITS.genderSelfDescribed}
+                    placeholder="How would you describe it?"
+                    value={genderSelfDescribed}
+                    onChange={(e) => setGenderSelfDescribed(e.target.value)}
+                  />
+                )}
+              </Field>
             </div>
           )}
 
@@ -450,6 +492,22 @@ function Build() {
           )}
 
           {step === 4 && (
+            <div className="space-y-6">
+              <Head t="Add your MBTI" d="Take a test elsewhere (e.g. 16personalities.com) at your own pace, then pick your result here." />
+              <Field label="MBTI type">
+                <select value={mbtiType} onChange={(e) => setMbtiType(e.target.value)} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
+                  <option value="">Not taken yet</option>
+                  {MBTI_TYPES.map((t) => <option key={t.code} value={t.code}>{t.code} — {t.label}</option>)}
+                </select>
+              </Field>
+              <p className="text-xs text-muted-foreground">
+                Private — never shown on your public profile. You can skip this for now, but you'll need it before you can make
+                your profile public.
+              </p>
+            </div>
+          )}
+
+          {step === 5 && (
             <div className="space-y-6">
               <Head t="Choose who can see it" d="Your MetaTwin is private by default. Nothing is public unless you decide." />
               <div className="grid gap-3 sm:grid-cols-2">

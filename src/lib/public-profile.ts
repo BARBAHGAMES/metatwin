@@ -62,6 +62,7 @@ export type PublicProject = {
   created_at: string;
   problem_statement: string | null;
   proposed_solution: string | null;
+  stage: "idea" | "in_progress" | "prototype" | "completed";
   artifact_url?: string | null;
   writeup_url?: string | null;
   pitch_deck_url?: string | null;

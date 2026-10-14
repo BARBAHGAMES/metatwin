@@ -107,6 +107,61 @@ export type Database = {
           },
         ]
       }
+      collaboration_requests: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          owner_twin_id: string
+          project_id: string
+          requester_twin_id: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          owner_twin_id: string
+          project_id: string
+          requester_twin_id: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          owner_twin_id?: string
+          project_id?: string
+          requester_twin_id?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaboration_requests_owner_twin_id_fkey"
+            columns: ["owner_twin_id"]
+            isOneToOne: false
+            referencedRelation: "twins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collaboration_requests_project_owner_fkey"
+            columns: ["project_id", "owner_twin_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "twin_id"]
+          },
+          {
+            foreignKeyName: "collaboration_requests_requester_twin_id_fkey"
+            columns: ["requester_twin_id"]
+            isOneToOne: false
+            referencedRelation: "twins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competencies: {
         Row: {
           created_at: string
@@ -857,10 +912,16 @@ export type Database = {
       projects: {
         Row: {
           artifact_url: string | null
+          completed_at: string | null
+          completion_reason: string | null
           created_at: string
           description: string | null
           github_repo: string | null
           id: string
+          interviews_count: number
+          interviews_csv_url: string | null
+          interviews_synced_at: string | null
+          open_to_collaborators: boolean
           pitch_deck_url: string | null
           pitch_scores: Json
           pitch_video_url: string | null
@@ -869,6 +930,7 @@ export type Database = {
           scores_csv_url: string | null
           scores_synced_at: string | null
           skill_ids: string[]
+          stage: string
           team_id: string | null
           title: string
           twin_id: string
@@ -876,10 +938,16 @@ export type Database = {
         }
         Insert: {
           artifact_url?: string | null
+          completed_at?: string | null
+          completion_reason?: string | null
           created_at?: string
           description?: string | null
           github_repo?: string | null
           id?: string
+          interviews_count?: number
+          interviews_csv_url?: string | null
+          interviews_synced_at?: string | null
+          open_to_collaborators?: boolean
           pitch_deck_url?: string | null
           pitch_scores?: Json
           pitch_video_url?: string | null
@@ -888,6 +956,7 @@ export type Database = {
           scores_csv_url?: string | null
           scores_synced_at?: string | null
           skill_ids?: string[]
+          stage?: string
           team_id?: string | null
           title: string
           twin_id: string
@@ -895,10 +964,16 @@ export type Database = {
         }
         Update: {
           artifact_url?: string | null
+          completed_at?: string | null
+          completion_reason?: string | null
           created_at?: string
           description?: string | null
           github_repo?: string | null
           id?: string
+          interviews_count?: number
+          interviews_csv_url?: string | null
+          interviews_synced_at?: string | null
+          open_to_collaborators?: boolean
           pitch_deck_url?: string | null
           pitch_scores?: Json
           pitch_video_url?: string | null
@@ -907,6 +982,7 @@ export type Database = {
           scores_csv_url?: string | null
           scores_synced_at?: string | null
           skill_ids?: string[]
+          stage?: string
           team_id?: string | null
           title?: string
           twin_id?: string
@@ -1097,6 +1173,8 @@ export type Database = {
           education_status: string | null
           fields_of_interest: string[] | null
           first_name: string | null
+          gender: string | null
+          gender_self_described: string | null
           handle: string | null
           headline: string | null
           id: string
@@ -1104,6 +1182,7 @@ export type Database = {
           is_active: boolean
           is_adult: boolean
           last_name: string | null
+          mbti_type: string | null
           name: string | null
           parental_consent_at: string | null
           photo_url: string | null
@@ -1128,6 +1207,8 @@ export type Database = {
           education_status?: string | null
           fields_of_interest?: string[] | null
           first_name?: string | null
+          gender?: string | null
+          gender_self_described?: string | null
           handle?: string | null
           headline?: string | null
           id: string
@@ -1135,6 +1216,7 @@ export type Database = {
           is_active?: boolean
           is_adult?: boolean
           last_name?: string | null
+          mbti_type?: string | null
           name?: string | null
           parental_consent_at?: string | null
           photo_url?: string | null
@@ -1159,6 +1241,8 @@ export type Database = {
           education_status?: string | null
           fields_of_interest?: string[] | null
           first_name?: string | null
+          gender?: string | null
+          gender_self_described?: string | null
           handle?: string | null
           headline?: string | null
           id?: string
@@ -1166,6 +1250,7 @@ export type Database = {
           is_active?: boolean
           is_adult?: boolean
           last_name?: string | null
+          mbti_type?: string | null
           name?: string | null
           parental_consent_at?: string | null
           photo_url?: string | null
@@ -1248,6 +1333,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_collaboration_request: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
       add_team_member: {
         Args: { p_handle: string; p_role?: string; p_team_id: string }
         Returns: undefined
@@ -1330,6 +1419,46 @@ export type Database = {
         }[]
       }
       leave_team: { Args: { p_team_id: string }; Returns: undefined }
+      list_my_incoming_collaboration_requests: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          message: string | null
+          project_id: string
+          project_title: string
+          requester_handle: string | null
+          requester_headline: string | null
+          requester_name: string | null
+          status: string
+        }[]
+      }
+      list_my_sent_collaboration_requests: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          message: string | null
+          owner_handle: string | null
+          owner_name: string | null
+          project_id: string
+          project_title: string
+          status: string
+        }[]
+      }
+      list_open_collaboration_projects: {
+        Args: never
+        Returns: {
+          owner_handle: string
+          owner_headline: string
+          owner_institution: string
+          owner_name: string
+          owner_twin_id: string
+          problem_statement: string
+          project_id: string
+          title: string
+        }[]
+      }
       list_public_twins: {
         Args: never
         Returns: {
@@ -1342,7 +1471,15 @@ export type Database = {
           photo_url: string
         }[]
       }
+      mark_project_complete: {
+        Args: { p_project_id: string; p_reason: string }
+        Returns: undefined
+      }
       reactivate_twin: { Args: { p_twin_id: string }; Returns: undefined }
+      recompute_project_stage: {
+        Args: { p_project_id: string }
+        Returns: undefined
+      }
       remove_team_member: {
         Args: { p_team_id: string; p_twin_id: string }
         Returns: undefined

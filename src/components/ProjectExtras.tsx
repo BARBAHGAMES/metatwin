@@ -1,15 +1,27 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { ExternalLink, GitFork, Github, History, MessageSquare, Pencil, Plus, RefreshCw, Rocket, Star, Trash2 } from "lucide-react";
+import { CheckCircle2, Circle, ExternalLink, GitFork, Github, History, MessageSquare, Pencil, Plus, RefreshCw, Rocket, Star, Trash2, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GITHUB_SYNC_PATH, PITCH_FEEDBACK_SYNC_PATH, type GitHubRepoStats } from "@/lib/api-paths";
 import { LIMITS } from "@/lib/limits";
-import type { GithubRepoRow, MyProject, PitchRow, PitchStatsRow, ProjectUpdateRow } from "@/lib/real-data";
+import {
+  acceptCollaborationRequest,
+  markProjectComplete,
+  recomputeProjectStage,
+  type GithubRepoRow,
+  type IncomingCollaborationRequest,
+  type MyProject,
+  type PitchRow,
+  type PitchStatsRow,
+  type ProjectUpdateRow,
+} from "@/lib/real-data";
+import { COMPLETION_REASONS, nextInterviewTarget, type ProjectStage } from "@/lib/project-stage";
 import type { PitchScores } from "@/lib/scores";
 import { safeHref } from "@/lib/url";
 import { Card } from "@/components/site";
 import { PitchDeckButton, PitchVideoButton } from "@/components/PitchMedia";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -489,6 +501,246 @@ export function PitchFeedbackCard({
   );
 }
 
+export function InterviewTrackerCard({
+  project,
+  onSynced,
+}: {
+  project: Pick<MyProject, "id" | "stage" | "interviews_csv_url" | "interviews_count" | "interviews_synced_at">;
+  onSynced: () => void;
+}) {
+  const [url, setUrl] = useState(project.interviews_csv_url ?? "");
+  const [syncing, setSyncing] = useState(false);
+  const target = nextInterviewTarget(project.stage as ProjectStage);
+
+  async function sync() {
+    const csvUrl = url.trim();
+    if (!csvUrl) {
+      toast.error("Paste your published Google Form response sheet link first.");
+      return;
+    }
+    setSyncing(true);
+    try {
+      const res = await fetch(PITCH_FEEDBACK_SYNC_PATH, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ csv_url: csvUrl }),
+      });
+      const body = (await res.json()) as PitchScores | { error: string };
+      if (!res.ok || "error" in body) {
+        toast.error("error" in body ? body.error : "Could not sync responses.");
+        return;
+      }
+      const { error } = await supabase
+        .from("projects")
+        .update({ interviews_csv_url: csvUrl, interviews_count: body.responses, interviews_synced_at: new Date().toISOString() })
+        .eq("id", project.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      await recomputeProjectStage(project.id);
+      toast.success("Interview count synced.");
+      onSynced();
+    } catch {
+      toast.error("Could not reach Google Sheets. Try again.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  return (
+    <Card>
+      <h3 className="font-semibold">Idea validation</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Interview businesses or individuals to test your idea, collect responses with a Google Form, then paste the form's
+        response sheet here (published to the web as a CSV). We only count responses — never read them.
+      </p>
+      <div className="mt-3 flex gap-2">
+        <Input placeholder="https://docs.google.com/spreadsheets/..." value={url} onChange={(e) => setUrl(e.target.value)} />
+      </div>
+      <Button variant="hero" className="mt-2 w-full" onClick={sync} disabled={syncing}>
+        <RefreshCw className={syncing ? "animate-spin" : ""} /> {syncing ? "Syncing…" : project.interviews_synced_at ? "Sync again" : "Sync responses"}
+      </Button>
+      <div className="mt-4 border-t pt-4">
+        <p className="text-sm">
+          <span className="font-display text-2xl font-semibold">{project.interviews_count}</span>
+          {target != null && <span className="text-muted-foreground"> of {target} interviews</span>}
+        </p>
+        {project.interviews_synced_at && (
+          <p className="mt-1 text-xs text-muted-foreground">Last synced {new Date(project.interviews_synced_at).toLocaleDateString()} · reported by the student</p>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+export function PrototypeChecklistCard({
+  artifactUrl,
+  hasPitchFeedback,
+  pitchCount,
+}: {
+  artifactUrl: string | null;
+  hasPitchFeedback: boolean;
+  pitchCount: number;
+}) {
+  const items = [
+    { done: !!artifactUrl, label: "Website or project link" },
+    { done: hasPitchFeedback, label: "Pitch feedback synced" },
+    { done: pitchCount >= 20, label: `At least 20 pitches logged (${pitchCount} so far)` },
+  ];
+  return (
+    <Card>
+      <h3 className="font-semibold">Prototype checklist</h3>
+      <ul className="mt-3 space-y-2 text-sm">
+        {items.map((it) => (
+          <li key={it.label} className="flex items-center gap-2">
+            {it.done ? <CheckCircle2 className="h-4 w-4 shrink-0 text-electric" /> : <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />}
+            <span className={it.done ? "" : "text-muted-foreground"}>{it.label}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+export function MarkCompleteButton({
+  projectId,
+  stage,
+  completionReason,
+  onChange,
+}: {
+  projectId: string;
+  stage: ProjectStage;
+  completionReason: string | null;
+  onChange: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState<string>(COMPLETION_REASONS[0].value);
+  const [saving, setSaving] = useState(false);
+
+  if (stage === "completed") {
+    return (
+      <Card>
+        <h3 className="font-semibold">Completed</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{COMPLETION_REASONS.find((r) => r.value === completionReason)?.label ?? completionReason}</p>
+      </Card>
+    );
+  }
+
+  async function confirm() {
+    setSaving(true);
+    try {
+      await markProjectComplete(projectId, reason);
+      toast.success("Project marked complete.");
+      setOpen(false);
+      onChange();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not mark this project complete.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <Button variant="outline" className="w-full" onClick={() => setOpen(true)}>Mark project complete</Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Mark this project complete</DialogTitle></DialogHeader>
+          <div className="space-y-1.5">
+            <Label>Why is it complete?</Label>
+            <select value={reason} onChange={(e) => setReason(e.target.value)} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+              {COMPLETION_REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+          </div>
+          <DialogFooter><Button onClick={confirm} disabled={saving}>{saving ? "Saving…" : "Confirm"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+export function CollaborationCard({
+  projectId,
+  stage,
+  hasTeam,
+  openToCollaborators,
+  incomingRequests,
+  onChange,
+}: {
+  projectId: string;
+  stage: ProjectStage;
+  hasTeam: boolean;
+  openToCollaborators: boolean;
+  incomingRequests: IncomingCollaborationRequest[];
+  onChange: () => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
+
+  if (stage !== "idea" || hasTeam) return null;
+
+  async function toggle(next: boolean) {
+    setSaving(true);
+    const { error } = await supabase.from("projects").update({ open_to_collaborators: next }).eq("id", projectId);
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    onChange();
+  }
+
+  async function accept(id: string) {
+    setRespondingId(id);
+    try {
+      await acceptCollaborationRequest(id);
+      toast.success("Paired up — a team was formed.");
+      onChange();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not accept this request.");
+    } finally {
+      setRespondingId(null);
+    }
+  }
+
+  async function decline(id: string) {
+    setRespondingId(id);
+    const { error } = await supabase.from("collaboration_requests").update({ status: "declined", responded_at: new Date().toISOString() }).eq("id", id);
+    setRespondingId(null);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    onChange();
+  }
+
+  return (
+    <Card>
+      <h3 className="flex items-center gap-2 font-semibold"><Users className="h-4 w-4" /> Find a co-founder</h3>
+      <label className="mt-2 flex items-start gap-2 text-sm">
+        <input type="checkbox" className="mt-1" checked={openToCollaborators} disabled={saving} onChange={(e) => toggle(e.target.checked)} />
+        <span>Open to being paired with another student to form a team</span>
+      </label>
+      {incomingRequests.length > 0 && (
+        <ul className="mt-4 space-y-2 border-t pt-4">
+          {incomingRequests.map((r) => (
+            <li key={r.id} className="rounded-lg border p-2.5 text-sm">
+              <p className="font-medium">{r.requester_name ?? r.requester_handle ?? "A student"}</p>
+              {r.requester_headline && <p className="text-xs text-muted-foreground">{r.requester_headline}</p>}
+              {r.message && <p className="mt-1 text-xs text-muted-foreground">"{r.message}"</p>}
+              <div className="mt-2 flex items-center gap-2">
+                <Button size="sm" onClick={() => accept(r.id)} disabled={respondingId === r.id}><UserPlus className="h-3.5 w-3.5" /> Accept</Button>
+                <Button size="sm" variant="outline" onClick={() => decline(r.id)} disabled={respondingId === r.id}>Decline</Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
 export function ProjectLinksForm({
   project,
   onSaved,
@@ -513,6 +765,12 @@ export function ProjectLinksForm({
     if (error) {
       toast.error(error.message);
       return;
+    }
+    // A video link can unlock Prototype (see recompute_project_stage) — harmless no-op otherwise.
+    try {
+      await recomputeProjectStage(project.id);
+    } catch {
+      // Non-fatal: the stage just won't have advanced yet; the next sync/save retries it.
     }
     toast.success("Links saved.");
     onSaved();

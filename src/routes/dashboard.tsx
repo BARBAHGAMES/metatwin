@@ -18,6 +18,7 @@ import { PaywallGate } from "@/components/PaywallGate";
 import { hasActivePlan, fetchHasTeamPlanAccess } from "@/lib/plan";
 import { LINK_ERROR, isHttpUrl, safeHref } from "@/lib/url";
 import { LIMITS, validateStudyYear } from "@/lib/limits";
+import { GENDER_OPTIONS, MBTI_TYPES } from "@/lib/profile-traits";
 import { LoadError } from "@/components/LoadError";
 import { fetchMyOpportunityMatches, type OpportunityMatch } from "@/lib/real-data";
 import { HANDLE_HELP, normalizeHandle, publicProfilePath, validateHandle } from "@/lib/public-profile";
@@ -56,6 +57,9 @@ type Twin = {
   handle: string | null;
   public_show_evidence_details: boolean;
   photo_url: string | null;
+  gender: string | null;
+  gender_self_described: string | null;
+  mbti_type: string | null;
 };
 
 type Skill = { id: string; name: string; category: string | null };
@@ -153,7 +157,7 @@ function Dashboard() {
   async function loadAll(userId: string) {
     fetchHasTeamPlanAccess().then(setTeamPlanAccess);
     const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes, reviewsRes, pitchStatsRes] = await Promise.all([
-      supabase.from("twins").select("id, name, first_name, institution, programme, year, headline, visibility, is_adult, is_active, plan_status, plan_paid_until, handle, public_show_evidence_details, photo_url").eq("id", userId).maybeSingle(),
+      supabase.from("twins").select("id, name, first_name, institution, programme, year, headline, visibility, is_adult, is_active, plan_status, plan_paid_until, handle, public_show_evidence_details, photo_url, gender, gender_self_described, mbti_type").eq("id", userId).maybeSingle(),
       supabase.from("skills").select("id, name, category").order("name"),
       supabase
         .from("competencies")
@@ -215,6 +219,9 @@ function Dashboard() {
         handle: null,
         public_show_evidence_details: false,
         photo_url: null,
+        gender: null,
+        gender_self_described: null,
+        mbti_type: null,
       },
     );
     setSkills((skillsRes.data as Skill[] | null) ?? []);
@@ -993,6 +1000,44 @@ function Dashboard() {
   );
 }
 
+function MbtiCard({ twinId, mbtiType, onSaved }: { twinId: string; mbtiType: string | null; onSaved: () => void }) {
+  const [code, setCode] = useState(mbtiType ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!code) {
+      toast.error("Pick your MBTI type first.");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("assessments").insert({ twin_id: twinId, trait_type: "mbti", trait_value: code });
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("MBTI saved.");
+    onSaved();
+  }
+
+  return (
+    <div className="space-y-1.5 sm:col-span-2">
+      <Label>MBTI type</Label>
+      <p className="text-xs text-muted-foreground">
+        Take a test elsewhere (e.g. 16personalities.com) at your own pace, then pick your result here. Private — never shown on
+        your public profile — but needed before you can go public.
+      </p>
+      <div className="flex gap-2">
+        <select value={code} onChange={(e) => setCode(e.target.value)} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+          <option value="">Not taken yet</option>
+          {MBTI_TYPES.map((t) => <option key={t.code} value={t.code}>{t.code} — {t.label}</option>)}
+        </select>
+        <Button variant="outline" onClick={save} disabled={saving || code === mbtiType}>{saving ? "Saving…" : "Save"}</Button>
+      </div>
+    </div>
+  );
+}
+
 function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
   const [form, setForm] = useState(twin);
   const [saving, setSaving] = useState(false);
@@ -1034,8 +1079,14 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
       toast.error("Add your name before making your profile public.");
       return;
     }
+    if (isPublic && !form.mbti_type) {
+      toast.error("Add your MBTI type before making your profile public.");
+      return;
+    }
     setSaving(true);
     // is_adult is server-controlled (declare_adult RPC) — never sent from here.
+    // mbti_type is never sent from here either — it's denormalized by a trigger
+    // from the student's own assessments submission (see the MBTI card below).
     const payload = {
       name: form.name,
       institution: form.institution,
@@ -1045,6 +1096,8 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
       visibility: form.visibility,
       handle: handle || null,
       public_show_evidence_details: form.public_show_evidence_details,
+      gender: form.gender,
+      gender_self_described: form.gender === "self_described" ? form.gender_self_described : null,
     };
     // A plain UPDATE, not upsert: upsert compiles to INSERT ... ON CONFLICT DO
     // UPDATE, and Postgres fires guard_twin_protected_columns()'s BEFORE INSERT
@@ -1109,6 +1162,27 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
           onChange={(e) => setForm({ ...form, year: e.target.value ? Number(e.target.value) : null })}
         />
       </div>
+      <div className="space-y-1.5">
+        <Label>Gender</Label>
+        <select
+          value={form.gender ?? ""}
+          onChange={(e) => setForm({ ...form, gender: e.target.value || null })}
+          className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+        >
+          <option value="">Prefer not to answer</option>
+          {GENDER_OPTIONS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+        </select>
+        {form.gender === "self_described" && (
+          <Input
+            maxLength={LIMITS.genderSelfDescribed}
+            placeholder="How would you describe it?"
+            value={form.gender_self_described ?? ""}
+            onChange={(e) => setForm({ ...form, gender_self_described: e.target.value })}
+          />
+        )}
+        <p className="text-xs text-muted-foreground">Private — never shown on your public profile.</p>
+      </div>
+      <MbtiCard twinId={twin.id} mbtiType={twin.mbti_type} onSaved={onSaved} />
       <div className="space-y-4 rounded-xl border bg-muted/30 p-4 sm:col-span-2">
         <div>
           <h4 className="font-semibold">Public profile</h4>
@@ -1150,7 +1224,7 @@ function ProfileEditor({ twin, onSaved }: { twin: Twin; onSaved: () => void }) {
         </label>
         <p className="text-xs text-muted-foreground">
           The public page shows your name, headline, institution, programme, capabilities, evidence titles and projects. It never
-          shows your email, birth year or year of study.
+          shows your email, birth year, year of study, gender or MBTI type.
         </p>
         {twin.visibility === "public" && twin.handle && (
           <div className="flex flex-wrap items-center gap-3 rounded-lg bg-background p-3 text-sm">
