@@ -9,7 +9,7 @@ import { safeHref } from "@/lib/url";
 import { LoadError } from "@/components/LoadError";
 import { DeactivatedGate } from "@/components/DeactivatedGate";
 import { PaywallGate } from "@/components/PaywallGate";
-import { hasActivePlan } from "@/lib/plan";
+import { hasActivePlan, fetchHasTeamPlanAccess } from "@/lib/plan";
 import { supabase } from "@/integrations/supabase/client";
 import { AITeam } from "@/components/AITeam";
 import { CareerGraph } from "@/components/CareerGraph";
@@ -83,11 +83,13 @@ function RealProfile({ userId }: { userId: string }) {
   const [reloadKey, setReloadKey] = useState(0);
   const [teams, setTeams] = useState<MyTeam[]>([]);
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+  const [teamPlanAccess, setTeamPlanAccess] = useState(false);
 
   useEffect(() => {
     fetchMyTeams()
       .then(setTeams)
       .catch((err) => console.error("[profile] load teams failed:", err));
+    fetchHasTeamPlanAccess().then(setTeamPlanAccess);
   }, [userId, reloadKey]);
 
   useEffect(() => {
@@ -151,7 +153,7 @@ function RealProfile({ userId }: { userId: string }) {
 
   if (!twin.is_active) return <DeactivatedGate />;
 
-  if (!hasActivePlan(twin)) return <PaywallGate onPaid={() => setReloadKey((k) => k + 1)} />;
+  if (!hasActivePlan(twin) && !teamPlanAccess) return <PaywallGate onPaid={() => setReloadKey((k) => k + 1)} />;
 
   const reviewedCount = competencies.filter((c) => competencyStatus(c, evidence, reviews) === "reviewed").length;
   const evidenceCount = competencies.filter((c) => c.evidence_count > 0).length;
@@ -198,7 +200,7 @@ function RealProfile({ userId }: { userId: string }) {
         </div>
       )}
       {activeTeam ? (
-        <TeamDashboardView team={activeTeam} />
+        <TeamDashboardView team={activeTeam} onReload={() => setReloadKey((k) => k + 1)} />
       ) : (
         <>
       <section className="relative overflow-hidden bg-gradient-ink text-ink-foreground">

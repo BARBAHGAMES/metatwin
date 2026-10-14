@@ -3,18 +3,27 @@
 // (Safaricom POSTs there, not here), so "initiate" only ever creates a
 // 'pending' payments row; "status" just reads it back.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { individualPlans } from "./pricing";
+import { individualPlans, teamPackages, teamTiers, teamTierPrice } from "./pricing";
+import type { MpesaTier as Tier, MpesaPackage as Package, MpesaProduct as Product } from "./api-paths";
 
-const BASIC_PLAN_PRICE = individualPlans.find((p) => p.id === "basic")!.price;
+function individualPrice(tier: Tier): number | null {
+  return individualPlans.find((p) => p.id === tier)?.price ?? null;
+}
+
+function teamPrice(pkg: Package, tier: Tier): number | null {
+  const p = teamPackages.find((x) => x.id === pkg);
+  const t = teamTiers.find((x) => x.id === tier);
+  return p && t ? teamTierPrice(p, t) : null;
+}
 
 // Optional ops lever, not a pricing change: lets a real STK push be tested
 // end-to-end (including against a real phone / a future real paybill)
-// without actually moving the full KES 2,000 each time. Unset in normal
-// operation — falls back to the real price. Never shown to the client;
-// PaywallGate's copy always quotes the real price regardless.
-function chargeAmount(): number {
+// without actually moving the real listed price each time. Unset in normal
+// operation — falls back to the real price for whatever was requested.
+// Never shown to the client; the UI always quotes the real price regardless.
+function chargeAmount(realPrice: number): number {
   const override = Number(process.env.MPESA_TEST_AMOUNT);
-  return Number.isFinite(override) && override > 0 ? override : BASIC_PLAN_PRICE;
+  return Number.isFinite(override) && override > 0 ? override : realPrice;
 }
 
 const DARAJA_BASE_URL = "https://sandbox.safaricom.co.ke";
@@ -65,12 +74,15 @@ async function getDarajaAccessToken(): Promise<string> {
   return data.access_token;
 }
 
+const TIER_NAMES: Record<Tier, string> = { basic: "Basic", guided: "Guided", builder: "Builder" };
+const PACKAGE_NAMES: Record<Package, string> = { duo: "Duo", studio: "Studio", launch: "Launch" };
+
 export async function handleMpesaInitiate(request: Request): Promise<Response> {
   const authResult = await authenticateTwin(request);
   if (authResult instanceof Response) return authResult;
-  const twinId = authResult;
+  const callerId = authResult;
 
-  let body: { phone?: string };
+  let body: { phone?: string; product?: Product };
   try {
     body = await request.json();
   } catch {
@@ -80,14 +92,46 @@ export async function handleMpesaInitiate(request: Request): Promise<Response> {
   if (!msisdn) {
     return new Response(JSON.stringify({ error: "Enter a valid Kenyan phone number (e.g. 07XXXXXXXX)." }), { status: 400, headers: { "content-type": "application/json" } });
   }
+  const product = body.product;
+  if (!product || (product.kind !== "individual" && product.kind !== "team")) {
+    return new Response(JSON.stringify({ error: "Bad request: missing product." }), { status: 400, headers: { "content-type": "application/json" } });
+  }
 
-  // A non-student account (platform_admins, school_admins) has no twins row
-  // at all — fail here, before bothering Safaricom, rather than after a
-  // real STK push has already gone to someone's phone for a payment that
-  // was always going to fail the payments.twin_id foreign key.
-  const { data: twinExists } = await supabaseAdmin.from("twins").select("id").eq("id", twinId).maybeSingle();
-  if (!twinExists) {
-    return new Response(JSON.stringify({ error: "This account doesn't have a MetaTwin student profile to pay for." }), { status: 400, headers: { "content-type": "application/json" } });
+  let accountReference: string;
+  let transactionDesc: string;
+  let realPrice: number | null;
+  let paymentRow: { twin_id: string | null; team_id: string | null; plan_tier: Tier; plan_package: Package | null };
+
+  if (product.kind === "individual") {
+    // A non-student account (platform_admins, school_admins) has no twins
+    // row at all — fail here, before bothering Safaricom, rather than after
+    // a real STK push has already gone to someone's phone for a payment
+    // that was always going to fail the payments.twin_id foreign key.
+    const { data: twinExists } = await supabaseAdmin.from("twins").select("id").eq("id", callerId).maybeSingle();
+    if (!twinExists) {
+      return new Response(JSON.stringify({ error: "This account doesn't have a MetaTwin student profile to pay for." }), { status: 400, headers: { "content-type": "application/json" } });
+    }
+    realPrice = individualPrice(product.tier);
+    accountReference = callerId;
+    transactionDesc = `MetaTwin ${TIER_NAMES[product.tier]} annual plan`;
+    paymentRow = { twin_id: callerId, team_id: null, plan_tier: product.tier, plan_package: null };
+  } else {
+    // Only the team's own lead can buy for it — checked before calling
+    // Daraja at all, same "fail fast" principle as the non-student check above.
+    const { data: team } = await supabaseAdmin.from("teams").select("id, created_by").eq("id", product.teamId).maybeSingle();
+    if (!team) {
+      return new Response(JSON.stringify({ error: "Team not found." }), { status: 404, headers: { "content-type": "application/json" } });
+    }
+    if (team.created_by !== callerId) {
+      return new Response(JSON.stringify({ error: "Only the team lead can pay for the team's plan." }), { status: 403, headers: { "content-type": "application/json" } });
+    }
+    realPrice = teamPrice(product.package, product.tier);
+    accountReference = product.teamId;
+    transactionDesc = `Team ${PACKAGE_NAMES[product.package]} (${TIER_NAMES[product.tier]}) annual plan`;
+    paymentRow = { twin_id: null, team_id: product.teamId, plan_tier: product.tier, plan_package: product.package };
+  }
+  if (realPrice === null) {
+    return new Response(JSON.stringify({ error: "Unknown plan." }), { status: 400, headers: { "content-type": "application/json" } });
   }
 
   const shortcode = process.env.MPESA_SHORTCODE;
@@ -106,7 +150,7 @@ export async function handleMpesaInitiate(request: Request): Promise<Response> {
 
   const timestamp = darajaTimestamp();
   const password = btoa(`${shortcode}${passkey}${timestamp}`);
-  const amount = chargeAmount();
+  const amount = chargeAmount(realPrice);
 
   const stkRes = await fetch(`${DARAJA_BASE_URL}/mpesa/stkpush/v1/processrequest`, {
     method: "POST",
@@ -121,8 +165,8 @@ export async function handleMpesaInitiate(request: Request): Promise<Response> {
       PartyB: shortcode,
       PhoneNumber: msisdn,
       CallBackURL: CALLBACK_URL,
-      AccountReference: twinId,
-      TransactionDesc: "MetaTwin Basic annual plan",
+      AccountReference: accountReference,
+      TransactionDesc: transactionDesc,
     }),
   });
   const stkData = (await stkRes.json()) as {
@@ -137,7 +181,10 @@ export async function handleMpesaInitiate(request: Request): Promise<Response> {
   }
 
   const { error: insertError } = await supabaseAdmin.from("payments").insert({
-    twin_id: twinId,
+    twin_id: paymentRow.twin_id,
+    team_id: paymentRow.team_id,
+    plan_tier: paymentRow.plan_tier,
+    plan_package: paymentRow.plan_package,
     phone: msisdn,
     amount,
     mpesa_merchant_request_id: stkData.MerchantRequestID,
@@ -158,7 +205,7 @@ export async function handleMpesaInitiate(request: Request): Promise<Response> {
 export async function handleMpesaStatus(request: Request): Promise<Response> {
   const authResult = await authenticateTwin(request);
   if (authResult instanceof Response) return authResult;
-  const twinId = authResult;
+  const callerId = authResult;
 
   const url = new URL(request.url);
   const checkoutRequestId = url.searchParams.get("checkout_request_id");
@@ -168,12 +215,22 @@ export async function handleMpesaStatus(request: Request): Promise<Response> {
 
   const { data, error } = await supabaseAdmin
     .from("payments")
-    .select("twin_id, status")
+    .select("twin_id, team_id, status")
     .eq("mpesa_checkout_request_id", checkoutRequestId)
     .maybeSingle();
-  if (error || !data || data.twin_id !== twinId) {
-    // Scoped to the caller's own payment — a service-role read bypasses RLS,
-    // so this check has to live here in the route, not the database.
+  if (error || !data) {
+    return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { "content-type": "application/json" } });
+  }
+
+  // Scoped to the caller: their own individual payment, or a team payment
+  // for a team they lead. A service-role read bypasses RLS, so this check
+  // has to live here in the route, not the database.
+  let authorized = data.twin_id === callerId;
+  if (!authorized && data.team_id) {
+    const { data: team } = await supabaseAdmin.from("teams").select("created_by").eq("id", data.team_id).maybeSingle();
+    authorized = team?.created_by === callerId;
+  }
+  if (!authorized) {
     return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { "content-type": "application/json" } });
   }
 

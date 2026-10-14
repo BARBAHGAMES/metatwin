@@ -46,7 +46,7 @@ export async function handleMpesaCallback(request: Request): Promise<Response> {
 
   const { data: payment, error: lookupError } = await supabaseAdmin
     .from("payments")
-    .select("id, twin_id, status")
+    .select("id, twin_id, team_id, plan_tier, plan_package, status")
     .eq("mpesa_checkout_request_id", callback.CheckoutRequestID)
     .maybeSingle();
 
@@ -69,17 +69,31 @@ export async function handleMpesaCallback(request: Request): Promise<Response> {
       .eq("id", payment.id);
     if (updatePaymentError) console.error("[mpesa callback] payment update failed:", updatePaymentError.message);
 
-    const { data: twin } = await supabaseAdmin.from("twins").select("plan_status, plan_paid_until").eq("id", payment.twin_id).maybeSingle();
-    const currentExpiry = twin?.plan_status === "paid" && twin.plan_paid_until ? new Date(twin.plan_paid_until) : null;
-    const base = currentExpiry && currentExpiry.getTime() > Date.now() ? currentExpiry : new Date();
-    const newExpiry = new Date(base);
-    newExpiry.setFullYear(newExpiry.getFullYear() + 1);
+    if (payment.twin_id) {
+      const { data: twin } = await supabaseAdmin.from("twins").select("plan_status, plan_paid_until").eq("id", payment.twin_id).maybeSingle();
+      const currentExpiry = twin?.plan_status === "paid" && twin.plan_paid_until ? new Date(twin.plan_paid_until) : null;
+      const base = currentExpiry && currentExpiry.getTime() > Date.now() ? currentExpiry : new Date();
+      const newExpiry = new Date(base);
+      newExpiry.setFullYear(newExpiry.getFullYear() + 1);
 
-    const { error: updateTwinError } = await supabaseAdmin
-      .from("twins")
-      .update({ plan_status: "paid", plan_paid_until: newExpiry.toISOString() })
-      .eq("id", payment.twin_id);
-    if (updateTwinError) console.error("[mpesa callback] twin plan update failed:", updateTwinError.message);
+      const { error: updateTwinError } = await supabaseAdmin
+        .from("twins")
+        .update({ plan_status: "paid", plan_tier: payment.plan_tier ?? "basic", plan_paid_until: newExpiry.toISOString() })
+        .eq("id", payment.twin_id);
+      if (updateTwinError) console.error("[mpesa callback] twin plan update failed:", updateTwinError.message);
+    } else if (payment.team_id) {
+      const { data: team } = await supabaseAdmin.from("teams").select("plan_status, plan_paid_until").eq("id", payment.team_id).maybeSingle();
+      const currentExpiry = team?.plan_status === "paid" && team.plan_paid_until ? new Date(team.plan_paid_until) : null;
+      const base = currentExpiry && currentExpiry.getTime() > Date.now() ? currentExpiry : new Date();
+      const newExpiry = new Date(base);
+      newExpiry.setFullYear(newExpiry.getFullYear() + 1);
+
+      const { error: updateTeamError } = await supabaseAdmin
+        .from("teams")
+        .update({ plan_status: "paid", plan_tier: payment.plan_tier, plan_package: payment.plan_package, plan_paid_until: newExpiry.toISOString() })
+        .eq("id", payment.team_id);
+      if (updateTeamError) console.error("[mpesa callback] team plan update failed:", updateTeamError.message);
+    }
   } else {
     const { error: updatePaymentError } = await supabaseAdmin
       .from("payments")

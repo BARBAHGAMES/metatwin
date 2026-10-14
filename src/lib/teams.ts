@@ -19,6 +19,10 @@ export type MyTeam = {
   visibility: "public" | "private";
   avatar_url: string | null;
   is_creator: boolean;
+  plan_tier: "basic" | "guided" | "builder" | null;
+  plan_package: "duo" | "studio" | "launch" | null;
+  plan_status: "unpaid" | "paid";
+  plan_paid_until: string | null;
   members: MyTeamMember[];
   projects: MyTeamProject[];
   pitch_scores: MyPitchScore[];

@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AdultGate } from "@/components/AdultGate";
 import { DeactivatedGate } from "@/components/DeactivatedGate";
 import { PaywallGate } from "@/components/PaywallGate";
-import { hasActivePlan } from "@/lib/plan";
+import { hasActivePlan, fetchHasTeamPlanAccess } from "@/lib/plan";
 import { LINK_ERROR, isHttpUrl, safeHref } from "@/lib/url";
 import { LIMITS, validateStudyYear } from "@/lib/limits";
 import { LoadError } from "@/components/LoadError";
@@ -120,6 +120,7 @@ function Dashboard() {
   const [projectGrades, setProjectGrades] = useState<MyProjectGrade[]>([]);
   const [fetching, setFetching] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [teamPlanAccess, setTeamPlanAccess] = useState(false);
 
   const [projectDialog, setProjectDialog] = useState(false);
   const [projectForm, setProjectForm] = useState({ title: "", description: "" });
@@ -149,6 +150,7 @@ function Dashboard() {
   }, [authLoading, user, navigate]);
 
   async function loadAll(userId: string) {
+    fetchHasTeamPlanAccess().then(setTeamPlanAccess);
     const [twinRes, skillsRes, compsRes, projectsRes, evidenceRes, reviewsRes, pitchStatsRes] = await Promise.all([
       supabase.from("twins").select("id, name, first_name, institution, programme, year, headline, visibility, is_adult, is_active, plan_status, plan_paid_until, handle, public_show_evidence_details, photo_url").eq("id", userId).maybeSingle(),
       supabase.from("skills").select("id, name, category").order("name"),
@@ -462,7 +464,7 @@ function Dashboard() {
     return <AdultGate onDeclared={() => user && loadAll(user.id)} />;
   }
 
-  if (!hasActivePlan(twin)) {
+  if (!hasActivePlan(twin) && !teamPlanAccess) {
     return <PaywallGate onPaid={() => user && loadAll(user.id)} />;
   }
 

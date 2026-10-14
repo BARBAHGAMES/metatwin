@@ -529,9 +529,12 @@ export type Database = {
           mpesa_merchant_request_id: string
           mpesa_receipt_number: string | null
           phone: string
+          plan_package: string | null
+          plan_tier: string | null
           result_desc: string | null
           status: string
-          twin_id: string
+          team_id: string | null
+          twin_id: string | null
           updated_at: string
         }
         Insert: {
@@ -542,9 +545,12 @@ export type Database = {
           mpesa_merchant_request_id: string
           mpesa_receipt_number?: string | null
           phone: string
+          plan_package?: string | null
+          plan_tier?: string | null
           result_desc?: string | null
           status?: string
-          twin_id: string
+          team_id?: string | null
+          twin_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -555,12 +561,22 @@ export type Database = {
           mpesa_merchant_request_id?: string
           mpesa_receipt_number?: string | null
           phone?: string
+          plan_package?: string | null
+          plan_tier?: string | null
           result_desc?: string | null
           status?: string
-          twin_id?: string
+          team_id?: string | null
+          twin_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_twin_id_fkey"
             columns: ["twin_id"]
@@ -956,6 +972,10 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          plan_package: string | null
+          plan_paid_until: string | null
+          plan_status: string
+          plan_tier: string | null
           slug: string | null
           updated_at: string
           visibility: string
@@ -967,6 +987,10 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          plan_package?: string | null
+          plan_paid_until?: string | null
+          plan_status?: string
+          plan_tier?: string | null
           slug?: string | null
           updated_at?: string
           visibility?: string
@@ -978,6 +1002,10 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          plan_package?: string | null
+          plan_paid_until?: string | null
+          plan_status?: string
+          plan_tier?: string | null
           slug?: string | null
           updated_at?: string
           visibility?: string
@@ -1015,6 +1043,7 @@ export type Database = {
           photo_url: string | null
           plan_paid_until: string | null
           plan_status: string
+          plan_tier: string
           programme: string | null
           public_show_evidence_details: boolean
           seeking: string[] | null
@@ -1045,6 +1074,7 @@ export type Database = {
           photo_url?: string | null
           plan_paid_until?: string | null
           plan_status?: string
+          plan_tier?: string
           programme?: string | null
           public_show_evidence_details?: boolean
           seeking?: string[] | null
@@ -1075,6 +1105,7 @@ export type Database = {
           photo_url?: string | null
           plan_paid_until?: string | null
           plan_status?: string
+          plan_tier?: string
           programme?: string | null
           public_show_evidence_details?: boolean
           seeking?: string[] | null
@@ -1216,6 +1247,7 @@ export type Database = {
         }[]
       }
       get_team_public_profile: { Args: { p_slug: string }; Returns: Json }
+      has_team_plan_access: { Args: never; Returns: boolean }
       introspect_applied_migrations: {
         Args: never
         Returns: {

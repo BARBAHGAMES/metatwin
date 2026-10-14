@@ -41,3 +41,9 @@ export type GitHubRepoStats = {
   last_commit_at: string | null;
   weekly_commits: number[];
 };
+
+export type MpesaTier = "basic" | "guided" | "builder";
+export type MpesaPackage = "duo" | "studio" | "launch";
+export type MpesaProduct =
+  | { kind: "individual"; tier: MpesaTier }
+  | { kind: "team"; teamId: string; package: MpesaPackage; tier: MpesaTier };

@@ -17,7 +17,7 @@ import { isHttpUrl } from "@/lib/url";
 import { uploadAvatar } from "@/lib/avatar";
 import { HANDLE_HELP, normalizeHandle, validateHandle } from "@/lib/public-profile";
 import { cn } from "@/lib/utils";
-import { hasActivePlan } from "@/lib/plan";
+import { hasActivePlan, fetchHasTeamPlanAccess } from "@/lib/plan";
 
 export const Route = createFileRoute("/build")({
   head: () => ({
@@ -85,9 +85,11 @@ function Build() {
       .select("plan_status, plan_paid_until")
       .eq("id", user.id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (cancelled || !data) return;
-        if (!hasActivePlan(data)) navigate({ to: "/dashboard" });
+        if (hasActivePlan(data)) return;
+        const viaTeam = await fetchHasTeamPlanAccess();
+        if (!cancelled && !viaTeam) navigate({ to: "/dashboard" });
       });
     return () => {
       cancelled = true;

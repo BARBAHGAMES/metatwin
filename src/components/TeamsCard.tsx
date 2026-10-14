@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchMyTeams, createTeam, updateTeam, addTeamMember, leaveTeam, removeTeamMember, type MyTeam } from "@/lib/teams";
+import { teamSeatCap } from "@/lib/plan";
 
 const emptyCreateForm = { name: "", description: "" };
 const emptyMemberForm = { handle: "", role: "" };
@@ -190,18 +191,31 @@ export function TeamsCard() {
                     </li>
                   ))}
                 </ul>
-                <div className="mt-2 flex flex-wrap items-end gap-2">
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor="member-handle" className="text-xs">Add by MetaTwin handle</Label>
-                    <Input id="member-handle" value={memberForm.handle} onChange={(e) => setMemberForm({ ...memberForm, handle: e.target.value })} placeholder="their-handle" />
-                  </div>
-                  <div className="w-28 space-y-1">
-                    <Label htmlFor="member-role" className="text-xs">Role (optional)</Label>
-                    <Input id="member-role" value={memberForm.role} onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })} placeholder="Design" />
-                  </div>
-                  <Button size="sm" onClick={handleAddMember} disabled={busy || !memberForm.handle.trim()}>Add</Button>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">They need a MetaTwin handle set on their own profile first.</p>
+                {(() => {
+                  const cap = teamSeatCap(manageTeam.plan_package);
+                  const atCap = manageTeam.members.length >= cap;
+                  return (
+                    <>
+                      <p className="mt-2 text-xs text-muted-foreground">{manageTeam.members.length} of {cap} seat{cap === 1 ? "" : "s"} used</p>
+                      {atCap ? (
+                        <p className="mt-1 text-xs text-electric">{manageTeam.is_creator ? "Upgrade your team's plan to add more seats." : "This team is at its seat limit — ask the team lead to upgrade."}</p>
+                      ) : (
+                        <div className="mt-2 flex flex-wrap items-end gap-2">
+                          <div className="flex-1 space-y-1">
+                            <Label htmlFor="member-handle" className="text-xs">Add by MetaTwin handle</Label>
+                            <Input id="member-handle" value={memberForm.handle} onChange={(e) => setMemberForm({ ...memberForm, handle: e.target.value })} placeholder="their-handle" />
+                          </div>
+                          <div className="w-28 space-y-1">
+                            <Label htmlFor="member-role" className="text-xs">Role (optional)</Label>
+                            <Input id="member-role" value={memberForm.role} onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })} placeholder="Design" />
+                          </div>
+                          <Button size="sm" onClick={handleAddMember} disabled={busy || !memberForm.handle.trim()}>Add</Button>
+                        </div>
+                      )}
+                      <p className="mt-1 text-xs text-muted-foreground">They need a MetaTwin handle set on their own profile first.</p>
+                    </>
+                  );
+                })()}
               </div>
 
               {manageTeam.pitch_scores.length > 0 && (
