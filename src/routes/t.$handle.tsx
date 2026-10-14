@@ -199,6 +199,13 @@ function PublicProfilePage() {
                       <p className="text-xs text-muted-foreground">{[e.role, e.platform].filter(Boolean).join(" · ")}</p>
                       {e.description && <p className="mt-2 text-sm text-muted-foreground">{e.description}</p>}
                       {href && <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 flex items-center gap-1 text-sm text-electric hover:underline">View <ExternalLink className="h-3.5 w-3.5" /></a>}
+                      {e.github_full_name && (
+                        <div className="mt-2 flex items-center gap-3 border-t pt-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1"><Star className="h-3 w-3" /> {e.github_stars}</span>
+                          <span className="flex items-center gap-1"><GitFork className="h-3 w-3" /> {e.github_forks}</span>
+                          <span>{e.github_open_issues} open issues</span>
+                        </div>
+                      )}
                     </Card>
                   </li>
                 );

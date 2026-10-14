@@ -1,13 +1,22 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Bot, ExternalLink, Pencil, Plus, Trash2 } from "lucide-react";
-import { fetchMyAiEmployees, addAiEmployee, updateAiEmployee, removeAiEmployee, type AiEmployee } from "@/lib/ai-employees";
+import { Bot, ExternalLink, Pencil, Plus, Trash2, Star, GitFork, RefreshCw } from "lucide-react";
+import {
+  fetchMyAiEmployees,
+  addAiEmployee,
+  updateAiEmployee,
+  removeAiEmployee,
+  parseGithubRepo,
+  syncAiEmployeeGithubStats,
+  type AiEmployee,
+} from "@/lib/ai-employees";
 import { safeHref } from "@/lib/url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 const emptyForm = { name: "", role: "", platform: "", description: "", link_url: "" };
+const LINK_PLACEHOLDER = "GitHub repo or Claude Skill link (optional)";
 
 function EditForm({
   initial,
@@ -44,7 +53,7 @@ function EditForm({
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         <Input placeholder="Platform (optional)" value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value })} />
-        <Input placeholder="Link (optional)" value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} />
+        <Input placeholder={LINK_PLACEHOLDER} value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} />
       </div>
       <Textarea rows={2} placeholder="Description (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
       <div className="flex gap-2">
@@ -60,6 +69,7 @@ export function AiEmployeesCard({ userId }: { userId: string }) {
   const [form, setForm] = useState(emptyForm);
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
   function reload() {
     fetchMyAiEmployees(userId)
@@ -111,12 +121,24 @@ export function AiEmployeesCard({ userId }: { userId: string }) {
     }
   }
 
+  async function handleSyncStats(id: string, repo: string) {
+    setSyncingId(id);
+    try {
+      await syncAiEmployeeGithubStats(id, repo);
+      reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't fetch GitHub stats.");
+    } finally {
+      setSyncingId(null);
+    }
+  }
+
   return (
     <div>
       <h3 className="flex items-center gap-2 font-semibold"><Bot className="h-4 w-4" /> Your AI employees</h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        The agents and tools that work alongside you — a GPT, an automation, a bot you run. Shown separately on your public
-        page and never counted as your own evidence.
+        The agents and tools that work alongside you — a GPT, an automation, a bot you run. Link its GitHub repo or Claude
+        Skill. Shown separately on your public page and never counted as your own evidence.
       </p>
 
       {employees === undefined ? (
@@ -127,6 +149,7 @@ export function AiEmployeesCard({ userId }: { userId: string }) {
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {employees.map((e) => {
             const href = safeHref(e.link_url);
+            const repo = e.link_url ? parseGithubRepo(e.link_url) : null;
             if (editingId === e.id) {
               return (
                 <li key={e.id} className="rounded-xl bg-ink p-3 text-ink-foreground">
@@ -156,6 +179,27 @@ export function AiEmployeesCard({ userId }: { userId: string }) {
                     View <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
+                {repo && (
+                  <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-ink-foreground/10 pt-2 text-xs text-ink-muted">
+                    {e.github_synced_at ? (
+                      <>
+                        <span className="flex items-center gap-1"><Star className="h-3 w-3" /> {e.github_stars}</span>
+                        <span className="flex items-center gap-1"><GitFork className="h-3 w-3" /> {e.github_forks}</span>
+                        <span>{e.github_open_issues} open issues</span>
+                      </>
+                    ) : (
+                      <span>Not synced yet</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleSyncStats(e.id, repo)}
+                      disabled={syncingId === e.id}
+                      className="ml-auto flex items-center gap-1 text-electric hover:underline disabled:opacity-50"
+                    >
+                      <RefreshCw className={`h-3 w-3 ${syncingId === e.id ? "animate-spin" : ""}`} /> {syncingId === e.id ? "Syncing…" : "Sync stats"}
+                    </button>
+                  </div>
+                )}
               </li>
             );
           })}
@@ -169,7 +213,7 @@ export function AiEmployeesCard({ userId }: { userId: string }) {
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <Input placeholder="Platform (optional, e.g. ChatGPT)" value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value })} />
-          <Input placeholder="Link (optional)" value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} />
+          <Input placeholder={LINK_PLACEHOLDER} value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} />
         </div>
         <Textarea rows={2} placeholder="What does it do for you? (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         <Button onClick={handleAdd} disabled={adding}><Plus /> {adding ? "Adding…" : "Add AI employee"}</Button>

@@ -2,12 +2,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import heroImg from "@/assets/hero-dashboard.jpg";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FolderPlus, FilePlus2, Layers, ArrowRight, Info, Bot, Camera, UserRound, FileText, PlayCircle, Rocket, GraduationCap, Pencil, Trash2 } from "lucide-react";
+import { FolderPlus, FilePlus2, Layers, ArrowRight, Info, Camera, UserRound, FileText, PlayCircle, Rocket, GraduationCap, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { aiEmployees } from "@/lib/data";
 import { Button } from "@/components/ui/button";
-import { Card, HeroBackdrop, PreviewTag, Section, StatusBadge } from "@/components/site";
+import { Card, HeroBackdrop, Section, StatusBadge } from "@/components/site";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -508,14 +507,6 @@ function Dashboard() {
         </div>
       </section>
       <Section className="py-10 md:py-12">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gradient-ink p-4 text-ink-foreground">
-          <p className="flex items-center gap-2 text-sm"><Bot className="h-4 w-4 text-electric" /> AI team concept: {aiEmployees.map((a) => `${a.name} (${a.role})`).join(" · ")}</p>
-          <div className="flex items-center gap-2">
-            <PreviewTag />
-            <span className="text-xs text-ink-muted">Illustration only — no AI is working on your behalf yet.</span>
-          </div>
-        </div>
-
         {!twin.name && (
           <div className="mb-6 flex items-start gap-2 rounded-lg border border-dashed bg-card p-3 text-xs text-muted-foreground">
             <Info className="h-4 w-4 shrink-0" /> Add your name and headline from the profile fields below to get started.

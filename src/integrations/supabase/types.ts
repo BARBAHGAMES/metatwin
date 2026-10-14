@@ -20,6 +20,11 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          github_forks: number | null
+          github_full_name: string | null
+          github_open_issues: number | null
+          github_stars: number | null
+          github_synced_at: string | null
           id: string
           link_url: string | null
           name: string
@@ -30,6 +35,11 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          github_forks?: number | null
+          github_full_name?: string | null
+          github_open_issues?: number | null
+          github_stars?: number | null
+          github_synced_at?: string | null
           id?: string
           link_url?: string | null
           name: string
@@ -40,6 +50,11 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          github_forks?: number | null
+          github_full_name?: string | null
+          github_open_issues?: number | null
+          github_stars?: number | null
+          github_synced_at?: string | null
           id?: string
           link_url?: string | null
           name?: string

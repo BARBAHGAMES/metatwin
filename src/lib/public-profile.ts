@@ -66,7 +66,18 @@ export type PublicProject = {
   team?: PublicProjectTeam | null;
 };
 export type PublicProfileTeam = { slug: string; name: string };
-export type PublicAiEmployee = { id: string; name: string; role: string | null; platform: string | null; description: string | null; link_url: string | null };
+export type PublicAiEmployee = {
+  id: string;
+  name: string;
+  role: string | null;
+  platform: string | null;
+  description: string | null;
+  link_url: string | null;
+  github_full_name: string | null;
+  github_stars: number | null;
+  github_forks: number | null;
+  github_open_issues: number | null;
+};
 // Aggregate signals only, deliberately — no repo listing, no token. Shown to
 // anyone viewing a public profile (including recruiters), so it mirrors
 // exactly what GitHub's own public contribution graph exposes: activity
