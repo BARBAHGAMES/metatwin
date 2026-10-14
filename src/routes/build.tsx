@@ -251,8 +251,8 @@ function Build() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-muted/40">
       <div className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
-        <HeroBackdrop image={heroImg} />
-        <div className="relative mx-auto max-w-7xl px-5 py-10">
+        <HeroBackdrop image={heroImg} imageClassName="object-contain object-right sm:object-right" />
+        <div className="relative mx-auto max-w-7xl px-5 py-10 md:py-14">
           <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Build Your MetaTwin</p>
           <h1 className="hero-rise-delay-1 mt-3 text-3xl font-semibold md:text-4xl">Don't just tell the world. Show the evidence.</h1>
           <p className="mt-6 text-xs font-medium text-ink-muted sm:hidden">
