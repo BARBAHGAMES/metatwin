@@ -75,7 +75,6 @@ const nav = [
   { to: "/profile", label: "My MetaTwin" },
   { to: "/projects", label: "Projects" },
   { to: "/talent", label: "Find Talent" },
-  { to: "/pair", label: "Find a Co-founder" },
   { to: "/how-it-works", label: "How It Works" },
   { to: "/pricing", label: "Pricing" },
   { to: "/about", label: "About" },

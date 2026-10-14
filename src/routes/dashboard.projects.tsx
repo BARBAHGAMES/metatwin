@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowRight, FileText, GraduationCap, Pencil, PlayCircle, Plus, Rocket, Trash2 } from "lucide-react";
+import { ArrowRight, FileText, GraduationCap, Pencil, PlayCircle, Plus, Rocket, Trash2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/site";
 import { Button } from "@/components/ui/button";
@@ -145,15 +145,20 @@ function ProjectsTab() {
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-2">
-        <Input
-          placeholder="New project title"
-          value={newTitle}
-          maxLength={LIMITS.projectTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addProject()}
-        />
-        <Button onClick={addProject} disabled={adding || !newTitle.trim()}><Plus className="h-4 w-4" /> Add</Button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-1 gap-2">
+          <Input
+            placeholder="New project title"
+            value={newTitle}
+            maxLength={LIMITS.projectTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addProject()}
+          />
+          <Button onClick={addProject} disabled={adding || !newTitle.trim()}><Plus className="h-4 w-4" /> Add</Button>
+        </div>
+        <Link to="/pair" className="flex items-center gap-1 text-sm text-electric hover:underline">
+          <Users className="h-4 w-4" /> Find a co-founder
+        </Link>
       </div>
 
       {projects.length === 0 ? (

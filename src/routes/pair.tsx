@@ -165,7 +165,7 @@ function Pair({ userId }: { userId: string }) {
             </ul>
           )}
           <p className="mt-6 text-xs text-muted-foreground">
-            Have an idea of your own? <Link to="/dashboard" className="text-electric hover:underline">Turn on "Open to being paired"</Link> on your project.
+            Have an idea of your own? <Link to="/dashboard/projects" className="text-electric hover:underline">Open your project</Link> and turn on "Open to being paired" from there.
           </p>
         </aside>
       </Section>
