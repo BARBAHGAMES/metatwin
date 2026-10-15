@@ -70,27 +70,18 @@ export function parseGithubRepo(url: string): string | null {
   return match ? match[1]!.replace(/\.git$/i, "") : null;
 }
 
-// Reuses the existing /api/github/sync route as-is (github-sync-route.server.ts) —
-// a stateless public-GitHub-API proxy already built for project repos, which
-// never required the caller to own the repo, so it works unchanged here.
+// Reuses the existing /api/github/sync route (github-sync-route.server.ts) —
+// authenticated and ownership-checked there, which also does the write
+// server-side now (Build Plan 0.5), so this is just the authenticated call.
 export async function syncAiEmployeeGithubStats(id: string, repo: string): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Sign in to sync GitHub stats.");
   const res = await fetch(GITHUB_SYNC_PATH, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ repo }),
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ repo, ai_employee_id: id }),
   });
   const body = (await res.json()) as GitHubRepoStats & { error?: string };
   if (!res.ok || body.error) throw new Error(body.error ?? "Couldn't fetch GitHub stats.");
-
-  const { error } = await supabase
-    .from("ai_employees")
-    .update({
-      github_full_name: body.full_name,
-      github_stars: body.stars,
-      github_forks: body.forks,
-      github_open_issues: body.open_issues,
-      github_synced_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-  if (error) throw new Error(error.message);
 }

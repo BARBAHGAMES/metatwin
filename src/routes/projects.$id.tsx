@@ -222,7 +222,7 @@ function ProjectExtrasPanel({
         incomingRequests={incomingRequests}
         onChange={onReload}
       />
-      <GitHubCard repo={githubRepo} githubRepoField={githubField} onFieldChange={setGithubField} onSave={saveGithubRepo} onSynced={onReload} twinId={userId} projectId={projectId} />
+      <GitHubCard repo={githubRepo} githubRepoField={githubField} onFieldChange={setGithubField} onSave={saveGithubRepo} onSynced={onReload} projectId={projectId} />
       <ProjectLinksForm project={project} onSaved={onReload} />
       <PitchFeedbackCard project={project} onSynced={onReload} />
       <PitchTracker pitches={pitches} stats={pitchStats} twinId={userId} projectId={projectId} onChange={onReload} />

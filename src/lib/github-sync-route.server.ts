@@ -1,8 +1,11 @@
-// Public, read-only proxy to the GitHub REST API — no OAuth, no user auth
-// needed here (the data returned is public repo metadata; the actual write
-// to github_repos happens client-side under the caller's own Supabase RLS
-// session, same as every other student-owned insert in this app).
+// GitHub repo-stats sync for a project OR an AI employee. Authenticated and
+// ownership-checked, then written server-side via supabaseAdmin — the client
+// no longer writes github_repos / ai_employees.github_* directly (Build Plan
+// 0.5: those columns are server-fetched but used to be browser-written, so a
+// student could forge stars/forks/etc. through the API). The actual GitHub
+// REST calls stay unauthenticated-or-app-token (public repo metadata).
 import type { GitHubRepoStats } from "./api-paths";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
@@ -13,8 +16,24 @@ function authHeaders(): Record<string, string> {
   return headers;
 }
 
+async function authenticateTwin(request: Request): Promise<string | Response> {
+  const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (!token) {
+    return new Response(JSON.stringify({ error: "Sign in to sync GitHub stats." }), { status: 401, headers: { "content-type": "application/json" } });
+  }
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+  if (userError || !userData?.user) {
+    return new Response(JSON.stringify({ error: "Sign in to sync GitHub stats." }), { status: 401, headers: { "content-type": "application/json" } });
+  }
+  return userData.user.id;
+}
+
 export async function handleGitHubSync(request: Request): Promise<Response> {
-  let body: { repo?: unknown };
+  const authResult = await authenticateTwin(request);
+  if (authResult instanceof Response) return authResult;
+  const callerId = authResult;
+
+  let body: { repo?: unknown; project_id?: unknown; ai_employee_id?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -24,6 +43,29 @@ export async function handleGitHubSync(request: Request): Promise<Response> {
   const repo = typeof body.repo === "string" ? body.repo.trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\/$/, "") : "";
   if (!REPO_PATTERN.test(repo)) {
     return new Response(JSON.stringify({ error: "Enter a repo as owner/name." }), { status: 400, headers: { "content-type": "application/json" } });
+  }
+
+  const projectId = typeof body.project_id === "string" ? body.project_id : null;
+  const aiEmployeeId = typeof body.ai_employee_id === "string" ? body.ai_employee_id : null;
+  if ((!projectId && !aiEmployeeId) || (projectId && aiEmployeeId)) {
+    return new Response(JSON.stringify({ error: "Bad request: pass exactly one of project_id or ai_employee_id." }), {
+      status: 400,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  if (projectId) {
+    const { data: project } = await supabaseAdmin.from("projects").select("id, twin_id").eq("id", projectId).maybeSingle();
+    if (!project) return new Response(JSON.stringify({ error: "Project not found." }), { status: 404, headers: { "content-type": "application/json" } });
+    if (project.twin_id !== callerId) {
+      return new Response(JSON.stringify({ error: "You can only sync your own project." }), { status: 403, headers: { "content-type": "application/json" } });
+    }
+  } else {
+    const { data: employee } = await supabaseAdmin.from("ai_employees").select("id, twin_id").eq("id", aiEmployeeId as string).maybeSingle();
+    if (!employee) return new Response(JSON.stringify({ error: "AI employee not found." }), { status: 404, headers: { "content-type": "application/json" } });
+    if (employee.twin_id !== callerId) {
+      return new Response(JSON.stringify({ error: "You can only sync your own AI employee." }), { status: 403, headers: { "content-type": "application/json" } });
+    }
   }
 
   const repoRes = await fetch(`https://api.github.com/repos/${repo}`, { headers: authHeaders() });
@@ -68,6 +110,39 @@ export async function handleGitHubSync(request: Request): Promise<Response> {
     last_commit_at: repoData.pushed_at,
     weekly_commits,
   };
+
+  if (projectId) {
+    const { error: dbError } = await supabaseAdmin.from("github_repos").upsert(
+      {
+        twin_id: callerId,
+        project_id: projectId,
+        full_name: stats.full_name,
+        url: stats.url,
+        description: stats.description,
+        stars: stats.stars,
+        forks: stats.forks,
+        open_issues: stats.open_issues,
+        language: stats.language,
+        last_commit_at: stats.last_commit_at,
+        weekly_commits: stats.weekly_commits,
+        last_synced_at: new Date().toISOString(),
+      },
+      { onConflict: "project_id" },
+    );
+    if (dbError) return new Response(JSON.stringify({ error: dbError.message }), { status: 500, headers: { "content-type": "application/json" } });
+  } else {
+    const { error: dbError } = await supabaseAdmin
+      .from("ai_employees")
+      .update({
+        github_full_name: stats.full_name,
+        github_stars: stats.stars,
+        github_forks: stats.forks,
+        github_open_issues: stats.open_issues,
+        github_synced_at: new Date().toISOString(),
+      })
+      .eq("id", aiEmployeeId as string);
+    if (dbError) return new Response(JSON.stringify({ error: dbError.message }), { status: 500, headers: { "content-type": "application/json" } });
+  }
 
   return new Response(JSON.stringify(stats), { status: 200, headers: { "content-type": "application/json" } });
 }
