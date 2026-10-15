@@ -10,25 +10,14 @@
 // behalf and an unrestricted host would make it an open SSRF proxy.
 import { summarizeScores, type PitchScores } from "./scores";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { authenticateTwin } from "./authenticate-twin.server";
 
 const ALLOWED_HOST = "docs.google.com";
 const MAX_BYTES = 2_000_000;
 const FETCH_TIMEOUT_MS = 10_000;
 
-async function authenticateTwin(request: Request): Promise<string | Response> {
-  const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!token) {
-    return new Response(JSON.stringify({ error: "Sign in to sync." }), { status: 401, headers: { "content-type": "application/json" } });
-  }
-  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-  if (userError || !userData?.user) {
-    return new Response(JSON.stringify({ error: "Sign in to sync." }), { status: 401, headers: { "content-type": "application/json" } });
-  }
-  return userData.user.id;
-}
-
 export async function handlePitchFeedbackSync(request: Request): Promise<Response> {
-  const authResult = await authenticateTwin(request);
+  const authResult = await authenticateTwin(request, "Sign in to sync.");
   if (authResult instanceof Response) return authResult;
   const callerId = authResult;
 
@@ -48,7 +37,8 @@ export async function handlePitchFeedbackSync(request: Request): Promise<Respons
     return new Response(JSON.stringify({ error: "Bad request: kind must be pitch_scores or interviews." }), { status: 400, headers: { "content-type": "application/json" } });
   }
 
-  const { data: project } = await supabaseAdmin.from("projects").select("id, twin_id").eq("id", projectId).maybeSingle();
+  const { data: project, error: lookupError } = await supabaseAdmin.from("projects").select("id, twin_id").eq("id", projectId).maybeSingle();
+  if (lookupError) return new Response(JSON.stringify({ error: lookupError.message }), { status: 500, headers: { "content-type": "application/json" } });
   if (!project) return new Response(JSON.stringify({ error: "Project not found." }), { status: 404, headers: { "content-type": "application/json" } });
   if (project.twin_id !== callerId) {
     return new Response(JSON.stringify({ error: "You can only sync your own project." }), { status: 403, headers: { "content-type": "application/json" } });

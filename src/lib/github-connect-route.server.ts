@@ -9,18 +9,7 @@
 // server route rather than a direct client-side fetch either way.
 import type { GithubConnection } from "./api-paths";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
-async function authenticateTwin(request: Request): Promise<string | Response> {
-  const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!token) {
-    return new Response(JSON.stringify({ error: "Sign in to connect GitHub." }), { status: 401, headers: { "content-type": "application/json" } });
-  }
-  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-  if (userError || !userData?.user) {
-    return new Response(JSON.stringify({ error: "Sign in to connect GitHub." }), { status: 401, headers: { "content-type": "application/json" } });
-  }
-  return userData.user.id;
-}
+import { authenticateTwin } from "./authenticate-twin.server";
 
 type GithubGraphQLResponse = {
   data?: {
@@ -140,7 +129,7 @@ async function fetchGithubStats(accessToken: string): Promise<FetchStatsResult> 
 }
 
 export async function handleGithubConnect(request: Request): Promise<Response> {
-  const twinIdOrResponse = await authenticateTwin(request);
+  const twinIdOrResponse = await authenticateTwin(request, "Sign in to connect GitHub.");
   if (typeof twinIdOrResponse !== "string") return twinIdOrResponse;
   const twinId = twinIdOrResponse;
 
@@ -172,7 +161,7 @@ export async function handleGithubConnect(request: Request): Promise<Response> {
 }
 
 export async function handleGithubRefresh(request: Request): Promise<Response> {
-  const twinIdOrResponse = await authenticateTwin(request);
+  const twinIdOrResponse = await authenticateTwin(request, "Sign in to connect GitHub.");
   if (typeof twinIdOrResponse !== "string") return twinIdOrResponse;
   const twinId = twinIdOrResponse;
 

@@ -6,6 +6,7 @@
 // REST calls stay unauthenticated-or-app-token (public repo metadata).
 import type { GitHubRepoStats } from "./api-paths";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { authenticateTwin } from "./authenticate-twin.server";
 
 const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
@@ -16,20 +17,8 @@ function authHeaders(): Record<string, string> {
   return headers;
 }
 
-async function authenticateTwin(request: Request): Promise<string | Response> {
-  const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!token) {
-    return new Response(JSON.stringify({ error: "Sign in to sync GitHub stats." }), { status: 401, headers: { "content-type": "application/json" } });
-  }
-  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-  if (userError || !userData?.user) {
-    return new Response(JSON.stringify({ error: "Sign in to sync GitHub stats." }), { status: 401, headers: { "content-type": "application/json" } });
-  }
-  return userData.user.id;
-}
-
 export async function handleGitHubSync(request: Request): Promise<Response> {
-  const authResult = await authenticateTwin(request);
+  const authResult = await authenticateTwin(request, "Sign in to sync GitHub stats.");
   if (authResult instanceof Response) return authResult;
   const callerId = authResult;
 
@@ -55,13 +44,15 @@ export async function handleGitHubSync(request: Request): Promise<Response> {
   }
 
   if (projectId) {
-    const { data: project } = await supabaseAdmin.from("projects").select("id, twin_id").eq("id", projectId).maybeSingle();
+    const { data: project, error: lookupError } = await supabaseAdmin.from("projects").select("id, twin_id").eq("id", projectId).maybeSingle();
+    if (lookupError) return new Response(JSON.stringify({ error: lookupError.message }), { status: 500, headers: { "content-type": "application/json" } });
     if (!project) return new Response(JSON.stringify({ error: "Project not found." }), { status: 404, headers: { "content-type": "application/json" } });
     if (project.twin_id !== callerId) {
       return new Response(JSON.stringify({ error: "You can only sync your own project." }), { status: 403, headers: { "content-type": "application/json" } });
     }
   } else {
-    const { data: employee } = await supabaseAdmin.from("ai_employees").select("id, twin_id").eq("id", aiEmployeeId as string).maybeSingle();
+    const { data: employee, error: lookupError } = await supabaseAdmin.from("ai_employees").select("id, twin_id").eq("id", aiEmployeeId as string).maybeSingle();
+    if (lookupError) return new Response(JSON.stringify({ error: lookupError.message }), { status: 500, headers: { "content-type": "application/json" } });
     if (!employee) return new Response(JSON.stringify({ error: "AI employee not found." }), { status: 404, headers: { "content-type": "application/json" } });
     if (employee.twin_id !== callerId) {
       return new Response(JSON.stringify({ error: "You can only sync your own AI employee." }), { status: 403, headers: { "content-type": "application/json" } });
