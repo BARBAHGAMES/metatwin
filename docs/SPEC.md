@@ -93,6 +93,12 @@ M-Pesa STK Push (Daraja **sandbox**) for MetaTwin's own subscription plans (indi
 
 ## 6. Non-functional
 
-- **Mobile-first**, East African connections: ~1.2 MB raw JS total, largest chunk ~101 KB gzipped (2026-10-14 build).
-  Hero images are pre-compressed; the 8 MB pitch-deck MP4 loads only on demand.
+- **Mobile-first**, East African connections. Supported widths: 320px and up; layouts verified at 320/360/768/1280px
+  (no horizontal overflow; tap targets >= 32px for standalone controls; form fields >= 16px on touch devices so iOS
+  doesn't zoom). Root font size steps 17px (phones) / 18px (tablets) / 19px (desktop). Hero photos ship an 800px
+  variant via `srcset` (~30 KB vs ~90 KB on phones). Ambient hero animations are off below 640px. Largest JS chunk
+  ~101 KB gzipped; the shared `site` chunk is ~72 KB gzipped (mostly supabase-js, incl. unused realtime).
+- **Layout rules that prevent clipped content** (`src/styles.css`): `.grid` defaults to `minmax(0, 1fr)` columns and
+  body text uses `overflow-wrap: anywhere`. `html { overflow-x: clip }` stays as a safety net, but anything it clips
+  is invisible, so new layouts must not rely on it.
 - **Honesty:** fictional sample data is always labelled; unbuilt features are labelled "Preview"/"Coming soon".
