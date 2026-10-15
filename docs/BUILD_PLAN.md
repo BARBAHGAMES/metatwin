@@ -24,7 +24,7 @@ Must be finished before new features, because the product's value **is** trustwo
 
 | # | Item | Status |
 |---|---|---|
-| 0.1 | **Close the `twins` hole** — students could self-grant a paid plan or undo a deactivation (UPDATE), or delete and recreate their row (DELETE+INSERT). Migration `20261014200000_guard_twin_plan_and_activation_columns`; 11 new regression assertions. | Done on branch; approved; apply via [`LOCAL_SESSION_RUNBOOK.md`](LOCAL_SESSION_RUNBOOK.md) (DB-only, no deploy needed) |
+| 0.1 | **Close the `twins` hole** — students could self-grant a paid plan or undo a deactivation (UPDATE), or delete and recreate their row (DELETE+INSERT). Migration `20261015171820_guard_twin_plan_and_activation_columns`; 11 new regression assertions. | Done on branch; approved; apply via [`LOCAL_SESSION_RUNBOOK.md`](LOCAL_SESSION_RUNBOOK.md) (DB-only, no deploy needed) |
 | 0.2 | **Repo security** — gitleaks full-history scan in CI, `npm audit` in CI, SHA-pinned actions, Dependabot, hardened `.gitignore`, `SECURITY.md`. | Done on branch |
 | 0.3 | **Owner GitHub settings** — `main` ruleset (PR + green CI required, no force push), secret scanning + push protection, 2FA, access review. Checklist: [`REPO_SECURITY.md`](REPO_SECURITY.md). | Owner action |
 | 0.4 | **Rotate the Supabase service-role key** (was pasted into chat on 2026-10-10). | Owner action **[approval]** |

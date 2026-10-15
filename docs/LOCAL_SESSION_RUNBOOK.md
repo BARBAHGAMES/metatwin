@@ -33,7 +33,7 @@ git checkout feature/phase1-foundation-hardening
 ```
 
 If `origin/main` has moved past `38c60f7`: `git rebase origin/main`. If main gained a migration with a version newer
-than `20261014200000`, rename ours (file + every reference in docs) to a later version before continuing.
+than `20261015171820`, rename ours (file + every reference in docs) to a later version before continuing.
 
 Local gate — all must pass, report actual output:
 
@@ -88,7 +88,7 @@ select id, is_active, deactivated_at from public.twins where is_active and deact
 
 1. Announce: "Applying migration guard_twin_plan_and_activation_columns to production."
 2. `apply_migration` with name `guard_twin_plan_and_activation_columns` and the **exact** contents of
-   `supabase/migrations/20261014200000_guard_twin_plan_and_activation_columns.sql`.
+   `supabase/migrations/20261015171820_guard_twin_plan_and_activation_columns.sql`.
    (If the MCP tool errors, use the SQL editor, then register the version by hand in
    `supabase_migrations.schema_migrations` — existing practice, see PROJECT_STATE.md.)
 3. Read back the version it assigned (`select version, name from supabase_migrations.schema_migrations order by version desc limit 3;`)

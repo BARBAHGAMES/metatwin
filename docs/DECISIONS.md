@@ -19,7 +19,7 @@ fixed field set and hides unknown, private, non-adult, inactive and unpaid profi
 ### D-004 · The client never writes money/access/moderation/verification columns — Accepted (2026-10-14)
 Enforced by guard triggers (writes as `authenticated`/`anon` are silently reset) or by zero-grant tables written only
 by server routes / `SECURITY DEFINER` functions. Applied to `twins.plan_*`, `is_active`, `deactivated_at` in migration
-`20261014200000` after they were found client-writable. Remaining violations are tracked as Build Plan 0.5.
+`20261015171820` after they were found client-writable. Remaining violations are tracked as Build Plan 0.5.
 
 ### D-005 · Client may not insert or delete `twins` rows — Accepted (2026-10-14)
 Rows are created only by `handle_new_user()`. Revoking DELETE closes a delete-and-recreate deactivation bypass.
