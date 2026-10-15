@@ -24,7 +24,7 @@ Must be finished before new features, because the product's value **is** trustwo
 
 | # | Item | Status |
 |---|---|---|
-| 0.1 | **Close the `twins` hole** — students could self-grant a paid plan or undo a deactivation (UPDATE), or delete and recreate their row (DELETE+INSERT). Migration `20261015171820_guard_twin_plan_and_activation_columns`; 11 new regression assertions. | Done on branch; approved; apply via [`LOCAL_SESSION_RUNBOOK.md`](LOCAL_SESSION_RUNBOOK.md) (DB-only, no deploy needed) |
+| 0.1 | **Close the `twins` hole** — students could self-grant a paid plan or undo a deactivation (UPDATE), or delete and recreate their row (DELETE+INSERT). Migration `20261015171820_guard_twin_plan_and_activation_columns`; 11 new regression assertions. | **Shipped 2026-10-15** — applied to production, verified read-only (Q1 now `true,false,false,true`), no exploitation found (Q3 clean); PR #2 merged to `main` (`68fef60`). No Worker deploy needed, DB-only. |
 | 0.2 | **Repo security** — gitleaks full-history scan in CI, `npm audit` in CI, SHA-pinned actions, Dependabot, hardened `.gitignore`, `SECURITY.md`. | Done on branch |
 | 0.3 | **Owner GitHub settings** — `main` ruleset (PR + green CI required, no force push), secret scanning + push protection, 2FA, access review. Checklist: [`REPO_SECURITY.md`](REPO_SECURITY.md). | Owner action |
 | 0.4 | **Rotate the Supabase service-role key** (was pasted into chat on 2026-10-10). | Owner action **[approval]** |
@@ -99,7 +99,7 @@ on the builder's profile.
 
 ## Open decisions (summary)
 
-1. ~~Apply Stage 0.1~~ approved. 2. Repo public or private. 3. Dev database (0.7) and Supabase Pro (0.8).
+1. ~~Apply Stage 0.1~~ shipped 2026-10-15. 2. Repo public or private. 3. Dev database (0.7) and Supabase Pro (0.8).
 4. ~~DB test harness in CI (0.6)~~ approved and done on branch. 5. Audience: students only vs students + independent builders (1.1).
 6. MBTI and gender (1.3). 7. Score vs "never a single score" (2.5). 8. Paywall vs discoverability (3.5).
 9. Card provider and escrow model (4.3).
