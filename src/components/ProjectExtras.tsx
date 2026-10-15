@@ -44,7 +44,6 @@ export function GitHubCard({
   onFieldChange,
   onSave,
   onSynced,
-  twinId,
   projectId,
 }: {
   repo: GithubRepoRow | null;
@@ -52,7 +51,6 @@ export function GitHubCard({
   onFieldChange: (v: string) => void;
   onSave: () => Promise<void>;
   onSynced: () => void;
-  twinId: string;
   projectId: string;
 }) {
   const [saving, setSaving] = useState(false);
@@ -77,32 +75,20 @@ export function GitHubCard({
     }
     setSyncing(true);
     try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) {
+        toast.error("Sign in to sync GitHub stats.");
+        return;
+      }
       const res = await fetch(GITHUB_SYNC_PATH, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ repo: repoName }),
+        headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ repo: repoName, project_id: projectId }),
       });
       const body = (await res.json()) as GitHubRepoStats | { error: string };
       if (!res.ok || "error" in body) {
         toast.error("error" in body ? body.error : "Could not sync this repo.");
-        return;
-      }
-      await supabase.from("github_repos").delete().eq("project_id", projectId);
-      const { error } = await supabase.from("github_repos").insert({
-        twin_id: twinId,
-        project_id: projectId,
-        full_name: body.full_name,
-        url: body.url,
-        description: body.description,
-        stars: body.stars,
-        forks: body.forks,
-        open_issues: body.open_issues,
-        language: body.language,
-        last_commit_at: body.last_commit_at,
-        weekly_commits: body.weekly_commits,
-      });
-      if (error) {
-        toast.error(error.message);
         return;
       }
       toast.success("GitHub stats synced.");
@@ -499,22 +485,20 @@ export function PitchFeedbackCard({
     }
     setSyncing(true);
     try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) {
+        toast.error("Sign in to sync.");
+        return;
+      }
       const res = await fetch(PITCH_FEEDBACK_SYNC_PATH, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ csv_url: csvUrl }),
+        headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ csv_url: csvUrl, project_id: project.id, kind: "pitch_scores" }),
       });
       const body = (await res.json()) as PitchScores | { error: string };
       if (!res.ok || "error" in body) {
         toast.error("error" in body ? body.error : "Could not sync feedback.");
-        return;
-      }
-      const { error } = await supabase
-        .from("projects")
-        .update({ scores_csv_url: csvUrl, pitch_scores: body, scores_synced_at: new Date().toISOString() })
-        .eq("id", project.id);
-      if (error) {
-        toast.error(error.message);
         return;
       }
       toast.success("Pitch feedback synced.");
@@ -591,22 +575,20 @@ export function InterviewTrackerCard({
     }
     setSyncing(true);
     try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) {
+        toast.error("Sign in to sync.");
+        return;
+      }
       const res = await fetch(PITCH_FEEDBACK_SYNC_PATH, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ csv_url: csvUrl }),
+        headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ csv_url: csvUrl, project_id: project.id, kind: "interviews" }),
       });
       const body = (await res.json()) as PitchScores | { error: string };
       if (!res.ok || "error" in body) {
         toast.error("error" in body ? body.error : "Could not sync responses.");
-        return;
-      }
-      const { error } = await supabase
-        .from("projects")
-        .update({ interviews_csv_url: csvUrl, interviews_count: body.responses, interviews_synced_at: new Date().toISOString() })
-        .eq("id", project.id);
-      if (error) {
-        toast.error(error.message);
         return;
       }
       await recomputeProjectStage(project.id);

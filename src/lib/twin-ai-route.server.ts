@@ -4,6 +4,7 @@
 // invent facts, never fabricate company names or deadlines.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { PublicProfile } from "./public-profile";
+import { authenticateTwin } from "./authenticate-twin.server";
 
 const CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
@@ -115,15 +116,9 @@ export async function handleOpportunitiesScout(request: Request): Promise<Respon
     return new Response(JSON.stringify({ error: "AI is not configured on this deployment." }), { status: 503, headers: { "content-type": "application/json" } });
   }
 
-  const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!token) {
-    return new Response(JSON.stringify({ error: "Sign in to use the opportunities scout." }), { status: 401, headers: { "content-type": "application/json" } });
-  }
-  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-  if (userError || !userData?.user) {
-    return new Response(JSON.stringify({ error: "Sign in to use the opportunities scout." }), { status: 401, headers: { "content-type": "application/json" } });
-  }
-  const twinId = userData.user.id;
+  const authResult = await authenticateTwin(request, "Sign in to use the opportunities scout.");
+  if (authResult instanceof Response) return authResult;
+  const twinId = authResult;
 
   if (rateLimited(`scout:${twinId}`)) {
     return new Response(JSON.stringify({ error: "Too many requests — try again in a few minutes." }), { status: 429, headers: { "content-type": "application/json" } });

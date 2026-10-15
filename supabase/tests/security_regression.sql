@@ -24,7 +24,7 @@ declare
   n int;
   city uuid; uni uuid;
   rv_id uuid; rv_token uuid; rv_result boolean; rv_row jsonb;
-  gh_id uuid; pitch_id uuid;
+  gh_id uuid; pitch_id uuid; ai_emp_id uuid;
 begin
   ------------------------------------------------------------------ signups
   -- under-18 declaration is rejected at signup
@@ -371,11 +371,15 @@ begin
   assert blocked, 'an over-length comment must be rejected by submit_evidence_review';
 
   ------------------------------------------------------------ github_repos / pitches (Lovable-sync round)
-  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
-  set local role authenticated;
+  -- github_repos is now written only by the server (Build Plan 0.5 — the
+  -- sync route runs as service_role, via supabaseAdmin), not the client.
+  set local role service_role;
   insert into public.github_repos (twin_id, project_id, full_name, url, stars, forks, language)
     values (a, pa, 'octocat/hello-world', 'https://github.com/octocat/hello-world', 5, 1, 'TypeScript')
     returning id into gh_id;
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
   insert into public.pitches (twin_id, project_id, business_name, outcome)
     values (a, pa, 'Acme Duka', 'customer') returning id into pitch_id;
   reset role;
@@ -391,6 +395,15 @@ begin
   assert blocked, 'B must not insert a pitches row claiming A''s twin_id';
   reset role;
 
+  -- not even the owner can write github_repos directly any more (Build Plan 0.5)
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  blocked := false; begin insert into public.github_repos (twin_id, project_id, full_name) values (a, pa, 'owner/attempt'); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'owner must not be able to insert a github_repos row directly any more';
+  blocked := false; begin update public.github_repos set stars = 9999 where id = gh_id; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'owner must not be able to forge github_repos stats directly any more';
+  reset role;
+
   -- anon has no direct table access to either (public exposure is only via get_public_profile)
   set local role anon;
   blocked := false; begin perform 1 from public.github_repos limit 1; exception when insufficient_privilege then blocked := true; end;
@@ -401,7 +414,7 @@ begin
   assert blocked, 'anon must not read pitch_stats directly';
   reset role;
 
-  -- owner can read their own rows and the computed stats view
+  -- owner can still read, and separately delete, their own rows; the computed stats view still works
   perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into n from public.github_repos where id = gh_id; assert n = 1, 'owner can read their own github_repos row';
@@ -409,12 +422,12 @@ begin
   reset role;
 
   -- cannot attach a second project's github_repos/pitches row to a different owner's project
+  -- (FK integrity still holds for the server's own writes, not just RLS)
   blocked := false;
-  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
-  set local role authenticated;
+  set local role service_role;
   begin insert into public.github_repos (twin_id, project_id, full_name) values (a, pb, 'x/y'); exception when foreign_key_violation then blocked := true; end;
-  assert blocked, 'github_repos must reject a project_id that does not belong to the same twin_id';
   reset role;
+  assert blocked, 'github_repos must reject a project_id that does not belong to the same twin_id';
 
   ------------------------------------------------------------ list_public_twins() + extended get_public_profile()
   set local role anon;
@@ -511,6 +524,69 @@ begin
   exception when insufficient_privilege then blocked := true; end;
   assert blocked, 'clients must not be able to insert twin rows';
   reset role;
+
+  ------------------------------------------------------------ project proof columns (Build Plan 0.5)
+  -- interviews_count/synced_at + pitch_scores/scores_synced_at are server-fetched
+  -- (a published Google Sheet) but must never be forgeable by the browser —
+  -- interviews_count feeds recompute_project_stage(), so this used to let a
+  -- student self-advance their own project stage.
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.projects set interviews_count = 999, interviews_synced_at = now() where id = pa;
+  update public.projects set pitch_scores = '{"responses": 50, "overall": 10, "questions": []}'::jsonb, scores_synced_at = now() where id = pa;
+  reset role;
+  assert (select interviews_count = 0 and interviews_synced_at is null from public.projects where id = pa),
+    'interviews_count / interviews_synced_at must ignore a direct client write';
+  assert (select pitch_scores = '{}'::jsonb and scores_synced_at is null from public.projects where id = pa),
+    'pitch_scores / scores_synced_at must ignore a direct client write';
+
+  -- the real sync routes run as service_role (via supabaseAdmin) and write the url + derived values together
+  set local role service_role;
+  update public.projects set interviews_csv_url = 'https://docs.google.com/x', interviews_count = 12, interviews_synced_at = now() where id = pa;
+  update public.projects set scores_csv_url = 'https://docs.google.com/y', pitch_scores = '{"responses": 5, "overall": 8, "questions": []}'::jsonb, scores_synced_at = now() where id = pa;
+  reset role;
+  assert (select interviews_count = 12 from public.projects where id = pa),
+    'service_role (the sync route) must still be able to set interviews_count';
+  assert (select (pitch_scores->>'responses')::int = 5 from public.projects where id = pa),
+    'service_role (the sync route) must still be able to set pitch_scores';
+
+  -- a client-made change to the source url invalidates the stale derived number (the
+  -- url itself stays client-writable, only the derived columns are pinned)
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.projects set interviews_csv_url = 'https://docs.google.com/a-new-sheet' where id = pa;
+  update public.projects set scores_csv_url = 'https://docs.google.com/a-new-sheet-2' where id = pa;
+  reset role;
+  assert (select interviews_count = 0 and interviews_synced_at is null from public.projects where id = pa),
+    'changing interviews_csv_url must reset the stale interviews_count/synced_at';
+  assert (select pitch_scores = '{}'::jsonb and scores_synced_at is null from public.projects where id = pa),
+    'changing scores_csv_url must reset the stale pitch_scores/scores_synced_at';
+
+  ------------------------------------------------------------ ai_employees github stats (Build Plan 0.5)
+  -- github_full_name/stars/forks/open_issues/synced_at are server-fetched (the
+  -- public GitHub API) but must never be forgeable by the browser.
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.ai_employees (twin_id, name, link_url) values (a, 'Research bot', 'https://github.com/octocat/hello-world') returning id into ai_emp_id;
+  update public.ai_employees set github_full_name = 'fake/repo', github_stars = 9999 where id = ai_emp_id;
+  reset role;
+  assert (select github_full_name is null and github_stars is null from public.ai_employees where id = ai_emp_id),
+    'ai_employees.github_* must ignore a direct client write';
+
+  -- the real sync route runs as service_role (via supabaseAdmin) and writes the stats
+  set local role service_role;
+  update public.ai_employees set github_full_name = 'octocat/hello-world', github_stars = 5, github_forks = 1, github_open_issues = 0, github_synced_at = now() where id = ai_emp_id;
+  reset role;
+  assert (select github_full_name = 'octocat/hello-world' and github_stars = 5 from public.ai_employees where id = ai_emp_id),
+    'service_role (the sync route) must still be able to set ai_employees.github_*';
+
+  -- changing link_url invalidates the now-unrelated stats
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.ai_employees set link_url = 'https://github.com/octocat/spoon-knife' where id = ai_emp_id;
+  reset role;
+  assert (select github_full_name is null and github_stars is null and github_synced_at is null from public.ai_employees where id = ai_emp_id),
+    'changing link_url must reset the stale github_* stats';
 
   raise exception 'ALL PASS (rolled back)';
 exception

@@ -5,6 +5,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { individualPlans, teamPackages, teamTiers, teamTierPrice } from "./pricing";
 import type { MpesaTier as Tier, MpesaPackage as Package, MpesaProduct as Product } from "./api-paths";
+import { authenticateTwin } from "./authenticate-twin.server";
 
 function individualPrice(tier: Tier): number | null {
   return individualPlans.find((p) => p.id === tier)?.price ?? null;
@@ -28,18 +29,6 @@ function chargeAmount(realPrice: number): number {
 
 const DARAJA_BASE_URL = "https://sandbox.safaricom.co.ke";
 const CALLBACK_URL = "https://metatwin.metaglobetechnologies.co.ke/api/webhooks/mpesa-callback";
-
-async function authenticateTwin(request: Request): Promise<string | Response> {
-  const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!token) {
-    return new Response(JSON.stringify({ error: "Sign in to pay." }), { status: 401, headers: { "content-type": "application/json" } });
-  }
-  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-  if (userError || !userData?.user) {
-    return new Response(JSON.stringify({ error: "Sign in to pay." }), { status: 401, headers: { "content-type": "application/json" } });
-  }
-  return userData.user.id;
-}
 
 // Accepts 07XXXXXXXX, 01XXXXXXXX, +2547XXXXXXXX, 2547XXXXXXXX (and the 01
 // equivalents) and normalizes to the MSISDN format Daraja requires:
@@ -78,7 +67,7 @@ const TIER_NAMES: Record<Tier, string> = { basic: "Basic", guided: "Guided", bui
 const PACKAGE_NAMES: Record<Package, string> = { duo: "Duo", studio: "Studio", launch: "Launch" };
 
 export async function handleMpesaInitiate(request: Request): Promise<Response> {
-  const authResult = await authenticateTwin(request);
+  const authResult = await authenticateTwin(request, "Sign in to pay.");
   if (authResult instanceof Response) return authResult;
   const callerId = authResult;
 
@@ -203,7 +192,7 @@ export async function handleMpesaInitiate(request: Request): Promise<Response> {
 }
 
 export async function handleMpesaStatus(request: Request): Promise<Response> {
-  const authResult = await authenticateTwin(request);
+  const authResult = await authenticateTwin(request, "Sign in to pay.");
   if (authResult instanceof Response) return authResult;
   const callerId = authResult;
 
