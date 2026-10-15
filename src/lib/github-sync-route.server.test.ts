@@ -40,35 +40,41 @@ describe("github sync ownership check", () => {
     vi.unstubAllGlobals();
   });
 
+  it("rejects a malformed project_id with a clean 400, never querying the database", async () => {
+    const res = await handleGitHubSync(req({ repo: "octocat/hello-world", project_id: "not-a-uuid" }));
+    expect(res.status).toBe(400);
+    expect(mockMaybeSingle).not.toHaveBeenCalled();
+  });
+
   it("rejects syncing a project owned by a different twin", async () => {
     mockMaybeSingle.mockResolvedValue({ data: { id: "p1", twin_id: "someone-else" }, error: null });
-    const res = await handleGitHubSync(req({ repo: "octocat/hello-world", project_id: "p1" }));
+    const res = await handleGitHubSync(req({ repo: "octocat/hello-world", project_id: "11111111-1111-1111-1111-111111111111" }));
     expect(res.status).toBe(403);
   });
 
   it("404s when the project does not exist", async () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
-    const res = await handleGitHubSync(req({ repo: "octocat/hello-world", project_id: "missing" }));
+    const res = await handleGitHubSync(req({ repo: "octocat/hello-world", project_id: "22222222-2222-2222-2222-222222222222" }));
     expect(res.status).toBe(404);
     expect((await res.json()).error).toMatch(/project not found/i);
   });
 
   it("rejects syncing an AI employee owned by a different twin", async () => {
     mockMaybeSingle.mockResolvedValue({ data: { id: "e1", twin_id: "someone-else" }, error: null });
-    const res = await handleGitHubSync(req({ repo: "octocat/hello-world", ai_employee_id: "e1" }));
+    const res = await handleGitHubSync(req({ repo: "octocat/hello-world", ai_employee_id: "33333333-3333-3333-3333-333333333333" }));
     expect(res.status).toBe(403);
   });
 
   it("returns 500 (not a false-negative 404) when the ownership lookup itself fails", async () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: { message: "connection reset" } });
-    const res = await handleGitHubSync(req({ repo: "octocat/hello-world", project_id: "p1" }));
+    const res = await handleGitHubSync(req({ repo: "octocat/hello-world", project_id: "11111111-1111-1111-1111-111111111111" }));
     expect(res.status).toBe(500);
   });
 
   it("proceeds past the ownership check once the caller owns the project", async () => {
     mockMaybeSingle.mockResolvedValue({ data: { id: "p1", twin_id: "caller-1" }, error: null });
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
-    const res = await handleGitHubSync(req({ repo: "octocat/hello-world", project_id: "p1" }));
+    const res = await handleGitHubSync(req({ repo: "octocat/hello-world", project_id: "11111111-1111-1111-1111-111111111111" }));
     // GitHub's own 404 ("Repository not found"), not the ownership-check 404
     // ("Project not found") -- proves the ownership gate let this request through.
     expect(res.status).toBe(404);

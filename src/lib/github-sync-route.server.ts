@@ -7,6 +7,7 @@
 import type { GitHubRepoStats } from "./api-paths";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { authenticateTwin } from "./authenticate-twin.server";
+import { checkOwnsRow } from "./check-owns-row.server";
 
 const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
@@ -43,21 +44,10 @@ export async function handleGitHubSync(request: Request): Promise<Response> {
     });
   }
 
-  if (projectId) {
-    const { data: project, error: lookupError } = await supabaseAdmin.from("projects").select("id, twin_id").eq("id", projectId).maybeSingle();
-    if (lookupError) return new Response(JSON.stringify({ error: lookupError.message }), { status: 500, headers: { "content-type": "application/json" } });
-    if (!project) return new Response(JSON.stringify({ error: "Project not found." }), { status: 404, headers: { "content-type": "application/json" } });
-    if (project.twin_id !== callerId) {
-      return new Response(JSON.stringify({ error: "You can only sync your own project." }), { status: 403, headers: { "content-type": "application/json" } });
-    }
-  } else {
-    const { data: employee, error: lookupError } = await supabaseAdmin.from("ai_employees").select("id, twin_id").eq("id", aiEmployeeId as string).maybeSingle();
-    if (lookupError) return new Response(JSON.stringify({ error: lookupError.message }), { status: 500, headers: { "content-type": "application/json" } });
-    if (!employee) return new Response(JSON.stringify({ error: "AI employee not found." }), { status: 404, headers: { "content-type": "application/json" } });
-    if (employee.twin_id !== callerId) {
-      return new Response(JSON.stringify({ error: "You can only sync your own AI employee." }), { status: 403, headers: { "content-type": "application/json" } });
-    }
-  }
+  const ownershipError = projectId
+    ? await checkOwnsRow("projects", projectId, callerId, "Project not found.", "You can only sync your own project.")
+    : await checkOwnsRow("ai_employees", aiEmployeeId as string, callerId, "AI employee not found.", "You can only sync your own AI employee.");
+  if (ownershipError) return ownershipError;
 
   const repoRes = await fetch(`https://api.github.com/repos/${repo}`, { headers: authHeaders() });
   if (repoRes.status === 404) {

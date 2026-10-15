@@ -11,6 +11,7 @@
 import { summarizeScores, type PitchScores } from "./scores";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { authenticateTwin } from "./authenticate-twin.server";
+import { checkOwnsRow } from "./check-owns-row.server";
 
 const ALLOWED_HOST = "docs.google.com";
 const MAX_BYTES = 2_000_000;
@@ -37,12 +38,8 @@ export async function handlePitchFeedbackSync(request: Request): Promise<Respons
     return new Response(JSON.stringify({ error: "Bad request: kind must be pitch_scores or interviews." }), { status: 400, headers: { "content-type": "application/json" } });
   }
 
-  const { data: project, error: lookupError } = await supabaseAdmin.from("projects").select("id, twin_id").eq("id", projectId).maybeSingle();
-  if (lookupError) return new Response(JSON.stringify({ error: lookupError.message }), { status: 500, headers: { "content-type": "application/json" } });
-  if (!project) return new Response(JSON.stringify({ error: "Project not found." }), { status: 404, headers: { "content-type": "application/json" } });
-  if (project.twin_id !== callerId) {
-    return new Response(JSON.stringify({ error: "You can only sync your own project." }), { status: 403, headers: { "content-type": "application/json" } });
-  }
+  const ownershipError = await checkOwnsRow("projects", projectId, callerId, "Project not found.", "You can only sync your own project.");
+  if (ownershipError) return ownershipError;
 
   const csvUrl = typeof body.csv_url === "string" ? body.csv_url.trim() : "";
   let parsed: URL;
