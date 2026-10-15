@@ -251,8 +251,8 @@ export function PitchTracker({
                 {p.notes && <p className="mt-1 text-xs text-muted-foreground">{p.notes}</p>}
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <button onClick={() => startEdit(p)} aria-label="Edit" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
-                <button onClick={() => removePitch(p.id)} aria-label="Remove" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => startEdit(p)} aria-label="Edit" className="cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => removePitch(p.id)} aria-label="Remove" className="cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
               </div>
             </li>
           ),
@@ -432,8 +432,8 @@ export function ProjectUpdatesCard({
                 {u.description && <p className="mt-1 text-xs text-muted-foreground">{u.description}</p>}
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <button onClick={() => startEdit(u)} aria-label="Edit" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
-                <button onClick={() => removeUpdate(u.id)} aria-label="Remove" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => startEdit(u)} aria-label="Edit" className="cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => removeUpdate(u.id)} aria-label="Remove" className="cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
               </div>
             </li>
           ),

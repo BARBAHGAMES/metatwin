@@ -14,12 +14,23 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [{ title: "Log in · MetaTwin" }],
   }),
+  // `?check_email=true` after signup shows a persistent "confirm your email" notice.
+  validateSearch: (search: Record<string, unknown>): { check_email?: boolean } =>
+    search.check_email === true || search.check_email === "true" ? { check_email: true } : {},
   component: LoginPage,
 });
+
+// Supabase's raw auth errors, reworded for people (the rest pass through).
+function friendlyAuthError(message: string): string {
+  if (/email not confirmed/i.test(message)) return "Confirm your email first: open the link we sent you, then log in.";
+  if (/invalid login credentials/i.test(message)) return "That email and password don't match. Check them, or reset your password.";
+  return message;
+}
 
 function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const { check_email: checkEmail } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -30,7 +41,7 @@ function LoginPage() {
     const error = await signIn(email, password);
     setSubmitting(false);
     if (error) {
-      toast.error(error);
+      toast.error(friendlyAuthError(error));
       return;
     }
     // A school/platform admin account has no twins row at all (handle_new_user
@@ -53,11 +64,16 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
+    <div className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
       <HeroBackdrop />
-      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-5 py-16">
+      <div className="relative mx-auto flex min-h-[calc(100svh-4rem)] max-w-md flex-col justify-center px-5 py-16">
         <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Welcome back</p>
         <h1 className="hero-rise-delay-1 mt-3 text-3xl font-semibold">Log in to your MetaTwin</h1>
+        {checkEmail && (
+          <p role="status" className="mt-5 rounded-xl border border-electric/40 bg-electric/10 p-4 text-sm text-ink-foreground">
+            <strong>Check your email.</strong> We sent you a link to confirm your account. Open it, then log in here.
+          </p>
+        )}
         <Card className="hero-rise-delay-2 mt-8 bg-card/95 text-foreground backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">

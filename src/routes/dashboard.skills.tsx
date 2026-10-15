@@ -248,9 +248,9 @@ function SkillsTab() {
             const items = evidence.filter((e) => e.competency_id === c.id);
             return (
               <li key={c.id} className="rounded-xl border bg-card p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{c.skills?.name ?? "Unknown skill"}</span>
-                  <div className="flex shrink-0 items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="min-w-0 font-medium">{c.skills?.name ?? "Unknown skill"}</span>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
                     <StatusBadge status={competencyStatus(c, evidence, reviews)} />
                     {editingCompetencyId === c.id ? (
                       <>
@@ -260,11 +260,11 @@ function SkillsTab() {
                         <Button size="sm" onClick={() => saveLevel(c.id)}>Save</Button>
                       </>
                     ) : (
-                      <button type="button" onClick={() => { setEditingCompetencyId(c.id); setEditLevel(c.level); }} aria-label="Edit skill level" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
+                      <button type="button" onClick={() => { setEditingCompetencyId(c.id); setEditLevel(c.level); }} aria-label="Edit skill level" className="cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
                     )}
-                    <button type="button" onClick={() => setDeleteTarget({ kind: "capability", id: c.id, label: c.skills?.name ?? "this skill" })} aria-label="Delete skill" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
+                    <button type="button" onClick={() => setDeleteTarget({ kind: "capability", id: c.id, label: c.skills?.name ?? "this skill" })} aria-label="Delete skill" className="cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -283,9 +283,9 @@ function SkillsTab() {
                               <span className="truncate text-xs text-muted-foreground">{e.title}</span>
                             )}
                             <div className="flex shrink-0 items-center gap-2">
-                              {!review && <button type="button" onClick={() => openReviewDialog(e.id)} className="cursor-pointer text-xs text-electric hover:underline">Invite a reviewer</button>}
-                              <button type="button" onClick={() => openEditEvidenceDialog(e)} aria-label="Edit evidence" className="cursor-pointer rounded p-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-3 w-3" /></button>
-                              <button type="button" onClick={() => setDeleteTarget({ kind: "evidence", id: e.id, label: e.title })} aria-label="Delete evidence" className="cursor-pointer rounded p-0.5 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-3 w-3" /></button>
+                              {!review && <button type="button" onClick={() => openReviewDialog(e.id)} className="cursor-pointer text-xs text-electric hover:underline -my-2 py-2 sm:my-0 sm:py-0">Invite a reviewer</button>}
+                              <button type="button" onClick={() => openEditEvidenceDialog(e)} aria-label="Edit evidence" className="cursor-pointer rounded p-2.5 sm:p-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-3 w-3" /></button>
+                              <button type="button" onClick={() => setDeleteTarget({ kind: "evidence", id: e.id, label: e.title })} aria-label="Delete evidence" className="cursor-pointer rounded p-2.5 sm:p-0.5 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-3 w-3" /></button>
                             </div>
                           </div>
                           {review && (
@@ -299,7 +299,7 @@ function SkillsTab() {
                     })}
                   </ul>
                 )}
-                <button type="button" onClick={() => openAddEvidenceDialog(c.id)} className="mt-2 flex cursor-pointer items-center gap-1 text-xs text-electric hover:underline">
+                <button type="button" onClick={() => openAddEvidenceDialog(c.id)} className="mt-2 flex cursor-pointer items-center gap-1 py-2 text-xs text-electric hover:underline sm:py-0">
                   <FilePlus2 className="h-3 w-3" /> Add evidence
                 </button>
               </li>

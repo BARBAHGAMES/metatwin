@@ -87,7 +87,8 @@ function Talent() {
                     {t.institution && <p className="truncate text-xs text-muted-foreground">{t.institution}</p>}
                     {t.github_username && (
                       <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                        <Github className="h-3 w-3" /> {t.github_total_contributions_year} contributions (1y)
+                        <Github className="h-3 w-3" />{" "}
+                        {t.github_total_contributions_year != null ? `${t.github_total_contributions_year} contributions (1y)` : `@${t.github_username}`}
                       </p>
                     )}
                   </div>

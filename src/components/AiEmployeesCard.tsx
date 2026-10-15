@@ -165,10 +165,10 @@ export function AiEmployeesCard({ userId }: { userId: string }) {
                     <p className="truncate text-xs text-ink-muted">{[e.role, e.platform].filter(Boolean).join(" · ") || "—"}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    <button onClick={() => setEditingId(e.id)} aria-label="Edit" className="cursor-pointer rounded p-1 text-ink-muted hover:text-ink-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
+                    <button onClick={() => setEditingId(e.id)} aria-label="Edit" className="cursor-pointer rounded p-2.5 sm:p-1 text-ink-muted hover:text-ink-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
-                    <button onClick={() => handleRemove(e.id)} aria-label="Remove" className="cursor-pointer rounded p-1 text-ink-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
+                    <button onClick={() => handleRemove(e.id)} aria-label="Remove" className="cursor-pointer rounded p-2.5 sm:p-1 text-ink-muted hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -194,7 +194,7 @@ export function AiEmployeesCard({ userId }: { userId: string }) {
                       type="button"
                       onClick={() => handleSyncStats(e.id, repo)}
                       disabled={syncingId === e.id}
-                      className="ml-auto flex items-center gap-1 text-electric hover:underline disabled:opacity-50"
+                      className="-my-2 ml-auto flex items-center gap-1 py-2 text-electric hover:underline disabled:opacity-50 sm:my-0 sm:py-0"
                     >
                       <RefreshCw className={`h-3 w-3 ${syncingId === e.id ? "animate-spin" : ""}`} /> {syncingId === e.id ? "Syncing…" : "Sync stats"}
                     </button>

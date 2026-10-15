@@ -4,13 +4,8 @@
 // sample data" label. Wiring these pages to the real schema (twins, skills,
 // competencies, courses, projects, assessments, opportunities, matches) is
 // tracked as follow-up work in .claude/PROJECT_STATE.md.
-export type Status = "self" | "evidence" | "reviewed";
-
-export const statusMeta: Record<Status, { label: string; desc: string }> = {
-  self: { label: "Self-Reported", desc: "The individual states they have this capability." },
-  evidence: { label: "Evidence Added", desc: "Supporting work has been attached." },
-  reviewed: { label: "Reviewed", desc: "An identified reviewer has examined the specified evidence." },
-};
+import type { Status } from "./status";
+export { statusMeta, type Status } from "./status";
 
 export type Capability = {
   slug: string;

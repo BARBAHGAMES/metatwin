@@ -144,8 +144,8 @@ function CoursesTab() {
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   )}
-                  <button type="button" onClick={() => startEdit(c)} aria-label="Edit course" className="cursor-pointer rounded p-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => setDeleteTarget({ kind: "course", id: c.id, label: c.name })} aria-label="Delete course" className="cursor-pointer rounded p-1.5 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => startEdit(c)} aria-label="Edit course" className="cursor-pointer rounded p-2.5 sm:p-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => setDeleteTarget({ kind: "course", id: c.id, label: c.name })} aria-label="Delete course" className="cursor-pointer rounded p-2.5 sm:p-1.5 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
                 </div>
               </li>
             ),

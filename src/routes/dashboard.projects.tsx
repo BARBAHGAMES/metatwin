@@ -183,8 +183,8 @@ function ProjectsTab() {
                   </div>
                 </Link>
                 <div className="flex shrink-0 items-center gap-1">
-                  <button type="button" onClick={() => openEdit(p)} aria-label="Edit project" className="cursor-pointer rounded p-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => setDeleteTarget({ kind: "project", id: p.id, label: p.title })} aria-label="Delete project" className="cursor-pointer rounded p-1.5 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => openEdit(p)} aria-label="Edit project" className="cursor-pointer rounded p-2.5 sm:p-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => setDeleteTarget({ kind: "project", id: p.id, label: p.title })} aria-label="Delete project" className="cursor-pointer rounded p-2.5 sm:p-1.5 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
                   <Link to="/projects/$id" params={{ id: p.id }} aria-label="Open project" className="rounded p-1.5 text-muted-foreground hover:text-foreground"><ArrowRight className="h-4 w-4" /></Link>
                 </div>
               </li>

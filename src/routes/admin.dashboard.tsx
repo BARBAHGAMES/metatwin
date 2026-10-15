@@ -113,7 +113,7 @@ function AdminDashboardPage() {
   }
 
   if (authLoading || state === "loading") {
-    return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+    return <div className="p-16 text-center text-muted-foreground" role="status">Loading...</div>;
   }
   if (state === "error") return <LoadError onRetry={() => setReloadKey((k) => k + 1)} />;
 

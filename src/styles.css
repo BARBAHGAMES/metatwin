@@ -169,8 +169,11 @@
     /* Scales every rem-based Tailwind size (type and spacing both) up from
        the 16px default — makes body copy read larger site-wide without
        hand-editing every text-* class, and gives sections a touch more
-       breathing room as a side effect since spacing utilities are rem too. */
-    font-size: 19px;
+       breathing room as a side effect since spacing utilities are rem too.
+       Stepped by viewport so phones get room to breathe: 19px on desktop
+       (unchanged), 18px on tablets, 17px on phones — still above the 16px
+       below which iOS Safari zooms into a focused input. */
+    font-size: 17px;
     /* Safety net, not a fix: a single element (a long button label, an
        unbreakable string) overflowing anywhere on the page can drag the
        whole document wider than the viewport on narrow screens, with
@@ -178,8 +181,17 @@
        there. `clip` (not `hidden`/`auto`) specifically because it doesn't
        create a new scroll container or trip the overflow-y:visible→auto
        conversion that `hidden` causes — both of which can break this
-       header's `position: sticky`. */
+       header's `position: sticky`. Note the flip side: clipped content is
+       invisible, so the two rules below remove the causes. */
     overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  @media (min-width: 40rem) {
+    html { font-size: 18px; }
+  }
+  @media (min-width: 64rem) {
+    html { font-size: 19px; }
   }
   @media (prefers-reduced-motion: no-preference) {
     html {
@@ -192,11 +204,45 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* Long unbroken strings (URLs, handles, a title typed without spaces)
+       may break mid-word instead of forcing their container wider than the
+       screen. `anywhere` (unlike `break-word`) also lowers the element's
+       min-content width, which is what grid/flex sizing uses. */
+    overflow-wrap: anywhere;
+  }
+  /* Grids with no explicit column count on mobile (e.g. `grid gap-4
+     sm:grid-cols-2`) otherwise get one implicit `auto` column that grows to
+     its widest unbreakable child — a `truncate` line, a long word — and
+     pushes content off-screen, where `overflow-x: clip` hides it (this hid
+     every result card on /talent at 360px). Same `minmax(0, 1fr)` Tailwind's
+     own grid-cols-1 uses; any grid-cols-* utility still overrides this
+     (utilities layer beats base). */
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
     text-wrap: balance;
+  }
+}
+
+/* Touch devices: iOS Safari zooms the whole page when a form field with
+   font-size < 16px gets focus, and doesn't zoom back. Several fields use
+   text-sm/text-xs (14-15px at the phone root size). Unlayered on purpose so
+   it beats those utility classes; desktop keeps the compact sizes. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+  /* Native checkboxes/radios render ~13px: too small to hit reliably. */
+  input[type="checkbox"]:not([class*="peer"]),
+  input[type="radio"]:not([class*="peer"]) {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
   }
 }
 
@@ -233,6 +279,14 @@
 @keyframes hero-field-drift-b { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-7%, -6%, 0) scale(1.08); } }
 .hero-field-blob-a { animation: hero-field-drift-a 22s ease-in-out infinite alternate; }
 .hero-field-blob-b { animation: hero-field-drift-b 26s ease-in-out infinite alternate; }
+
+/* Phones: the ambient hero drift (an infinite scale/translate on a large
+   photo) and the blurred gradient blobs keep the GPU busy for a barely
+   visible effect on a small screen; switch them off to save battery and
+   keep scrolling smooth on low-end Android. */
+@media (max-width: 40rem) {
+  .hero-drift, .hero-drift.hero-drift-soft, .hero-field-blob-a, .hero-field-blob-b { animation: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .career-line { animation: none; stroke-dashoffset: 0; }

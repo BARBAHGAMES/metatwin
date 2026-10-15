@@ -181,7 +181,7 @@ export function GithubActivityCard() {
           <p className="text-xs text-muted-foreground">public repos</p>
         </div>
         <div className="rounded-lg bg-muted/50 p-3">
-          <p className="text-2xl font-semibold">{connection.top_languages[0]?.language ?? "—"}</p>
+          <p className="truncate text-[0.95rem] font-semibold sm:text-2xl" title={connection.top_languages[0]?.language}>{connection.top_languages[0]?.language ?? "—"}</p>
           <p className="text-xs text-muted-foreground">top language</p>
         </div>
       </div>

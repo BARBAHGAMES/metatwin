@@ -36,7 +36,7 @@ function PairPage() {
     if (!authLoading && !user) navigate({ to: "/login" });
   }, [authLoading, user, navigate]);
 
-  if (authLoading || !user) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  if (authLoading || !user) return <div className="p-16 text-center text-muted-foreground" role="status">Loading...</div>;
   return <Pair userId={user.id} />;
 }
 
@@ -69,7 +69,7 @@ function Pair({ userId }: { userId: string }) {
   }, [reloadKey]);
 
   if (state === "error") return <LoadError onRetry={() => setReloadKey((k) => k + 1)} />;
-  if (state === "loading") return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  if (state === "loading") return <div className="p-16 text-center text-muted-foreground" role="status">Loading...</div>;
 
   const sentProjectIds = new Set(sent.filter((r) => r.status === "pending").map((r) => r.project_id));
 
@@ -155,7 +155,7 @@ function Pair({ userId }: { userId: string }) {
                       <p className="text-xs text-muted-foreground">{r.owner_name ?? r.owner_handle} · {r.status}</p>
                     </div>
                     {r.status === "pending" && (
-                      <button onClick={() => withdraw(r.id)} aria-label="Withdraw" className="shrink-0 cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
+                      <button onClick={() => withdraw(r.id)} aria-label="Withdraw" className="shrink-0 cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric">
                         <X className="h-4 w-4" />
                       </button>
                     )}

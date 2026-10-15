@@ -1,13 +1,25 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Menu, X, FileText, PlayCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { statusMeta, type Status } from "@/lib/data";
+import { statusMeta, type Status } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import metatwinLogo from "@/assets/metatwin_logo_transparent.png";
 import heroBackdrop from "@/assets/hero-backdrop.jpg";
+
+// Phone-sized (800px) versions of the 1600px hero photos, generated next to
+// each original as hero-*-800.jpg. Keyed by the original's URL so every
+// existing <HeroBackdrop image={...}> / <PageHero image={...}> call gets a
+// srcset with no call-site changes. ~69% fewer bytes for the LCP image on phones.
+const heroOriginals = import.meta.glob<string>(["/src/assets/hero-*.jpg", "!/src/assets/hero-*-800.jpg"], { eager: true, import: "default" });
+const heroSmall = import.meta.glob<string>("/src/assets/hero-*-800.jpg", { eager: true, import: "default" });
+const smallHeroByUrl: Record<string, string> = {};
+for (const [path, url] of Object.entries(heroOriginals)) {
+  const small = heroSmall[path.replace(/\.jpg$/, "-800.jpg")];
+  if (small) smallHeroByUrl[url] = small;
+}
 
 export function HeroBackdrop({
   image = heroBackdrop,
@@ -21,6 +33,8 @@ export function HeroBackdrop({
       {image && (
         <img
           src={image}
+          srcSet={smallHeroByUrl[image] ? `${smallHeroByUrl[image]} 800w, ${image} 1600w` : undefined}
+          sizes={smallHeroByUrl[image] ? "100vw" : undefined}
           alt=""
           width={1600}
           height={907}
@@ -89,6 +103,20 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const { user, signOut } = useAuth();
   const visibleNav = nav.filter((n) => !("authOnly" in n && n.authOnly) || user);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Signed-in users already have a MetaTwin: send them to it rather than
+  // back into the first-run /build wizard.
+  const cta = user ? { to: "/dashboard" as const, label: "My dashboard" } : { to: "/build" as const, label: "Build Your MetaTwin" };
+
+  // Close the phone menu on any navigation (incl. back/forward) and on Escape.
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
     <header className="sticky top-0 z-50 border-b border-ink-foreground/10 bg-ink/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
@@ -117,19 +145,21 @@ export function Header() {
             </Link>
           )}
           <Button asChild variant="hero" size="sm" className="px-4">
-            <Link to="/build">Build Your MetaTwin</Link>
+            <Link to={cta.to}>{cta.label}</Link>
           </Button>
         </div>
         <button
           className="-mr-2 cursor-pointer rounded-md p-2.5 text-ink-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2 lg:hidden"
           onClick={() => setOpen(!open)}
-          aria-label="Toggle menu"
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          aria-controls="mobile-nav"
         >
           {open ? <X /> : <Menu />}
         </button>
       </div>
       {open && (
-        <nav className="border-t border-ink-foreground/10 px-5 pb-5 lg:hidden">
+        <nav id="mobile-nav" aria-label="Main" className="max-h-[calc(100svh-4rem)] overflow-y-auto overscroll-contain border-t border-ink-foreground/10 px-5 pb-5 lg:hidden">
           {visibleNav.map((n) => (
             <Link key={n.to} to={n.to} onClick={() => setOpen(false)} className="block py-3 text-ink-muted" activeProps={{ className: "text-ink-foreground" }} activeOptions={{ exact: n.to === "/" }}>
               {n.label}
@@ -141,7 +171,7 @@ export function Header() {
                 signOut();
                 setOpen(false);
               }}
-              className="block py-3 text-left text-ink-muted"
+              className="block w-full py-3 text-left text-ink-muted"
             >
               Log out
             </button>
@@ -151,7 +181,7 @@ export function Header() {
             </Link>
           )}
           <Button asChild variant="hero" className="mt-2 w-full">
-            <Link to="/build" onClick={() => setOpen(false)}>Build Your MetaTwin</Link>
+            <Link to={cta.to} onClick={() => setOpen(false)}>{cta.label}</Link>
           </Button>
         </nav>
       )}
@@ -183,28 +213,28 @@ export function Footer() {
           </p>
           <p className="mt-6 text-xs">A product of MetaGlobe Technologies Ltd.</p>
         </div>
-        <div className="space-y-2 text-sm">
-          <p className="font-display text-ink-foreground">Product</p>
-          <Link to="/profile" className="block hover:text-ink-foreground">Sample profile</Link>
-          <Link to="/projects" className="block hover:text-ink-foreground">Projects</Link>
-          <Link to="/journey" className="block hover:text-ink-foreground">The Journey of Your Work</Link>
-          <Link to="/dashboard" className="block hover:text-ink-foreground">Owner dashboard</Link>
+        <div className="space-y-0.5 text-sm md:space-y-2">
+          <p className="pb-1 font-display text-ink-foreground">Product</p>
+          <Link to="/profile" className="block py-2 hover:text-ink-foreground md:py-0.5">Sample profile</Link>
+          <Link to="/projects" className="block py-2 hover:text-ink-foreground md:py-0.5">Projects</Link>
+          <Link to="/journey" className="block py-2 hover:text-ink-foreground md:py-0.5">The Journey of Your Work</Link>
+          <Link to="/dashboard" className="block py-2 hover:text-ink-foreground md:py-0.5">Owner dashboard</Link>
         </div>
-        <div className="space-y-2 text-sm">
-          <p className="font-display text-ink-foreground">Company</p>
-          <Link to="/talent" className="block hover:text-ink-foreground">Find Talent</Link>
-          <Link to="/how-it-works" className="block hover:text-ink-foreground">How It Works</Link>
-          <Link to="/pricing" className="block hover:text-ink-foreground">Pricing</Link>
-          <Link to="/about" className="block hover:text-ink-foreground">About</Link>
-          <Link to="/privacy" className="block hover:text-ink-foreground">Privacy Policy</Link>
-          <Link to="/terms" className="block hover:text-ink-foreground">Terms of Service</Link>
+        <div className="space-y-0.5 text-sm md:space-y-2">
+          <p className="pb-1 font-display text-ink-foreground">Company</p>
+          <Link to="/talent" className="block py-2 hover:text-ink-foreground md:py-0.5">Find Talent</Link>
+          <Link to="/how-it-works" className="block py-2 hover:text-ink-foreground md:py-0.5">How It Works</Link>
+          <Link to="/pricing" className="block py-2 hover:text-ink-foreground md:py-0.5">Pricing</Link>
+          <Link to="/about" className="block py-2 hover:text-ink-foreground md:py-0.5">About</Link>
+          <Link to="/privacy" className="block py-2 hover:text-ink-foreground md:py-0.5">Privacy Policy</Link>
+          <Link to="/terms" className="block py-2 hover:text-ink-foreground md:py-0.5">Terms of Service</Link>
         </div>
-        <div className="space-y-2 text-sm">
-          <p className="font-display text-ink-foreground">Pitch Deck</p>
-          <button type="button" onClick={() => setDeckOpen(true)} className="flex items-center gap-1.5 hover:text-ink-foreground">
+        <div className="space-y-0.5 text-sm md:space-y-2">
+          <p className="pb-1 font-display text-ink-foreground">Pitch Deck</p>
+          <button type="button" onClick={() => setDeckOpen(true)} className="flex items-center gap-1.5 py-2 hover:text-ink-foreground md:py-0.5">
             <FileText className="h-3.5 w-3.5 shrink-0" /> View the deck (PDF)
           </button>
-          <button type="button" onClick={() => setVideoOpen(true)} className="flex items-center gap-1.5 hover:text-ink-foreground">
+          <button type="button" onClick={() => setVideoOpen(true)} className="flex items-center gap-1.5 py-2 hover:text-ink-foreground md:py-0.5">
             <PlayCircle className="h-3.5 w-3.5 shrink-0" /> Watch the pitch (video)
           </button>
         </div>

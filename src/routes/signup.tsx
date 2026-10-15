@@ -56,16 +56,17 @@ function SignupPage() {
         navigate({ to: "/dashboard" });
         return;
       case "confirm":
-        toast.success("Check your email to confirm your account.");
-        navigate({ to: "/login" });
+        // Persistent notice on /login (a toast vanishes while the user is off
+        // in their email app).
+        navigate({ to: "/login", search: { check_email: true } });
         return;
     }
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
+    <div className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
       <HeroBackdrop />
-      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-5 py-16">
+      <div className="relative mx-auto flex min-h-[calc(100svh-4rem)] max-w-md flex-col justify-center px-5 py-16">
         <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Get started</p>
         <h1 className="hero-rise-delay-1 mt-3 text-3xl font-semibold">Build your MetaTwin</h1>
         <p className="hero-rise-delay-1 mt-2 text-ink-muted">Create your account — you'll start documenting capabilities and evidence from your dashboard.</p>

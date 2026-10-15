@@ -123,7 +123,7 @@ function Overview() {
           <ul className="mt-4 space-y-2.5 text-sm">
             {checklist.map((c) => (
               <li key={c.label}>
-                <Link to={c.to} className="flex items-center gap-2 hover:text-electric">
+                <Link to={c.to} className="flex items-center gap-2 py-1 hover:text-electric sm:py-0">
                   <span className={cn("grid h-4 w-4 shrink-0 place-items-center rounded-full border", c.done ? "border-electric bg-electric text-primary-foreground" : "border-muted-foreground/40")}>
                     {c.done && <Check className="h-3 w-3" />}
                   </span>
@@ -138,7 +138,7 @@ function Overview() {
         <Card>
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 font-semibold"><FolderGit2 className="h-4 w-4" /> Projects</h3>
-            <Link to="/dashboard/projects" className="text-xs text-electric hover:underline">Add project</Link>
+            <Link to="/dashboard/projects" className="text-xs text-electric hover:underline -my-2 py-2 sm:my-0 sm:py-0">Add project</Link>
           </div>
           {projects.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">No projects yet.</p>
@@ -161,7 +161,7 @@ function Overview() {
         <Card>
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 font-semibold"><Bot className="h-4 w-4" /> Your AI employees</h3>
-            <Link to="/dashboard/ai-team" className="text-xs text-electric hover:underline">Manage</Link>
+            <Link to="/dashboard/ai-team" className="text-xs text-electric hover:underline -my-2 py-2 sm:my-0 sm:py-0">Manage</Link>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
             {aiEmployeeCount === 0 ? "No AI employees yet. Add the agents and tools that work for you." : `${aiEmployeeCount} AI employee${aiEmployeeCount === 1 ? "" : "s"} listed.`}

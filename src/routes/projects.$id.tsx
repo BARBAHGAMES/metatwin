@@ -69,7 +69,7 @@ function ProjectPage() {
   const { id } = Route.useParams();
   const { user, loading } = useAuth();
   if (project) return <SampleProject p={project} />;
-  if (loading) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  if (loading) return <div className="p-16 text-center text-muted-foreground" role="status">Loading...</div>;
   if (!user) {
     return (
       <Section>
@@ -104,7 +104,7 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
   }, [userId, projectId, reloadKey]);
 
   if (state === "error") return <LoadError onRetry={() => setReloadKey((k) => k + 1)} />;
-  if (state === "loading") return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  if (state === "loading") return <div className="p-16 text-center text-muted-foreground" role="status">Loading...</div>;
   if (!data) {
     return (
       <Section>
