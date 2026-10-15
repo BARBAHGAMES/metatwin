@@ -75,7 +75,11 @@ const nav = [
   { to: "/profile", label: "My MetaTwin" },
   { to: "/projects", label: "Projects" },
   { to: "/talent", label: "Find Talent" },
-  { to: "/pair", label: "Find a Co-founder" },
+  // Pairing is a signed-in student feature (browsing other students' real,
+  // non-public project data) -- /pair itself already redirects a signed-out
+  // visitor to /login, but it has no business being advertised in the public
+  // marketing nav either.
+  { to: "/pair", label: "Find a Co-founder", authOnly: true },
   { to: "/how-it-works", label: "How It Works" },
   { to: "/pricing", label: "Pricing" },
   { to: "/about", label: "About" },
@@ -84,12 +88,13 @@ const nav = [
 export function Header() {
   const [open, setOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const visibleNav = nav.filter((n) => !("authOnly" in n && n.authOnly) || user);
   return (
     <header className="sticky top-0 z-50 border-b border-ink-foreground/10 bg-ink/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
         <Logo />
         <nav className="hidden items-center gap-1 lg:flex">
-          {nav.map((n) => (
+          {visibleNav.map((n) => (
             <Link
               key={n.to}
               to={n.to}
@@ -125,7 +130,7 @@ export function Header() {
       </div>
       {open && (
         <nav className="border-t border-ink-foreground/10 px-5 pb-5 lg:hidden">
-          {nav.map((n) => (
+          {visibleNav.map((n) => (
             <Link key={n.to} to={n.to} onClick={() => setOpen(false)} className="block py-3 text-ink-muted" activeProps={{ className: "text-ink-foreground" }} activeOptions={{ exact: n.to === "/" }}>
               {n.label}
             </Link>
