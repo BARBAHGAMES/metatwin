@@ -2,6 +2,17 @@
 
 Read [`.claude/PROJECT_STATE.md`](.claude/PROJECT_STATE.md) **first, before doing anything else** — it has the current state of the project, what the last session did, what's in progress, and what to watch for. Don't rely on this CLAUDE.md alone or on assumptions from training data; the state file is the source of truth for "where are we."
 
+**Then read [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md)** — the build-out plan Andrew approved on 2026-10-14 (Stage 0 "patch up tight", then Phases 1–4, each phase confirmed with him before it starts). Product spec: [`docs/SPEC.md`](docs/SPEC.md). Decisions: [`docs/DECISIONS.md`](docs/DECISIONS.md). If you're a local session picking up Stage 0, follow [`docs/LOCAL_SESSION_RUNBOOK.md`](docs/LOCAL_SESSION_RUNBOOK.md).
+
+## Standing rules (2026-10-14 — these override any older practice described below or in PROJECT_STATE.md)
+
+- **Feature branches only. Never push to `main`; changes land via PR with green CI.** Never deploy without Andrew's explicit approval in the session.
+- **Never test against production.** No `BEGIN…ROLLBACK` scripts, no `security_regression.sql`, no write/test scripts on the live database (a verification script wiped real data on 2026-10-14). Prove schema changes locally with `npm run test:db` (all migrations + the security suite on a throwaway in-memory Postgres) and check `npm run db:audit`. Production gets read-only queries and approved, already-proven migrations only.
+- **Every migration ships with a new section in `supabase/tests/security_regression.sql`, shown failing before and passing after.**
+- **The client never writes a column that carries money, access, moderation or verification** (D-004): use a guard trigger or a zero-grant table written by a server route.
+- **Ask before** schema migrations, deletions, auth changes, payments, or anything touching production config or secrets. Announce every production action before running it.
+- Before reporting done: `npm ci`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:db`, `npm run build` — report the actual output.
+
 At the **end of a session that changed anything real** (code, data, deploys, or a decision worth remembering), update `.claude/PROJECT_STATE.md` before finishing: move completed items out of "In progress," add anything new that's now in progress or blocked, and note the latest deployed commit. A session that only answered questions or did read-only investigation doesn't need to touch it.
 
 ## What this is

@@ -13,6 +13,8 @@ declare
   a uuid := gen_random_uuid();   -- adult student with data
   b uuid := gen_random_uuid();   -- second adult student (the "other user")
   c uuid := gen_random_uuid();   -- signup with NO age declaration
+  d uuid := gen_random_uuid();   -- new (unpaid) student for the plan/activation section
+  e uuid := gen_random_uuid();   -- account whose twin row is removed (client-insert check)
   s1 uuid; s2 uuid; s3 uuid;
   ca uuid; cb uuid; pb uuid; pa uuid; ev uuid;
   yr int := extract(year from now())::int;
@@ -48,6 +50,13 @@ begin
 
   assert (select is_adult from public.twins where id = a), 'adult declaration stored';
   assert not (select is_adult from public.twins where id = c), 'no declaration => is_adult false';
+
+  -- New signups default to plan_status 'unpaid' (20261014072301) and need an MBTI
+  -- type to newly go public (20261014132806). Set both here, as the table owner
+  -- (the way the M-Pesa callback / assessments trigger would), so the visibility
+  -- checks below exercise the handle/adult rules they were written for. The MBTI
+  -- and plan rules have their own section at the end.
+  update public.twins set mbti_type = 'INTJ', plan_status = 'grandfathered' where id in (a, b, c);
 
   select id into s1 from public.skills where slug = '3d-modelling';
   select id into s2 from public.skills where slug = 'user-research';
@@ -439,6 +448,69 @@ begin
   -- (token rv_token, comment "Great work!") -- the public page must reflect that as reviewed=true
   assert (prof -> 'capabilities' -> 0 -> 'evidence' -> 0 ->> 'reviewed')::boolean = true,
     'evidence with a submitted review must show reviewed=true on the public page';
+
+  ------------------------------------------------- plan, activation and MBTI gating
+  -- A brand-new (unpaid) student must not be able to grant themselves a plan, undo a
+  -- platform-admin deactivation, or recreate their twin row to reset either.
+  insert into auth.users (id, email, aud, role, raw_user_meta_data) values
+    (d, 'd@test.invalid', 'authenticated', 'authenticated', jsonb_build_object('birth_year', yr - 21, 'is_adult_declared', true)),
+    (e, 'e@test.invalid', 'authenticated', 'authenticated', jsonb_build_object('birth_year', yr - 21, 'is_adult_declared', true));
+  assert (select plan_status = 'unpaid' and plan_paid_until is null and plan_tier = 'basic' and is_active
+          from public.twins where id = d), 'new signups start unpaid, basic, active';
+
+  perform set_config('request.jwt.claims', json_build_object('sub', d, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  -- MBTI is required to newly go public (no test covered this before).
+  blocked := false;
+  begin update public.twins set name = 'Dee', handle = 'dee-reg', visibility = 'public' where id = d;
+  exception when raise_exception then blocked := true; end;
+  assert blocked, 'going public without an MBTI type must be blocked';
+  -- Self-granted plan: silently ignored, like is_adult/birth_year.
+  update public.twins set plan_status = 'paid', plan_paid_until = '2099-01-01', plan_tier = 'builder' where id = d;
+  update public.twins set name = 'Dee', handle = 'dee-reg', mbti_type = 'ENFP', visibility = 'public' where id = d;
+  reset role;
+  assert (select plan_status = 'unpaid' and plan_paid_until is null and plan_tier = 'basic' from public.twins where id = d),
+    'plan_status / plan_paid_until / plan_tier must ignore client writes';
+  assert (select visibility = 'public' and name = 'Dee' from public.twins where id = d),
+    'ordinary profile fields must still save in the same update';
+  set local role anon;
+  select count(*) into n from public.list_public_twins() where handle = 'dee-reg';
+  assert n = 0, 'an unpaid twin must not appear in list_public_twins even after a self-granted plan attempt';
+  assert public.get_public_profile('dee-reg') is null, 'an unpaid twin''s public profile must stay hidden';
+  reset role;
+
+  -- The legitimate writer (the M-Pesa callback runs as service_role) still works.
+  set local role service_role;
+  update public.twins set plan_status = 'paid', plan_paid_until = now() + interval '1 year', plan_tier = 'guided' where id = d;
+  reset role;
+  assert (select plan_status = 'paid' and plan_tier = 'guided' from public.twins where id = d),
+    'service_role (M-Pesa callback) must still be able to set the plan';
+
+  -- Deactivation (deactivate_twin() runs as the function owner) cannot be undone by the student.
+  update public.twins set is_active = false, deactivated_at = now() where id = d;
+  perform set_config('request.jwt.claims', json_build_object('sub', d, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.twins set is_active = true, deactivated_at = null where id = d;
+  reset role;
+  assert (select not is_active and deactivated_at is not null from public.twins where id = d),
+    'is_active / deactivated_at must ignore client writes';
+
+  -- ...nor by deleting the row and recreating it (a fresh row would default to active).
+  set local role authenticated;
+  blocked := false; begin delete from public.twins where id = d; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'a student must not be able to delete their own twin row';
+  reset role;
+  assert exists (select 1 from public.twins where id = d), 'twin row must survive the delete attempt';
+
+  -- A signed-in account with no twin row must not be able to create one (only handle_new_user does).
+  delete from public.twins where id = e;
+  perform set_config('request.jwt.claims', json_build_object('sub', e, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  blocked := false;
+  begin insert into public.twins (id, plan_status, is_active) values (e, 'paid', true);
+  exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'clients must not be able to insert twin rows';
+  reset role;
 
   raise exception 'ALL PASS (rolled back)';
 exception

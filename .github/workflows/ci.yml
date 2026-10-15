@@ -1,8 +1,14 @@
 name: CI
 
-# Checks only: typecheck, lint, unit tests, production build, content-drift. This
-# workflow never deploys and holds no secrets. Deploys stay manual (`npm run deploy`,
-# which also runs the grant, migration-sync, and content-drift guards).
+# Checks only: secret scan, dependency audit, typecheck, lint, unit tests, production
+# build, content-drift. This workflow never deploys and holds no secrets. Deploys stay
+# manual (`npm run deploy`, which also runs the grant, migration-sync, and
+# content-drift guards).
+#
+# Supply-chain hardening: third-party actions are pinned to full commit SHAs (a tag
+# can be moved to malicious code; a SHA can't). Dependabot (.github/dependabot.yml)
+# proposes SHA bumps. `persist-credentials: false` keeps the job's GITHUB_TOKEN out of
+# .git/config so no later step can reuse it.
 on:
   push:
   pull_request:
@@ -10,17 +16,49 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0 # full history: a secret removed in a later commit is still leaked
+          persist-credentials: false
+      - name: Scan full git history for secrets (gitleaks)
+        # The gitleaks CLI (MIT) rather than gitleaks-action, which needs a paid licence
+        # for organisation-owned repos. The release tarball is checksum-verified.
+        env:
+          GITLEAKS_VERSION: 8.28.0
+        run: |
+          set -euo pipefail
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$tarball" "$base/$tarball"
+          curl -sSfL -o checksums.txt "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " ${tarball}\$" checksums.txt | sha256sum -c -
+          tar -xzf "$tarball" gitleaks
+          ./gitleaks git --log-opts="--all" --redact --no-banner --exit-code 1 .
+
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Dependency audit
+        # Fails on known high/critical advisories in the installed dependency tree.
+        run: npm audit --audit-level=high
       - name: Production build
         # Runs first: `src/routeTree.gen.ts` is gitignored and only gets generated as a
         # side effect of the TanStack Router Vite plugin running during `vite build` (or
@@ -39,6 +77,14 @@ jobs:
         run: npm run lint
       - name: Unit tests
         run: npm test
+      - name: Database security suite (local throwaway Postgres)
+        # Applies every migration to an in-memory PGlite database with Supabase stubs and
+        # runs supabase/tests/security_regression.sql + supabase/tests/local/*.local.sql.
+        # No real database is involved. A migration that breaks RLS, grants or a column
+        # guard fails here, before anyone applies it to production.
+        run: npm run test:db
+      - name: Database security audit (RLS on every table)
+        run: npm run db:audit
       - name: Content drift
         # Catches page copy silently disappearing (a bad merge, a stale asset
         # sync, etc.) that still compiles and lints clean. Not a blocker for

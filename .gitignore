@@ -4,9 +4,27 @@ node_modules/
 .wrangler/
 .tanstack/
 dist/
-.env
-.env.local
-*.local
 .DS_Store
 *.log
 src/routeTree.gen.ts
+
+# Secrets — never commit. .env.example is the only env file that belongs in git.
+.env
+.env.*
+!.env.example
+*.local
+.dev.vars
+.dev.vars.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.secret
+service-account*.json
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+
+# Personal Claude Code settings (can hold MCP server config / API keys)
+.claude/settings.local.json

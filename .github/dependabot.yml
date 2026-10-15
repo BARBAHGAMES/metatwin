@@ -1,0 +1,26 @@
+# Dependabot: security fixes and routine updates, as reviewable PRs (never auto-merged).
+# Minor/patch bumps are grouped so the repo isn't flooded with one PR per package.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Africa/Nairobi
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    labels: [dependencies]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Africa/Nairobi
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: [dependencies]
