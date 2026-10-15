@@ -24,11 +24,11 @@ Must be finished before new features, because the product's value **is** trustwo
 
 | # | Item | Status |
 |---|---|---|
-| 0.1 | **Close the `twins` hole** — students could self-grant a paid plan or undo a deactivation (UPDATE), or delete and recreate their row (DELETE+INSERT). Migration `20261015171820_guard_twin_plan_and_activation_columns`; 11 new regression assertions. | Done on branch; approved; apply via [`LOCAL_SESSION_RUNBOOK.md`](LOCAL_SESSION_RUNBOOK.md) (DB-only, no deploy needed) |
+| 0.1 | **Close the `twins` hole** — students could self-grant a paid plan or undo a deactivation (UPDATE), or delete and recreate their row (DELETE+INSERT). Migration `20261015171820_guard_twin_plan_and_activation_columns`; 11 new regression assertions. | **Shipped 2026-10-15** — applied to production, verified read-only (Q1 now `true,false,false,true`), no exploitation found (Q3 clean); PR #2 merged to `main` (`68fef60`). No Worker deploy needed, DB-only. |
 | 0.2 | **Repo security** — gitleaks full-history scan in CI, `npm audit` in CI, SHA-pinned actions, Dependabot, hardened `.gitignore`, `SECURITY.md`. | Done on branch |
 | 0.3 | **Owner GitHub settings** — `main` ruleset (PR + green CI required, no force push), secret scanning + push protection, 2FA, access review. Checklist: [`REPO_SECURITY.md`](REPO_SECURITY.md). | Owner action |
 | 0.4 | **Rotate the Supabase service-role key** (was pasted into chat on 2026-10-10). | Owner action **[approval]** |
-| 0.5 | **Server-only "measured" proof numbers** — `projects.interviews_count`/`interviews_synced_at` (they advance project stage), `projects.pitch_scores`/`scores_synced_at`, `github_repos` stats, `ai_employees.github_*`. The sync routes write them with the service role after checking the caller owns the row; a guard trigger stops browser writes. | Next: design in the runbook, Step 5 |
+| 0.5 | **Server-only "measured" proof numbers** — `projects.interviews_count`/`interviews_synced_at` (they advance project stage), `projects.pitch_scores`/`scores_synced_at`, `github_repos` stats, `ai_employees.github_*`. The sync routes write them with the service role after checking the caller owns the row; a guard trigger stops browser writes. | **Shipped 2026-10-15** — PR #10 merged (`c0747b0`), Worker deployed first (version `00c3b904-e090-4593-96b2-21bfd9352a6a`), then migrations `20261015184954`/`20261015185005`/`20261015185017` applied. Live-verified: `github_repos` UPDATE/INSERT revoked from `authenticated` (SELECT/DELETE kept), both sync routes 401 without a bearer token, advisors unchanged from baseline. |
 | 0.6 | **Security suite in CI** — `npm run test:db` applies every migration to a throwaway in-memory Postgres (PGlite + Supabase stubs, `supabase/tests/local/`) and runs the security suite; `npm run db:audit` fails if any table lacks RLS. Both run in CI. It would have caught the suite being broken since the MBTI migration. Adds one dev dependency (`@electric-sql/pglite`). | Done on branch |
 | 0.7 | **A non-production database** — a Supabase dev project or branch for migrations and live smoke tests; production is never a test bed again (14 Oct data-loss incident). | **[decision]** (cost) |
 | 0.8 | **Supabase Pro** — the free plan auto-pauses after 7 idle days and has no backups/PITR; one real data-loss event has already happened. | **[decision]** (cost) |
@@ -99,7 +99,7 @@ on the builder's profile.
 
 ## Open decisions (summary)
 
-1. ~~Apply Stage 0.1~~ approved. 2. Repo public or private. 3. Dev database (0.7) and Supabase Pro (0.8).
+1. ~~Apply Stage 0.1~~ shipped 2026-10-15. 2. Repo public or private — resolved: already private; branch ruleset deferred (org is on GitHub Free, which only allows enforced rulesets on public repos or GitHub Team). 3. Dev database (0.7) and Supabase Pro (0.8).
 4. ~~DB test harness in CI (0.6)~~ approved and done on branch. 5. Audience: students only vs students + independent builders (1.1).
 6. MBTI and gender (1.3). 7. Score vs "never a single score" (2.5). 8. Paywall vs discoverability (3.5).
 9. Card provider and escrow model (4.3).
