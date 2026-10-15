@@ -79,9 +79,10 @@ M-Pesa STK Push (Daraja **sandbox**) for MetaTwin's own subscription plans (indi
    guard triggers on `twins` (adult declaration, plan, activation), `competencies.evidence_count`, `projects.stage`,
    `school_admins`/`platform_admins` status; and by zero-grant tables (`payments`, `pitch_scores`, `project_grades`,
    `teams`, `team_members`, `github_connections`).
-   **Known open violations** (Build Plan stage 0.5): `projects.interviews_count`/`interviews_synced_at` (drives stage
-   advancement), `projects.pitch_scores`/`scores_synced_at`, `github_repos` stats, `ai_employees.github_*` — fetched by
-   the server but written by the browser.
+   Since 0.5 (2026-10-15) the server-fetched proof numbers (`projects.interviews_count`/`pitch_scores`, `github_repos`,
+   `ai_employees.github_*`) are written only by authenticated, ownership-checked server routes. **Limits that remain**
+   (Build Plan 2.1a): a synced GitHub repo isn't yet proven to be the builder's, and sheet-based counts come from a
+   sheet the student controls.
 4. **Server routes that act on a user's behalf verify the caller's Supabase access token** and check ownership before
    any side effect (e.g. before an STK push).
 5. **Untrusted URLs:** http(s)-only CHECK constraints; rendered via `safeHref`; server-side fetches are host-restricted

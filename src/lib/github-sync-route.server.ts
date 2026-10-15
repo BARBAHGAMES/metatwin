@@ -4,12 +4,25 @@
 // 0.5: those columns are server-fetched but used to be browser-written, so a
 // student could forge stars/forks/etc. through the API). The actual GitHub
 // REST calls stay unauthenticated-or-app-token (public repo metadata).
+//
+// Which repo gets synced:
+// - project: the repo named in the request (the stored github_repos row and
+//   the public page show GitHub's own full_name/url for it, so the link shown
+//   always matches the stats shown).
+// - AI employee: the repo in the employee's *saved* link_url, never the
+//   request — otherwise a Claude Skill (or any) link could be shown next to
+//   some unrelated popular repo's stars. Non-GitHub links can't be synced.
+// Note: neither case proves the builder owns or contributed to the repo;
+// that's the verification model in Build Plan Phase 2 (2.1).
 import type { GitHubRepoStats } from "./api-paths";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { authenticateTwin } from "./authenticate-twin.server";
 import { checkOwnsRow } from "./check-owns-row.server";
+import { githubRepoApiUrl, normalizeRepoSlug, parseGithubRepo, type RepoSlug } from "./github-repo";
 
-const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+function json(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+}
 
 function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = { Accept: "application/vnd.github+json", "User-Agent": "metatwin-app" };
@@ -30,18 +43,17 @@ export async function handleGitHubSync(request: Request): Promise<Response> {
     return new Response(JSON.stringify({ error: "Bad request" }), { status: 400, headers: { "content-type": "application/json" } });
   }
 
-  const repo = typeof body.repo === "string" ? body.repo.trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\/$/, "") : "";
-  if (!REPO_PATTERN.test(repo)) {
-    return new Response(JSON.stringify({ error: "Enter a repo as owner/name." }), { status: 400, headers: { "content-type": "application/json" } });
-  }
-
   const projectId = typeof body.project_id === "string" ? body.project_id : null;
   const aiEmployeeId = typeof body.ai_employee_id === "string" ? body.ai_employee_id : null;
   if ((!projectId && !aiEmployeeId) || (projectId && aiEmployeeId)) {
-    return new Response(JSON.stringify({ error: "Bad request: pass exactly one of project_id or ai_employee_id." }), {
-      status: 400,
-      headers: { "content-type": "application/json" },
-    });
+    return json(400, { error: "Bad request: pass exactly one of project_id or ai_employee_id." });
+  }
+
+  // Projects: validate the requested repo before any database or GitHub call.
+  let repo: RepoSlug | null = null;
+  if (projectId) {
+    repo = typeof body.repo === "string" ? normalizeRepoSlug(body.repo) : null;
+    if (!repo) return json(400, { error: "Enter a repo as owner/name." });
   }
 
   const ownershipError = projectId
@@ -49,7 +61,21 @@ export async function handleGitHubSync(request: Request): Promise<Response> {
     : await checkOwnsRow("ai_employees", aiEmployeeId as string, callerId, "AI employee not found.", "You can only sync your own AI employee.");
   if (ownershipError) return ownershipError;
 
-  const repoRes = await fetch(`https://api.github.com/repos/${repo}`, { headers: authHeaders() });
+  // AI employees: the repo comes from the saved link, never from the request.
+  if (aiEmployeeId) {
+    const { data: employee, error: linkError } = await supabaseAdmin
+      .from("ai_employees")
+      .select("link_url")
+      .eq("id", aiEmployeeId)
+      .maybeSingle();
+    if (linkError) return json(500, { error: linkError.message });
+    const slug = employee?.link_url ? parseGithubRepo(employee.link_url) : null;
+    repo = slug ? normalizeRepoSlug(slug) : null;
+    if (!repo) return json(400, { error: "Save a GitHub repo link (https://github.com/owner/repo) on this AI employee first." });
+  }
+  const target = repo as RepoSlug;
+
+  const repoRes = await fetch(githubRepoApiUrl(target), { headers: authHeaders() });
   if (repoRes.status === 404) {
     return new Response(JSON.stringify({ error: "Repository not found or private." }), { status: 404, headers: { "content-type": "application/json" } });
   }
@@ -69,7 +95,7 @@ export async function handleGitHubSync(request: Request): Promise<Response> {
 
   let weekly_commits: number[] = [];
   try {
-    const statsRes = await fetch(`https://api.github.com/repos/${repo}/stats/commit_activity`, { headers: authHeaders() });
+    const statsRes = await fetch(githubRepoApiUrl(target, "/stats/commit_activity"), { headers: authHeaders() });
     if (statsRes.ok) {
       const weeks = (await statsRes.json()) as { total: number }[];
       if (Array.isArray(weeks)) weekly_commits = weeks.slice(-12).map((w) => w.total);

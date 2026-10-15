@@ -81,3 +81,54 @@ describe("github sync ownership check", () => {
     expect((await res.json()).error).toMatch(/repository/i);
   });
 });
+
+describe("github sync: which repo is fetched", () => {
+  const PROJECT = "11111111-1111-1111-1111-111111111111";
+  const EMPLOYEE = "33333333-3333-3333-3333-333333333333";
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: "caller-1" } }, error: null });
+    mockMaybeSingle.mockReset();
+    // GitHub 404 stops the handler right after the repo fetch, before any write.
+    fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("rejects a path-traversal repo ('../user' would hit api.github.com/user) before any DB or GitHub call", async () => {
+    for (const repo of ["../user", "../users", "octocat/.."]) {
+      const res = await handleGitHubSync(req({ repo, project_id: PROJECT }));
+      expect(res.status, repo).toBe(400);
+    }
+    expect(mockMaybeSingle).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("only ever calls the /repos/<owner>/<repo> endpoint for a project", async () => {
+    mockMaybeSingle.mockResolvedValueOnce({ data: { id: "p1", twin_id: "caller-1" }, error: null });
+    await handleGitHubSync(req({ repo: "https://github.com/octocat/hello-world.git", project_id: PROJECT }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]![0]).toBe("https://api.github.com/repos/octocat/hello-world");
+  });
+
+  it("syncs the AI employee's saved GitHub link, ignoring a different repo named in the request", async () => {
+    mockMaybeSingle
+      .mockResolvedValueOnce({ data: { id: "e1", twin_id: "caller-1" }, error: null }) // ownership
+      .mockResolvedValueOnce({ data: { link_url: "https://github.com/me/my-agent" }, error: null }); // saved link
+    await handleGitHubSync(req({ repo: "torvalds/linux", ai_employee_id: EMPLOYEE }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]![0]).toBe("https://api.github.com/repos/me/my-agent");
+  });
+
+  it("refuses to sync an AI employee whose saved link isn't a GitHub repo (no stats next to a Claude Skill link)", async () => {
+    mockMaybeSingle
+      .mockResolvedValueOnce({ data: { id: "e1", twin_id: "caller-1" }, error: null })
+      .mockResolvedValueOnce({ data: { link_url: "https://claude.ai/skills/my-skill" }, error: null });
+    const res = await handleGitHubSync(req({ repo: "torvalds/linux", ai_employee_id: EMPLOYEE }));
+    expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
