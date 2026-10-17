@@ -124,7 +124,7 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
       <Section className="grid gap-8 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0 space-y-6">
           <Link to="/projects" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> My projects</Link>
-          <MediaTiles writeupUrl={p.writeup_url} pitchDeckUrl={p.pitch_deck_url} pitchVideoUrl={p.pitch_video_url} />
+          <MediaTiles writeupUrl={p.writeup_url} pitchDeckUrl={p.pitch_deck_url} pitchVideoUrl={p.pitch_video_url} addHref="#pitch-links" />
           <ProblemSolutionCards problemStatement={p.problem_statement} proposedSolution={p.proposed_solution} />
           {artifact && (
             <Card>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Circle, ExternalLink, FileText, GitFork, Github, History, MessageSquare, Pencil, PlayCircle, Plus, RefreshCw, Rocket, Star, Trash2, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,9 +17,9 @@ import {
 } from "@/lib/real-data";
 import { COMPLETION_REASONS, nextInterviewTarget, type ProjectStage } from "@/lib/project-stage";
 import type { PitchScores } from "@/lib/scores";
-import { safeHref } from "@/lib/url";
+import { isHttpUrl, safeHref } from "@/lib/url";
 import { Card } from "@/components/site";
-import { PitchDeckButton, PitchVideoButton } from "@/components/PitchMedia";
+import { LinkHint, PitchDeckButton, PitchVideoButton } from "@/components/PitchMedia";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -280,10 +280,13 @@ export function MediaTiles({
   writeupUrl,
   pitchDeckUrl,
   pitchVideoUrl,
+  addHref,
 }: {
   writeupUrl: string | null;
   pitchDeckUrl: string | null;
   pitchVideoUrl: string | null;
+  /** Owner view: empty tiles link here (the links form) instead of being dead ends. */
+  addHref?: string;
 }) {
   const writeup = safeHref(writeupUrl);
   const deck = safeHref(pitchDeckUrl);
@@ -295,14 +298,14 @@ export function MediaTiles({
         {video ? (
           <PitchVideoButton url={video} label="Pitch video" className="flex flex-col items-center gap-2 text-electric" />
         ) : (
-          <><PlayCircle className="h-5 w-5 text-muted-foreground" /><span className="text-muted-foreground">No pitch video yet</span></>
+          <EmptyTile href={addHref} icon={<PlayCircle className="h-5 w-5" />} text="No pitch video yet" action="Add pitch video" />
         )}
       </div>
       <div className={tileClass}>
         {deck ? (
           <PitchDeckButton url={deck} label="Pitch deck" className="flex flex-col items-center gap-2 text-electric" />
         ) : (
-          <><FileText className="h-5 w-5 text-muted-foreground" /><span className="text-muted-foreground">No pitch deck yet</span></>
+          <EmptyTile href={addHref} icon={<FileText className="h-5 w-5" />} text="No pitch deck yet" action="Add pitch deck" />
         )}
       </div>
       <div className={tileClass}>
@@ -311,10 +314,20 @@ export function MediaTiles({
             <FileText className="h-5 w-5" /> Project write-up
           </a>
         ) : (
-          <><FileText className="h-5 w-5 text-muted-foreground" /><span className="text-muted-foreground">No write-up yet</span></>
+          <EmptyTile href={addHref} icon={<FileText className="h-5 w-5" />} text="No write-up yet" action="Add write-up" />
         )}
       </div>
     </div>
+  );
+}
+
+function EmptyTile({ href, icon, text, action }: { href?: string; icon: ReactNode; text: string; action: string }) {
+  if (!href) return <><span className="text-muted-foreground">{icon}</span><span className="text-muted-foreground">{text}</span></>;
+  return (
+    <a href={href} className="flex flex-col items-center gap-2 text-electric">
+      {icon}
+      <span>{action}</span>
+    </a>
   );
 }
 
@@ -807,6 +820,11 @@ export function ProjectLinksForm({
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    const bad = [writeup, deck, video].find((v) => v.trim() && !isHttpUrl(v.trim()));
+    if (bad !== undefined) {
+      toast.error("Each link must start with https:// (copy it from the Share button).");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase
       .from("projects")
@@ -829,23 +847,26 @@ export function ProjectLinksForm({
 
   return (
     <Card>
-      <h3 className="font-semibold">Write-up, deck & pitch video</h3>
+      <h3 id="pitch-links" className="scroll-mt-24 font-semibold">Write-up, deck & pitch video</h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        Paste links — a Google Doc write-up, a Slides/Drive deck, and a pitch video (YouTube or a direct video link). They'll play
-        inline from the tiles above once saved.
+        Paste links to your deck, pitch video and write-up. They show on your public MetaTwin, so make sure anyone with the link
+        can view them. We'll tell you what each link is as you paste it.
       </p>
       <div className="mt-3 space-y-2">
         <div className="space-y-1.5">
-          <Label>Write-up (Google Doc, etc.)</Label>
-          <Input placeholder="https://docs.google.com/..." value={writeup} onChange={(e) => setWriteup(e.target.value)} />
+          <Label htmlFor="pitch-deck-url">Pitch deck (Google Slides/Drive, PDF, Canva…)</Label>
+          <Input id="pitch-deck-url" type="url" inputMode="url" autoComplete="off" placeholder="https://docs.google.com/presentation/..." value={deck} onChange={(e) => setDeck(e.target.value)} />
+          <LinkHint url={deck} kind="deck" />
         </div>
         <div className="space-y-1.5">
-          <Label>Pitch deck (Google Slides/Drive, etc.)</Label>
-          <Input placeholder="https://docs.google.com/presentation/..." value={deck} onChange={(e) => setDeck(e.target.value)} />
+          <Label htmlFor="pitch-video-url">Pitch video (YouTube, Google Drive or a video file)</Label>
+          <Input id="pitch-video-url" type="url" inputMode="url" autoComplete="off" placeholder="https://youtube.com/watch?v=..." value={video} onChange={(e) => setVideo(e.target.value)} />
+          <LinkHint url={video} kind="video" />
         </div>
         <div className="space-y-1.5">
-          <Label>Pitch video (YouTube or direct link)</Label>
-          <Input placeholder="https://youtube.com/watch?v=..." value={video} onChange={(e) => setVideo(e.target.value)} />
+          <Label htmlFor="writeup-url">Write-up (Google Doc, etc.)</Label>
+          <Input id="writeup-url" type="url" inputMode="url" autoComplete="off" placeholder="https://docs.google.com/..." value={writeup} onChange={(e) => setWriteup(e.target.value)} />
+          <LinkHint url={writeup} kind="writeup" />
         </div>
         <Button variant="outline" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save links"}</Button>
       </div>
