@@ -11,14 +11,23 @@ import { Journey } from "@/components/Journey";
 import { ProblemSolutionCards } from "@/components/ProjectExtras";
 import { VisitorFeedbackButton } from "@/components/VisitorFeedbackDialog";
 import { DECK_VIEW_PATH } from "@/lib/api-paths";
+import { supabase } from "@/integrations/supabase/client";
 
-// Fire-and-forget: tell the server a visitor opened this deck (counted once per visitor per day).
-function recordDeckView(handle: string, projectId: string) {
+// Fire-and-forget: tell the server a visitor opened this deck (counted once per
+// visitor per day). Signed-in visitors send their token so the student's own
+// opens aren't counted.
+async function recordDeckView(handle: string, projectId: string) {
   try {
     const body = JSON.stringify({ handle, project_id: projectId });
-    if (!navigator.sendBeacon?.(DECK_VIEW_PATH, new Blob([body], { type: "application/json" }))) {
-      fetch(DECK_VIEW_PATH, { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(() => {});
-    }
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token && navigator.sendBeacon?.(DECK_VIEW_PATH, new Blob([body], { type: "application/json" }))) return;
+    await fetch(DECK_VIEW_PATH, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body,
+      keepalive: true,
+    });
   } catch {
     // never block opening the deck
   }
@@ -314,7 +323,7 @@ function PublicProfilePage() {
                       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                         {href && <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="py-2 text-electric hover:underline sm:py-0">View work</a>}
                         {writeup && <a href={writeup} target="_blank" rel="noopener noreferrer nofollow" className="py-2 text-electric hover:underline sm:py-0">Write-up</a>}
-                        {deck && <PitchDeckButton url={deck} label="Pitch deck" onOpen={() => recordDeckView(profile.handle, p.id)} className="flex items-center gap-1 py-2 text-electric hover:underline sm:py-0" />}
+                        {deck && <PitchDeckButton url={deck} label="Pitch deck" onOpen={() => void recordDeckView(profile.handle, p.id)} className="flex items-center gap-1 py-2 text-electric hover:underline sm:py-0" />}
                         {video && <PitchVideoButton url={video} label="Pitch video" className="flex items-center gap-1 py-2 text-electric hover:underline sm:py-0" />}
                       </div>
                       {p.github && (

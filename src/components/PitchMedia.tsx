@@ -114,6 +114,10 @@ const SHARING_ADVICE = {
     title: "Share it as a public view link",
     body: "In Canva, tap Share → “Public view link” → copy. Visitors will open it in a new tab.",
   },
+  pdf: {
+    title: "Want it to show inside your MetaTwin?",
+    body: "Upload the PDF to Google Drive, set Share → General access → “Anyone with the link” → Viewer, and paste the Drive link instead.",
+  },
 } as const;
 
 /** Live recognition + sharing advice shown under a pasted deck/video link. */

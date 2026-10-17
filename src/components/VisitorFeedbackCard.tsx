@@ -67,7 +67,7 @@ export function VisitorFeedbackCard({
     try {
       setItems(await fetchMyProjectFeedback(projectId));
       setFailed(false);
-      markFeedbackSeen();
+      markFeedbackSeen(projectId);
     } catch {
       setFailed(true);
     }

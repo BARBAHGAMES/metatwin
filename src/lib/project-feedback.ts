@@ -59,17 +59,29 @@ export function averageRating(items: { rating: number }[]): number | null {
   return Math.round((items.reduce((a, f) => a + f.rating, 0) / items.length) * 10) / 10;
 }
 
-// "New" = confirmed after the student last opened their feedback (per device).
-const SEEN_KEY = "metatwin:feedback-seen-at";
-export function feedbackSeenAt(): number {
-  if (typeof window === "undefined") return 0;
-  return Number(window.localStorage.getItem(SEEN_KEY) ?? 0);
+// "New" = confirmed after the student last opened that project's feedback panel
+// (per device; tracked per project so opening one project doesn't clear the rest).
+const SEEN_KEY = "metatwin:feedback-seen";
+type SeenMap = Record<string, number>;
+function readSeen(): SeenMap {
+  if (typeof window === "undefined") return {};
+  try {
+    const v = JSON.parse(window.localStorage.getItem(SEEN_KEY) ?? "{}");
+    return v && typeof v === "object" ? (v as SeenMap) : {};
+  } catch {
+    return {};
+  }
 }
-export function markFeedbackSeen(): void {
-  if (typeof window !== "undefined") window.localStorage.setItem(SEEN_KEY, String(Date.now()));
+export function markFeedbackSeen(projectId: string, at = Date.now()): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SEEN_KEY, JSON.stringify({ ...readSeen(), [projectId]: at }));
+  } catch {
+    // storage full / disabled: "new" badges just stay on
+  }
 }
-export function countNewFeedback(items: { confirmed_at: string | null; hidden_by_owner: boolean }[], seenAt = feedbackSeenAt()): number {
-  return items.filter((f) => !f.hidden_by_owner && f.confirmed_at && new Date(f.confirmed_at).getTime() > seenAt).length;
+export function newFeedback<T extends { project_id: string; confirmed_at: string | null; hidden_by_owner: boolean }>(items: T[], seen: SeenMap = readSeen()): T[] {
+  return items.filter((f) => !f.hidden_by_owner && f.confirmed_at && new Date(f.confirmed_at).getTime() > (seen[f.project_id] ?? 0));
 }
 
 export type DeckViews = { project_id: string; total: number; last_7_days: number; last_viewed_at: string | null; countries: { country: string; views: number }[] };

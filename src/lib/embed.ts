@@ -62,7 +62,9 @@ export function youTubeVideoId(url: string): string | null {
 export function toEmbeddableDeckUrl(url: string): string | null {
   const u = parse(url);
   if (!u) return null;
-  if (/\.pdf$/i.test(u.pathname)) return u.toString();
+  // A PDF on some other website can't be framed (the CSP only allows Google and
+  // YouTube frames), and phone browsers render framed PDFs poorly anyway: those
+  // open in a new tab. A PDF shared from Google Drive embeds via the Drive branch.
   const ref = googleRef(u);
   if (!ref) return null;
   if (ref.published) {
@@ -123,7 +125,7 @@ export type LinkDescription = {
   /** True if MetaTwin can show it inside the page. */
   inline: boolean;
   /** Which sharing advice applies, if any. */
-  sharing: "google" | "youtube" | "canva" | null;
+  sharing: "google" | "youtube" | "canva" | "pdf" | null;
   valid: boolean;
 };
 
@@ -153,7 +155,7 @@ export function describeDeckLink(url: string): LinkDescription | null {
   if (!url.trim()) return null;
   const u = parse(url);
   if (!u) return { label: "Not a valid link (it should start with https://)", inline: false, sharing: null, valid: false };
-  if (/\.pdf$/i.test(u.pathname)) return { label: "PDF file", inline: true, sharing: null, valid: true };
+  if (/\.pdf$/i.test(u.pathname)) return { label: "PDF file", inline: false, sharing: "pdf", valid: true };
   const ref = googleRef(u);
   if (ref) {
     const label = ref.app === "slides" ? "Google Slides" : ref.app === "docs" ? "Google Docs" : "Google Drive file";

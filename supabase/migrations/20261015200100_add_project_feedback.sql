@@ -67,9 +67,22 @@ create table public.project_feedback_contacts (
 create index project_feedback_contacts_token_idx on public.project_feedback_contacts (confirm_token_hash) where confirm_token_hash is not null;
 create index project_feedback_contacts_expiry_idx on public.project_feedback_contacts (contacts_expire_at);
 
+-- One row per confirmation email sent, keyed by a SHA-256 of the address (not the
+-- address itself). Caps how many emails anyone can make MetaTwin send to one
+-- inbox (e.g. by typing a stranger's email into the form), across projects.
+-- Rows are purged after 24 hours.
+create table public.project_feedback_email_sends (
+  id bigint generated always as identity primary key,
+  email_hash text not null check (email_hash ~ '^[0-9a-f]{64}$'),
+  sent_at timestamptz not null default now()
+);
+create index project_feedback_email_sends_hash_idx on public.project_feedback_email_sends (email_hash, sent_at);
+create index project_feedback_status_updated_idx on public.project_feedback (status, updated_at);
+
 alter table public.project_feedback enable row level security;
 alter table public.project_feedback_contacts enable row level security;
-revoke all on public.project_feedback, public.project_feedback_contacts from anon, authenticated;
+alter table public.project_feedback_email_sends enable row level security;
+revoke all on public.project_feedback, public.project_feedback_contacts, public.project_feedback_email_sends from anon, authenticated;
 
 -- ---------------------------------------------------------------- server-only writes
 
@@ -102,6 +115,7 @@ declare
   v_existing record;
   v_feedback_id uuid;
   v_payload jsonb;
+  v_email_hash text := encode(sha256(convert_to(lower(btrim(p_email)), 'UTF8')), 'hex');
 begin
   -- Same visibility rules as the public page: unknown, private, non-adult,
   -- deactivated and unpaid profiles all look identical (not found).
@@ -119,10 +133,12 @@ begin
     raise exception 'own_project' using errcode = 'P0001';
   end if;
 
-  -- Abuse brake: at most 10 submissions per email per hour across all projects.
-  if (select count(*) from public.project_feedback_contacts c
-      join public.project_feedback f on f.id = c.feedback_id
-      where c.email = v_email and f.updated_at > now() - interval '1 hour') >= 10 then
+  -- Abuse brake on confirmation emails to one address (holds across Worker
+  -- isolates): at most one per minute and five per hour, whatever the project.
+  if exists (select 1 from public.project_feedback_email_sends
+             where email_hash = v_email_hash and sent_at > clock_timestamp() - interval '60 seconds')
+     or (select count(*) from public.project_feedback_email_sends
+         where email_hash = v_email_hash and sent_at > clock_timestamp() - interval '1 hour') >= 5 then
     raise exception 'rate_limited' using errcode = 'P0001';
   end if;
 
@@ -175,6 +191,9 @@ begin
       set confirm_token_hash = p_token_hash, token_expires_at = now() + interval '48 hours'
       where feedback_id = v_feedback_id;
   end if;
+
+  -- The caller sends exactly one confirmation email per successful call.
+  insert into public.project_feedback_email_sends (email_hash) values (v_email_hash);
 
   return jsonb_build_object(
     'feedback_id', v_feedback_id,
@@ -244,7 +263,8 @@ end;
 $$;
 
 -- Retention: contact details 12 months after confirmation; unconfirmed feedback
--- after 48 hours; expired re-submissions are dropped (the confirmed version stays).
+-- when its confirmation link expires; expired re-submissions are dropped (the
+-- confirmed version stays); the email send log after 24 hours.
 create or replace function public.purge_expired_feedback_data()
 returns jsonb
 language plpgsql
@@ -256,9 +276,15 @@ declare
   n_pending int;
   n_updates int;
 begin
+  -- Unconfirmed feedback goes when its confirmation link expires (a re-submission
+  -- issues a fresh 48-hour link, so this is not 48 hours after the first try).
   delete from public.project_feedback f
-    where f.status = 'pending' and f.created_at < now() - interval '48 hours';
+    where f.status = 'pending'
+      and not exists (select 1 from public.project_feedback_contacts c
+                      where c.feedback_id = f.id and c.token_expires_at > now());
   get diagnostics n_pending = row_count;
+
+  delete from public.project_feedback_email_sends where sent_at < now() - interval '24 hours';
 
   update public.project_feedback f set pending_update = null
     where f.pending_update is not null

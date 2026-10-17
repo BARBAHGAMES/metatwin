@@ -37,7 +37,7 @@ export function probeTarget(deckUrl: string): { kind: "google" | "youtube"; url:
 
 /**
  * Pure: interpret Google's answer to an anonymous request (redirects NOT followed).
- * - 200 → anyone with the link can view.
+ * - 200 → candidate "public" (checkDeck then confirms from the page itself).
  * - 3xx to accounts.google.com / ServiceLogin → sign-in required (restricted).
  * - 401/403 → restricted. 404/410 → not found. Anything else → unknown.
  * Calibrate against one real public and one real restricted deck before relying
@@ -62,6 +62,42 @@ export function classifyYouTubeResponse(status: number): DeckStatus {
   return "unknown";
 }
 
+/** Pure: markers of Google's sign-in / request-access pages (never present on a shared deck). */
+export function looksLikeSignInPage(html: string): boolean {
+  return /accounts\.google\.com\/(ServiceLogin|v3\/signin|signin)|<title>[^<]*(Sign[- ]in|Request access|You need access)/i.test(html);
+}
+
+/** Pure: a Google Slides/Docs/Drive viewer page for an actual file ("<name> - Google Slides" etc.). */
+export function looksLikeSharedGoogleFile(html: string): boolean {
+  return /<title>[^<]*\S[^<]*\s-\s(Google (Slides|Docs|Drive|Sheets))\s*<\/title>/i.test(html);
+}
+
+async function readStart(res: Response, maxBytes: number): Promise<string> {
+  if (!res.body) return "";
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (total < maxBytes) {
+      const { value, done } = await reader.read();
+      if (done || !value) break;
+      chunks.push(value);
+      total += value.byteLength;
+    }
+  } finally {
+    reader.cancel().catch(() => {});
+  }
+  const merged = new Uint8Array(Math.min(total, maxBytes));
+  let offset = 0;
+  for (const c of chunks) {
+    const take = Math.min(c.byteLength, merged.length - offset);
+    merged.set(c.subarray(0, take), offset);
+    offset += take;
+    if (offset >= merged.length) break;
+  }
+  return new TextDecoder().decode(merged);
+}
+
 export async function checkDeck(deckUrl: string): Promise<DeckStatus> {
   const target = probeTarget(deckUrl);
   if (!target) return "unknown";
@@ -74,9 +110,22 @@ export async function checkDeck(deckUrl: string): Promise<DeckStatus> {
       signal: controller.signal,
       headers: { "User-Agent": "Mozilla/5.0 (compatible; MetaTwinDeckCheck/1.0; +https://metatwin.metaglobetechnologies.co.ke)" },
     });
-    // Don't download the deck body.
-    res.body?.cancel().catch(() => {});
-    return target.kind === "youtube" ? classifyYouTubeResponse(res.status) : classifyGoogleResponse(res.status, res.headers.get("location"));
+    if (target.kind === "youtube") {
+      res.body?.cancel().catch(() => {});
+      return classifyYouTubeResponse(res.status);
+    }
+    const status = classifyGoogleResponse(res.status, res.headers.get("location"));
+    if (status !== "public") {
+      res.body?.cancel().catch(() => {});
+      return status;
+    }
+    // A 200 can still be a sign-in / "request access" page: look at the start of it only.
+    // Fail safe: say "public" only when the page positively looks like a shared Google
+    // file; anything ambiguous is "unknown" (the student is asked to check it themselves),
+    // never a false "anyone can view".
+    const head = await readStart(res, 64 * 1024);
+    if (looksLikeSignInPage(head)) return "restricted";
+    return looksLikeSharedGoogleFile(head) ? "public" : "unknown";
   } catch {
     return "unknown";
   } finally {

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { averageRating, countNewFeedback, fetchMyProjectFeedback } from "@/lib/project-feedback";
+import { averageRating, fetchMyProjectFeedback, newFeedback } from "@/lib/project-feedback";
 import { ArrowRight, Bot, Check, FolderGit2, Github, MessageSquareText, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, StatusBadge } from "@/components/site";
@@ -43,14 +43,17 @@ function Overview() {
   const [githubStars, setGithubStars] = useState(0);
   const [businessesPitched, setBusinessesPitched] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
-  const [feedback, setFeedback] = useState<{ total: number; fresh: number; avg: number | null } | null>(null);
+  const [feedback, setFeedback] = useState<{ total: number; fresh: number; avg: number | null; projectId: string | null } | null>(null);
 
   // Visitor feedback summary (separate from the main load: a failure here shouldn't block the overview).
   useEffect(() => {
     fetchMyProjectFeedback()
       .then((items) => {
         const visible = items.filter((f) => !f.hidden_by_owner);
-        setFeedback({ total: visible.length, fresh: countNewFeedback(items), avg: averageRating(visible) });
+        const fresh = newFeedback(items);
+        // Open the project with the newest unread feedback (else the newest feedback).
+        const target = fresh[0] ?? visible[0];
+        setFeedback({ total: visible.length, fresh: fresh.length, avg: averageRating(visible), projectId: target?.project_id ?? null });
       })
       .catch(() => setFeedback(null));
   }, [reloadKey]);
@@ -126,14 +129,14 @@ function Overview() {
       </div>
 
       {feedback && feedback.total > 0 && (
-        <Link to="/dashboard/projects" className="block">
+        <Link to={feedback.projectId ? "/projects/$id" : "/dashboard/projects"} params={feedback.projectId ? { id: feedback.projectId } : undefined} className="block">
           <Card className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <MessageSquareText className="h-5 w-5 text-electric" />
               <div>
                 <p className="font-semibold">Visitor feedback</p>
                 <p className="text-xs text-muted-foreground">
-                  {feedback.total} {feedback.total === 1 ? "person has" : "people have"} rated your projects{feedback.avg != null ? `, ${feedback.avg.toFixed(1)}/5 on average` : ""}. Open a project to read it.
+                  {feedback.total} {feedback.total === 1 ? "person has" : "people have"} rated your projects{feedback.avg != null ? `, ${feedback.avg.toFixed(1)}/5 on average` : ""}. Tap to read{feedback.fresh > 0 ? " the latest" : ""}.
                 </p>
               </div>
             </div>

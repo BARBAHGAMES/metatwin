@@ -88,7 +88,9 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
 
   useEffect(() => {
     let cancelled = false;
-    setState("loading");
+    // Only the first load shows the full-page placeholder. Reloads after a save or
+    // sync keep the page (and the student's scroll position) and swap data in place.
+    setState((prev) => (prev === "ready" ? prev : "loading"));
     fetchMyProject(userId, projectId)
       .then((d) => {
         if (cancelled) return;

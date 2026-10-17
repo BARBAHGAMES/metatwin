@@ -23,6 +23,7 @@ create table public.project_deck_views (
   constraint project_deck_views_one_per_day unique (project_id, visitor_hash, view_day)
 );
 create index project_deck_views_project_day_idx on public.project_deck_views (project_id, view_day);
+create index project_deck_views_created_idx on public.project_deck_views (created_at);
 
 alter table public.project_deck_views enable row level security;
 revoke all on public.project_deck_views from anon, authenticated;
@@ -95,8 +96,12 @@ declare
   n_views int;
 begin
   delete from public.project_feedback f
-    where f.status = 'pending' and f.created_at < now() - interval '48 hours';
+    where f.status = 'pending'
+      and not exists (select 1 from public.project_feedback_contacts c
+                      where c.feedback_id = f.id and c.token_expires_at > now());
   get diagnostics n_pending = row_count;
+
+  delete from public.project_feedback_email_sends where sent_at < now() - interval '24 hours';
 
   update public.project_feedback f set pending_update = null
     where f.pending_update is not null

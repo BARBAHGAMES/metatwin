@@ -20,6 +20,27 @@ export async function visitorHash(ip: string, userAgent: string, day: string, sa
   return sha256Hex(`${salt}|${day}|${ip}|${userAgent}`);
 }
 
+// Best-effort per-isolate limit: 30 deck opens per IP per 10 minutes.
+const hits = new Map<string, number[]>();
+function limited(key: string, now = Date.now()): boolean {
+  const recent = (hits.get(key) ?? []).filter((t) => now - t < 10 * 60 * 1000);
+  recent.push(now);
+  hits.set(key, recent);
+  if (hits.size > 5000) hits.clear();
+  return recent.length > 30;
+}
+
+/** True when a signed-in caller owns the project (the student's own opens aren't views). */
+async function isOwnerView(request: Request, projectId: string): Promise<boolean> {
+  const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (!token) return false;
+  const { data: userData } = await supabaseAdmin.auth.getUser(token);
+  const userId = userData?.user?.id;
+  if (!userId) return false;
+  const { data } = await supabaseAdmin.from("projects").select("twin_id").eq("id", projectId).maybeSingle();
+  return data?.twin_id === userId;
+}
+
 export async function handleDeckView(request: Request): Promise<Response> {
   const ua = request.headers.get("user-agent") ?? "";
   if (!ua || BOTS.test(ua)) return json(200, { counted: false });
@@ -40,6 +61,8 @@ export async function handleDeckView(request: Request): Promise<Response> {
     return json(200, { counted: false });
   }
   const ip = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
+  if (limited(`deck-view:${ip}`)) return json(200, { counted: false });
+  if (await isOwnerView(request, projectId)) return json(200, { counted: false, owner: true });
   const day = new Date().toISOString().slice(0, 10);
   const country = (request.headers.get("cf-ipcountry") ?? "").toUpperCase();
 

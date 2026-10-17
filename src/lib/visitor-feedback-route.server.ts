@@ -77,8 +77,21 @@ export function confirmEmailHtml(opts: { reviewerName: string; studentName: stri
 const ERROR_MESSAGES: Record<string, [number, string]> = {
   project_not_found: [404, "This project isn't taking feedback right now."],
   own_project: [400, "You can't leave feedback on your own project."],
-  rate_limited: [429, "Too many submissions. Try again later."],
+  rate_limited: [429, "We've just sent a confirmation to this email. Please wait a minute (or check your inbox) before sending more."],
 };
+
+const PRODUCTION_ORIGIN = "https://metatwin.metaglobetechnologies.co.ke";
+
+/**
+ * Origin for links in emails. Never trust the incoming host blindly: the Worker
+ * may also answer on a workers.dev or preview hostname. Local dev keeps its
+ * own origin so the flow can be tested end to end.
+ */
+export function emailLinkOrigin(requestUrl: string): string {
+  const { origin, hostname } = new URL(requestUrl);
+  if (hostname === "localhost" || hostname === "127.0.0.1") return origin;
+  return process.env.PUBLIC_SITE_URL ?? PRODUCTION_ORIGIN;
+}
 
 export async function handleFeedbackSubmit(request: Request): Promise<Response> {
   const ip = clientIp(request);
@@ -126,12 +139,14 @@ export async function handleFeedbackSubmit(request: Request): Promise<Response> 
     const known = Object.entries(ERROR_MESSAGES).find(([code]) => error.message.includes(code));
     if (known) return json(known[1][0], { error: known[1][1] });
     if (error.code === "23514") return json(400, { error: "Check the highlighted fields." });
+    // Two first submissions from the same email for the same project at the same moment.
+    if (error.code === "23505") return json(409, { error: "We're already processing feedback from this email. Check your inbox." });
     console.error("[feedback submit]", error.message);
     return json(500, { error: "Couldn't save your feedback. Try again." });
   }
 
   const result = data as { student_name: string | null; project_title: string; is_update: boolean };
-  const link = `${new URL(request.url).origin}${FEEDBACK_CONFIRM_PAGE}/${token}`;
+  const link = `${emailLinkOrigin(request.url)}${FEEDBACK_CONFIRM_PAGE}/${token}`;
   await sendResendEmail(
     v.email,
     `Confirm your feedback on ${result.student_name ?? "a student"}'s project`,

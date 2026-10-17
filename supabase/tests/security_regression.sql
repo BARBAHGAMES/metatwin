@@ -603,6 +603,8 @@ begin
   assert blocked, 'anon must not read project_feedback';
   blocked := false; begin insert into public.project_feedback_contacts (feedback_id, project_id, email, whatsapp) values (gen_random_uuid(), pa, 'x@y.z', '+254700000000'); exception when insufficient_privilege then blocked := true; end;
   assert blocked, 'anon must not write feedback contacts';
+  blocked := false; begin perform 1 from public.project_feedback_email_sends limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not read the confirmation-email log';
   blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 5, 'Great', 'X', 'other', null, 'x@test.invalid', '+254700000000', true, repeat('a', 64)); exception when insufficient_privilege then blocked := true; end;
   assert blocked, 'anon must not call submit_project_feedback directly (server route only)';
   reset role;
@@ -634,6 +636,21 @@ begin
   assert blocked, 'WhatsApp number must be stored in +<country><number> form';
   reset role;
 
+  -- Confirmation-email brake (cross-isolate): one per minute and five per hour per address.
+  set local role service_role;
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 4, 'Again', 'Wanjiru K', 'business_owner', null, 'reviewer@test.invalid', '+254712345678', true, repeat('9', 64)); exception when others then blocked := sqlerrm = 'rate_limited'; end;
+  assert blocked, 'a second confirmation email to the same address within a minute is refused';
+  reset role;
+  assert (select count(*) from public.project_feedback_email_sends) = 1, 'only one confirmation email was recorded';
+  -- five sends to one inbox in the last hour (spaced > 1 minute) -> the sixth is refused, whatever the project
+  insert into public.project_feedback_email_sends (email_hash, sent_at)
+    select encode(sha256(convert_to('victim@test.invalid', 'UTF8')), 'hex'), now() - make_interval(mins => 5 * g) from generate_series(1, 5) g;
+  set local role service_role;
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 3, 'Spam', 'X', 'other', null, 'Victim@Test.invalid', '+254700000009', false, repeat('8', 64)); exception when others then blocked := sqlerrm = 'rate_limited'; end;
+  assert blocked, 'a sixth confirmation email to one address within an hour is refused (stops email bombing)';
+  reset role;
+  delete from public.project_feedback_email_sends;
+
   perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
   set local role authenticated;
   select count(*) into n from public.get_my_project_feedback();
@@ -654,6 +671,7 @@ begin
   reset role;
 
   -- Re-submission by the same email waits for confirmation, then replaces the old version (still one row).
+  update public.project_feedback_email_sends set sent_at = sent_at - interval '2 minutes';
   set local role service_role;
   perform public.submit_project_feedback('amina-reg', pa, 5, 'Updated: pricing test done, looks strong.', 'Wanjiru K', 'business_owner', 'Kiosk Co', 'reviewer@test.invalid', '+254712345678', false, repeat('c', 64));
   reset role;
@@ -717,12 +735,23 @@ begin
   reset role;
   update public.project_feedback set created_at = now() - interval '3 days'
     where id in (select feedback_id from public.project_feedback_contacts where email = 'ghost@test.invalid');
+  -- Ghost's link has expired; a second unconfirmed visitor re-submitted recently (old first try, fresh link).
+  update public.project_feedback_contacts set token_expires_at = now() - interval '1 hour' where email = 'ghost@test.invalid';
+  set local role service_role;
+  perform public.submit_project_feedback('amina-reg', pa, 4, 'Second try, fresh link.', 'Late', 'other', null, 'late@test.invalid', '+254700000002', false, repeat('7', 64));
+  reset role;
+  update public.project_feedback set created_at = now() - interval '5 days'
+    where id in (select feedback_id from public.project_feedback_contacts where email = 'late@test.invalid');
+  insert into public.project_feedback_email_sends (email_hash, sent_at) values (repeat('0', 64), now() - interval '2 days');
   set local role service_role;
   fb := public.purge_expired_feedback_data();
   reset role;
   assert not exists (select 1 from public.project_feedback_contacts where feedback_id = fb_id), 'expired contact details are deleted';
   assert exists (select 1 from public.project_feedback where id = fb_id), '... but the feedback itself is kept';
-  assert not exists (select 1 from public.project_feedback_contacts where email = 'ghost@test.invalid'), 'unconfirmed feedback is purged after 48 hours';
+  assert not exists (select 1 from public.project_feedback_contacts where email = 'ghost@test.invalid'), 'unconfirmed feedback is purged once its link expires';
+  assert exists (select 1 from public.project_feedback_contacts where email = 'late@test.invalid'),
+    'unconfirmed feedback with a still-valid (re-issued) link is kept, even if first submitted days ago';
+  assert not exists (select 1 from public.project_feedback_email_sends where email_hash = repeat('0', 64)), 'the email send log is purged after 24 hours';
 
   ------------------------------------------------- deck viewability status (server-only)
   perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);

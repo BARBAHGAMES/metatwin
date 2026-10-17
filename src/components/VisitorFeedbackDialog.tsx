@@ -47,7 +47,8 @@ export function VisitorFeedbackButton({ handle, projectId, projectTitle, student
         <MessageSquarePlus className="h-4 w-4" /> Give feedback on this project
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        {/* A stray tap outside the dialog must not throw away a half-written review on a phone; X / Escape still close it. */}
+        <DialogContent onInteractOutside={(e) => e.preventDefault()}>
           {open && <FeedbackForm handle={handle} projectId={projectId} projectTitle={projectTitle} studentFirstName={studentFirstName} onDone={() => setOpen(false)} />}
         </DialogContent>
       </Dialog>
@@ -121,6 +122,8 @@ function FeedbackForm({ handle, projectId, projectTitle, studentFirstName, onDon
       setSentTo(checked.value.email);
     } catch {
       setErrors({ form: "No connection. Check your internet and try again." });
+      if (widgetId.current && window.turnstile) window.turnstile.reset(widgetId.current);
+      setTurnstileToken(null);
     } finally {
       setSubmitting(false);
     }
@@ -165,13 +168,27 @@ function FeedbackForm({ handle, projectId, projectTitle, studentFirstName, onDon
 
       <fieldset className="space-y-1.5">
         <legend className="text-sm font-medium">How promising is this project?</legend>
-        <div role="radiogroup" aria-label="Rating" className="flex gap-1">
+        <div
+          role="radiogroup"
+          aria-label="Rating"
+          className="flex gap-1"
+          onKeyDown={(e) => {
+            // Standard radio-group keys: arrows change the rating.
+            const delta = e.key === "ArrowRight" || e.key === "ArrowUp" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowDown" ? -1 : 0;
+            if (!delta) return;
+            e.preventDefault();
+            const next = Math.min(5, Math.max(1, (rating || 0) + delta));
+            edit("rating", setRating)(next);
+            (e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next - 1])?.focus();
+          }}
+        >
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               key={n}
               type="button"
               role="radio"
               aria-checked={rating === n}
+              tabIndex={rating === n || (rating === 0 && n === 1) ? 0 : -1}
               aria-label={`${n} star${n === 1 ? "" : "s"}`}
               onClick={() => edit("rating", setRating)(n)}
               className="cursor-pointer rounded-md p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"

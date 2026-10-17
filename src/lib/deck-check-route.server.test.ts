@@ -14,7 +14,7 @@ vi.mock("@/integrations/supabase/client.server", () => ({
   },
 }));
 
-const { probeTarget, classifyGoogleResponse, classifyYouTubeResponse, handleCheckDeck } = await import("./deck-check-route.server");
+const { probeTarget, classifyGoogleResponse, classifyYouTubeResponse, handleCheckDeck, checkDeck, looksLikeSignInPage, looksLikeSharedGoogleFile } = await import("./deck-check-route.server");
 
 describe("probeTarget (never the user's URL, only fixed endpoints)", () => {
   it("maps share links to fixed Google endpoints built from the file id", () => {
@@ -48,6 +48,28 @@ describe("classify", () => {
     "YouTube %i -> %s",
     (status, expected) => expect(classifyYouTubeResponse(status)).toBe(expected),
   );
+});
+
+describe("checkDeck: a 200 that is really a sign-in page", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("reports restricted when Google serves its sign-in or request-access page with 200", async () => {
+    for (const html of ['<html><head><title>Sign-in - Google Accounts</title>', '<a href="https://accounts.google.com/ServiceLogin?continue=x">', "<title>Google Drive: Request access</title>"]) {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(html, { status: 200 })));
+      expect(await checkDeck("https://docs.google.com/presentation/d/1AbC/edit"), html).toBe("restricted");
+    }
+  });
+  it("reports public only for a page that positively looks like a shared Google file", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html><head><title>Duka Bot pitch - Google Slides</title>", { status: 200 })));
+    expect(await checkDeck("https://docs.google.com/presentation/d/1AbC/edit")).toBe("public");
+    expect(looksLikeSignInPage("<title>Duka Bot - Google Slides</title>")).toBe(false);
+    expect(looksLikeSharedGoogleFile("<title>pitch.pdf - Google Drive</title>")).toBe(true);
+  });
+  it("fails safe: an unrecognised 200 page is 'unknown', never a false 'public'", async () => {
+    for (const html of ["<html><head><title>Google Slides</title>", "<html><body>something else</body>", ""]) {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(html, { status: 200 })));
+      expect(await checkDeck("https://docs.google.com/presentation/d/1AbC/edit"), html).toBe("unknown");
+    }
+  });
 });
 
 function req(body: unknown, token: string | null = "t") {

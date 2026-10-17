@@ -6,7 +6,7 @@ const sendResendEmail = vi.fn();
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { rpc: (...args: unknown[]) => rpc(...args) } }));
 vi.mock("./resend-send.server", () => ({ sendResendEmail: (...args: unknown[]) => sendResendEmail(...args) }));
 
-const { handleFeedbackSubmit, handleFeedbackConfirm, sha256Hex, confirmEmailHtml } = await import("./visitor-feedback-route.server");
+const { handleFeedbackSubmit, handleFeedbackConfirm, sha256Hex, confirmEmailHtml, emailLinkOrigin } = await import("./visitor-feedback-route.server");
 
 let ipCounter = 0;
 function req(path: string, body: unknown): Request {
@@ -66,10 +66,19 @@ describe("POST /api/feedback/submit", () => {
     expect(subject).toContain("Amina");
     const token = (html as string).match(/\/feedback\/confirm\/([A-Za-z0-9_-]{43})/)?.[1];
     expect(token).toBeDefined();
-    expect(html).toContain("https://metatwin.example/feedback/confirm/");
+    // Email links always use the official site, not whatever host the request arrived on.
+    expect(html).toContain("https://metatwin.metaglobetechnologies.co.ke/feedback/confirm/");
+    expect(html).not.toContain("metatwin.example");
     expect(await sha256Hex(token!)).toBe(args.p_token_hash);
     expect(html).not.toContain("<b>K</b>");
     expect(html).toContain("Duka &lt;Bot&gt;");
+  });
+
+  it("maps a simultaneous duplicate submission (unique violation) to a friendly 409", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "duplicate key value", code: "23505" } });
+    const res = await handleFeedbackSubmit(req("/api/feedback/submit", valid));
+    expect(res.status).toBe(409);
+    expect(sendResendEmail).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -118,6 +127,14 @@ describe("POST /api/feedback/confirm", () => {
     const res = await handleFeedbackConfirm(req("/api/feedback/confirm", { token: "B".repeat(43) }));
     expect(res.status).toBe(400);
     expect((await res.json()).status).toBe("expired");
+  });
+});
+
+describe("emailLinkOrigin", () => {
+  it("uses the official origin for any non-local host, and keeps localhost for dev", () => {
+    expect(emailLinkOrigin("https://metatwin.someone.workers.dev/api/feedback/submit")).toBe("https://metatwin.metaglobetechnologies.co.ke");
+    expect(emailLinkOrigin("https://evil.example/api/feedback/submit")).toBe("https://metatwin.metaglobetechnologies.co.ke");
+    expect(emailLinkOrigin("http://127.0.0.1:8080/api/feedback/submit")).toBe("http://127.0.0.1:8080");
   });
 });
 

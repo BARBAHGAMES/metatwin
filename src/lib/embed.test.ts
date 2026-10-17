@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { toEmbeddableDeckUrl, toYouTubeEmbedUrl, isDirectVideoUrl, toVideoEmbed, describeDeckLink, describeVideoLink } from "./embed";
 
 describe("toEmbeddableDeckUrl", () => {
-  it("passes through a direct PDF link", () => {
-    expect(toEmbeddableDeckUrl("https://example.com/deck.pdf")).toBe("https://example.com/deck.pdf");
+  it("does not frame a PDF hosted elsewhere (CSP would block it): it opens in a new tab", () => {
+    expect(toEmbeddableDeckUrl("https://example.com/deck.pdf")).toBeNull();
   });
 
   it("rewrites a Google Drive share link to its preview form", () => {
@@ -100,6 +100,9 @@ describe("describeDeckLink / describeVideoLink", () => {
   it("flags Google links for the 'Anyone with the link' sharing prompt", () => {
     expect(describeDeckLink(`https://docs.google.com/presentation/d/${SLIDES_ID}/edit?usp=sharing`)).toMatchObject({ label: "Google Slides", inline: true, sharing: "google" });
     expect(describeVideoLink("https://drive.google.com/file/d/1ViDeOiDaBcDeF/view")).toMatchObject({ label: "Google Drive video", inline: true, sharing: "google" });
+  });
+  it("never promises inline play for a PDF hosted elsewhere, and suggests Google Drive", () => {
+    expect(describeDeckLink("https://example.com/files/deck.PDF")).toMatchObject({ label: "PDF file", inline: false, sharing: "pdf" });
   });
   it("names new-tab providers instead of failing silently", () => {
     expect(describeDeckLink("https://www.canva.com/design/DAFabcd1234/view")).toMatchObject({ label: "Canva", inline: false, sharing: "canva" });
