@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { EyeOff, Flag, MessageSquareText, Star, Eye } from "lucide-react";
+import { BarChart3, EyeOff, Flag, MessageSquareText, Star, Eye } from "lucide-react";
 import { Card } from "@/components/site";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +11,9 @@ import { publicProfilePath } from "@/lib/public-profile";
 import {
   aboutEarlierVersion,
   averageRating,
+  fetchMyDeckViews,
   fetchMyProjectFeedback,
+  type DeckViews,
   markFeedbackSeen,
   reportProjectFeedback,
   setProjectFeedbackHidden,
@@ -195,5 +197,38 @@ function FeedbackItem({ f, earlier, onToggleHidden, onReport }: { f: MyProjectFe
         )}
       </div>
     </li>
+  );
+}
+
+const COUNTRY_NAMES: Record<string, string> = { KE: "Kenya", UG: "Uganda", TZ: "Tanzania", RW: "Rwanda", ET: "Ethiopia", NG: "Nigeria", ZA: "South Africa", GH: "Ghana", US: "USA", GB: "UK", IN: "India", AE: "UAE" };
+
+/** Owner-only: how many people opened the pitch deck on the public MetaTwin (counts, never visitors). */
+export function DeckViewsCard({ projectId, hasDeck }: { projectId: string; hasDeck: boolean }) {
+  const [views, setViews] = useState<DeckViews | null | undefined>(undefined);
+  useEffect(() => {
+    if (!hasDeck) return;
+    fetchMyDeckViews(projectId).then(setViews).catch(() => setViews(null));
+  }, [projectId, hasDeck]);
+  if (!hasDeck) return null;
+  return (
+    <Card>
+      <h3 className="flex items-center gap-2 font-semibold"><BarChart3 className="h-4 w-4" /> Who's seen your pitch</h3>
+      <p className="mt-0.5 text-xs text-muted-foreground">Times visitors opened your deck on MetaTwin (once per person per day). Views elsewhere aren't counted.</p>
+      {views === undefined ? (
+        <p className="mt-3 text-sm text-muted-foreground" role="status">Loading…</p>
+      ) : !views || views.total === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">No views yet. Share your public MetaTwin link when you pitch.</p>
+      ) : (
+        <div className="mt-3 flex flex-wrap items-end gap-6">
+          <div><p className="font-display text-3xl font-semibold">{views.total}</p><p className="text-xs text-muted-foreground">total views</p></div>
+          <div><p className="font-display text-3xl font-semibold">{views.last_7_days}</p><p className="text-xs text-muted-foreground">last 7 days</p></div>
+          {views.countries.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              From {views.countries.map((c) => `${COUNTRY_NAMES[c.country] ?? c.country} (${c.views})`).join(", ")}
+            </p>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }

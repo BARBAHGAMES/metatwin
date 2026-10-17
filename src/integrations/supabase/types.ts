@@ -1373,6 +1373,11 @@ export type Database = {
         }[]
       }
       confirm_project_feedback: { Args: { p_token_hash: string }; Returns: Json }
+      get_my_deck_views: {
+        Args: { p_project_id?: string }
+        Returns: { countries: Json; last_7_days: number; last_viewed_at: string | null; project_id: string; total: number }[]
+      }
+      record_deck_view: { Args: { p_country: string; p_handle: string; p_project_id: string; p_visitor_hash: string }; Returns: boolean }
       get_my_institution_feedback: {
         Args: never
         Returns: {

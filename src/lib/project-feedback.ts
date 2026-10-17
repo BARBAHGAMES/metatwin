@@ -71,3 +71,12 @@ export function markFeedbackSeen(): void {
 export function countNewFeedback(items: { confirmed_at: string | null; hidden_by_owner: boolean }[], seenAt = feedbackSeenAt()): number {
   return items.filter((f) => !f.hidden_by_owner && f.confirmed_at && new Date(f.confirmed_at).getTime() > seenAt).length;
 }
+
+export type DeckViews = { project_id: string; total: number; last_7_days: number; last_viewed_at: string | null; countries: { country: string; views: number }[] };
+
+export async function fetchMyDeckViews(projectId: string): Promise<DeckViews | null> {
+  const { data, error } = await supabase.rpc("get_my_deck_views", { p_project_id: projectId });
+  if (error) throw new Error(error.message);
+  const row = (data as unknown as DeckViews[] | null)?.[0];
+  return row ? { ...row, total: Number(row.total), last_7_days: Number(row.last_7_days) } : null;
+}

@@ -1235,7 +1235,14 @@
     "Reported to MetaTwin",
     "Unhide",
     "Hide",
-    "Report"
+    "Report",
+    "Who's seen your pitch",
+    "Times visitors opened your deck on MetaTwin (once per person per day). Views elsewhere aren't counted.",
+    "Loading…",
+    "No views yet. Share your public MetaTwin link when you pitch.",
+    "total views",
+    "last 7 days",
+    "From"
   ],
   "src/components/VisitorFeedbackDialog.tsx": [
     "Give feedback on this project",
@@ -1348,6 +1355,7 @@
     "/api/feedback/confirm",
     "/feedback/confirm",
     "/api/projects/check-deck",
+    "/api/projects/deck-view",
     "unchecked",
     "public",
     "restricted",
@@ -1876,6 +1884,24 @@
     "projects",
     "id",
     "pitch_deck_url"
+  ],
+  "src/lib/deck-view-route.server.ts": [
+    "content-type",
+    "application/json",
+    "SHA-256",
+    "user-agent",
+    "Bad request",
+    "string",
+    "string",
+    "Bad request",
+    "[deck-view] no DECK_VIEW_SALT configured, skipping",
+    "cf-connecting-ip",
+    "x-forwarded-for",
+    "cf-ipcountry",
+    "record_deck_view",
+    "XX",
+    "T1",
+    "[deck-view]"
   ],
   "src/lib/embed.ts": [
     "([A-Za-z0-9_-]+)",
@@ -2530,7 +2556,8 @@
     "admin_delete_project_feedback",
     "metatwin:feedback-seen-at",
     "undefined",
-    "undefined"
+    "undefined",
+    "get_my_deck_views"
   ],
   "src/lib/project-grade-webhook-route.server.ts": [
     "Exceeds Expectation",

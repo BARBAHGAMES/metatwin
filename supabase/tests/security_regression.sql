@@ -746,6 +746,42 @@ begin
   assert (select pitch_deck_status = 'unchecked' and pitch_deck_checked_at is null from public.projects where id = pa),
     'changing the deck link resets the check result';
 
+  ------------------------------------------------- deck views (server-only writes, owner counts only)
+  set local role anon;
+  blocked := false; begin perform 1 from public.project_deck_views limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not read deck views';
+  blocked := false; begin perform public.record_deck_view('amina-reg', pa, repeat('1', 64), 'KE'); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not call record_deck_view directly (server route only)';
+  reset role;
+  update public.projects set pitch_deck_url = 'https://docs.google.com/presentation/d/xyz/edit' where id = pa;
+  set local role service_role;
+  assert public.record_deck_view('amina-reg', pa, repeat('1', 64), 'KE'), 'first view of the day is counted';
+  assert not public.record_deck_view('amina-reg', pa, repeat('1', 64), 'KE'), 'same visitor, same day: not counted again';
+  assert public.record_deck_view('amina-reg', pa, repeat('2', 64), 'UG'), 'a different visitor is counted';
+  assert not public.record_deck_view('amina-reg', pb, repeat('3', 64), 'KE'), 'views only count for projects shown on that public profile';
+  assert not public.record_deck_view('dee-reg', pa, repeat('3', 64), 'KE'), 'no views through a profile the project does not belong to';
+  blocked := false; begin perform public.record_deck_view('amina-reg', pa, 'not-a-hash', 'KE'); exception when check_violation then blocked := true; end;
+  assert blocked, 'only a 64-hex visitor hash is stored (no raw identifiers)';
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select to_jsonb(x) into fb from public.get_my_deck_views(pa) x;
+  assert (fb ->> 'total')::int = 2 and (fb ->> 'last_7_days')::int = 2, 'owner sees view totals';
+  assert not (fb::text ~* 'visitor_hash|1111|2222'), 'owner never sees visitor-level identifiers';
+  blocked := false; begin perform 1 from public.project_deck_views limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'owner cannot read raw view rows either';
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.get_my_deck_views(pa);
+  assert n = 0, 'another student cannot see A''s view counts';
+  reset role;
+  update public.project_deck_views set created_at = now() - interval '14 months' where project_id = pa and visitor_hash = repeat('1', 64);
+  set local role service_role;
+  perform public.purge_expired_feedback_data();
+  reset role;
+  assert (select count(*) from public.project_deck_views where project_id = pa) = 1, 'deck views older than 13 months are purged';
+
   raise exception 'ALL PASS (rolled back)';
 exception
   when assert_failure then

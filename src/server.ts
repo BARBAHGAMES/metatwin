@@ -1,4 +1,4 @@
-import { NEW_USER_WEBHOOK_PATH, GITHUB_SYNC_PATH, TWIN_CHAT_PATH, OPPORTUNITIES_SCOUT_PATH, PARTNERSHIP_INQUIRY_WEBHOOK_PATH, GITHUB_CONNECT_PATH, GITHUB_REFRESH_PATH, PITCH_SCORE_WEBHOOK_PATH, PITCH_FEEDBACK_SYNC_PATH, PROJECT_GRADE_WEBHOOK_PATH, SCHOOL_ADMIN_SIGNUP_WEBHOOK_PATH, PLATFORM_ADMIN_SIGNUP_WEBHOOK_PATH, MPESA_INITIATE_PATH, MPESA_STATUS_PATH, MPESA_CALLBACK_WEBHOOK_PATH, FEEDBACK_SUBMIT_PATH, FEEDBACK_CONFIRM_PATH, DECK_CHECK_PATH } from "./lib/api-paths";
+import { NEW_USER_WEBHOOK_PATH, GITHUB_SYNC_PATH, TWIN_CHAT_PATH, OPPORTUNITIES_SCOUT_PATH, PARTNERSHIP_INQUIRY_WEBHOOK_PATH, GITHUB_CONNECT_PATH, GITHUB_REFRESH_PATH, PITCH_SCORE_WEBHOOK_PATH, PITCH_FEEDBACK_SYNC_PATH, PROJECT_GRADE_WEBHOOK_PATH, SCHOOL_ADMIN_SIGNUP_WEBHOOK_PATH, PLATFORM_ADMIN_SIGNUP_WEBHOOK_PATH, MPESA_INITIATE_PATH, MPESA_STATUS_PATH, MPESA_CALLBACK_WEBHOOK_PATH, FEEDBACK_SUBMIT_PATH, FEEDBACK_CONFIRM_PATH, DECK_CHECK_PATH, DECK_VIEW_PATH } from "./lib/api-paths";
 import { handleNewUserWebhook } from "./lib/new-user-webhook-route.server";
 import { handleGitHubSync } from "./lib/github-sync-route.server";
 import { handleTwinChat, handleOpportunitiesScout } from "./lib/twin-ai-route.server";
@@ -13,6 +13,7 @@ import { handleMpesaInitiate, handleMpesaStatus } from "./lib/mpesa-route.server
 import { handleMpesaCallback } from "./lib/mpesa-callback-route.server";
 import { handleFeedbackSubmit, handleFeedbackConfirm } from "./lib/visitor-feedback-route.server";
 import { handleCheckDeck } from "./lib/deck-check-route.server";
+import { handleDeckView } from "./lib/deck-view-route.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -68,6 +69,15 @@ export default {
           status: 500,
           headers: { "content-type": "application/json" },
         });
+      }
+    }
+
+    if (url.pathname === DECK_VIEW_PATH && request.method === "POST") {
+      try {
+        return await handleDeckView(request);
+      } catch (error) {
+        console.error("[deck-view route]", error);
+        return new Response(JSON.stringify({ counted: false }), { status: 200, headers: { "content-type": "application/json" } });
       }
     }
 
