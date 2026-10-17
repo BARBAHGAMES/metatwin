@@ -15,6 +15,8 @@ declare
   c uuid := gen_random_uuid();   -- signup with NO age declaration
   d uuid := gen_random_uuid();   -- new (unpaid) student for the plan/activation section
   e uuid := gen_random_uuid();   -- account whose twin row is removed (client-insert check)
+  sa uuid := gen_random_uuid();  -- school admin (visitor-feedback section)
+  fb jsonb; fb_id uuid;
   s1 uuid; s2 uuid; s3 uuid;
   ca uuid; cb uuid; pb uuid; pa uuid; ev uuid;
   yr int := extract(year from now())::int;
@@ -593,6 +595,134 @@ begin
   reset role;
   assert (select github_full_name is null and github_stars is null and github_synced_at is null from public.ai_employees where id = ai_emp_id),
     'changing link_url must reset the stale github_* stats';
+
+  ------------------------------------------------- visitor feedback (pitch flow Release A)
+  -- Browser roles have no access to the tables or the server-only functions.
+  set local role anon;
+  blocked := false; begin perform 1 from public.project_feedback limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not read project_feedback';
+  blocked := false; begin insert into public.project_feedback_contacts (feedback_id, project_id, email, whatsapp) values (gen_random_uuid(), pa, 'x@y.z', '+254700000000'); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not write feedback contacts';
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 5, 'Great', 'X', 'other', null, 'x@test.invalid', '+254700000000', true, repeat('a', 64)); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not call submit_project_feedback directly (server route only)';
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  blocked := false; begin perform 1 from public.project_feedback_contacts limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'signed-in users must not read feedback contacts';
+  blocked := false; begin perform public.confirm_project_feedback(repeat('a', 64)); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'signed-in users must not call confirm_project_feedback directly';
+  blocked := false; begin perform public.purge_expired_feedback_data(); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'signed-in users must not call the purge';
+  reset role;
+
+  -- Server route path (service_role): submit -> pending (invisible) -> confirm -> visible.
+  set local role service_role;
+  fb := public.submit_project_feedback('amina-reg', pa, 4, 'Clear problem, test pricing next.', 'Wanjiru K', 'business_owner', 'Kiosk Co', 'Reviewer@Test.invalid', '+254712345678', true, repeat('a', 64));
+  fb_id := (fb ->> 'feedback_id')::uuid;
+  assert (select status from public.project_feedback where id = fb_id) = 'pending', 'new feedback starts pending';
+  assert (select email from public.project_feedback_contacts where feedback_id = fb_id) = 'reviewer@test.invalid', 'email stored normalised';
+  blocked := false; begin perform public.submit_project_feedback('dee-reg', pa, 5, 'x', 'X', 'other', null, 'z@test.invalid', '+254700000000', false, repeat('b', 64)); exception when others then blocked := true; end;
+  assert blocked, 'feedback only on projects shown on that (public, active, paid) profile';
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pb, 5, 'x', 'X', 'other', null, 'z@test.invalid', '+254700000000', false, repeat('b', 64)); exception when others then blocked := true; end;
+  assert blocked, 'feedback cannot target another student''s project through this handle';
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 5, 'x', 'X', 'other', null, 'a@test.invalid', '+254700000000', false, repeat('b', 64)); exception when others then blocked := true; end;
+  assert blocked, 'a student cannot review their own project';
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 5, 'see https://spam.example', 'X', 'other', null, 'y@test.invalid', '+254700000000', false, repeat('b', 64)); exception when check_violation then blocked := true; end;
+  assert blocked, 'links are not allowed in feedback comments';
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 5, 'ok', 'X', 'other', null, 'y@test.invalid', '0712345678', false, repeat('b', 64)); exception when check_violation then blocked := true; end;
+  assert blocked, 'WhatsApp number must be stored in +<country><number> form';
+  reset role;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.get_my_project_feedback();
+  assert n = 0, 'pending (unconfirmed) feedback is invisible to the student';
+  reset role;
+
+  set local role service_role;
+  assert public.confirm_project_feedback(repeat('f', 64)) ->> 'status' = 'invalid', 'unknown token is rejected';
+  assert public.confirm_project_feedback(repeat('a', 64)) ->> 'status' = 'confirmed', 'right token confirms';
+  assert public.confirm_project_feedback(repeat('a', 64)) ->> 'status' = 'invalid', 'confirmation tokens are single-use';
+  reset role;
+
+  set local role authenticated;  -- student A
+  select to_jsonb(x) into fb from public.get_my_project_feedback() x limit 1;
+  assert fb ->> 'comment' = 'Clear problem, test pricing next.' and (fb ->> 'rating')::int = 4, 'student sees confirmed feedback';
+  assert not (fb::text ~* 'reviewer@test|\+254712345678|whatsapp|email"'), 'student never receives reviewer email or WhatsApp';
+  assert (fb ->> 'email_unlockable')::boolean, 'consent is reported for the later unlock feature';
+  reset role;
+
+  -- Re-submission by the same email waits for confirmation, then replaces the old version (still one row).
+  set local role service_role;
+  perform public.submit_project_feedback('amina-reg', pa, 5, 'Updated: pricing test done, looks strong.', 'Wanjiru K', 'business_owner', 'Kiosk Co', 'reviewer@test.invalid', '+254712345678', false, repeat('c', 64));
+  reset role;
+  set local role authenticated;
+  assert (select x.comment from public.get_my_project_feedback() x limit 1) = 'Clear problem, test pricing next.', 'an unconfirmed update does not replace visible feedback';
+  reset role;
+  set local role service_role;
+  perform public.confirm_project_feedback(repeat('c', 64));
+  reset role;
+  set local role authenticated;
+  select count(*) into n from public.get_my_project_feedback();
+  assert n = 1 and (select x.rating from public.get_my_project_feedback() x limit 1) = 5, 'a confirmed update replaces the old version in place';
+  assert not (select x.email_unlockable from public.get_my_project_feedback() x limit 1), 'consent follows the latest confirmed submission';
+  reset role;
+
+  -- Another student cannot see or hide it.
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.get_my_project_feedback();
+  assert n = 0, 'another student sees none of A''s feedback';
+  blocked := false; begin perform public.set_project_feedback_hidden(fb_id, true); exception when others then blocked := true; end;
+  assert blocked, 'another student cannot hide A''s feedback';
+  reset role;
+
+  -- School admin of A's institution sees it (never contacts); an unverified admin sees nothing.
+  select id into uni from public.universities order by sort_order limit 1;
+  update public.twins set university_id = uni where id = a;
+  insert into auth.users (id, email, aud, role, raw_user_meta_data) values
+    (sa, 'regression-staff@mku.ac.ke', 'authenticated', 'authenticated',
+     jsonb_build_object('account_type', 'school_admin', 'full_name', 'Reg Staff', 'phone', '0700000000', 'university_id', uni));
+  perform set_config('request.jwt.claims', json_build_object('sub', sa, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.get_my_institution_feedback();
+  assert n = 0, 'an unverified school admin sees no feedback';
+  reset role;
+  update public.school_admins set status = 'verified', verified_at = now() where id = sa;
+  set local role authenticated;
+  select to_jsonb(x) into fb from public.get_my_institution_feedback() x limit 1;
+  assert fb ->> 'student_handle' = 'amina-reg', 'a verified school admin sees their institution''s feedback';
+  assert not (fb::text ~* 'reviewer@test|\+254712345678'), 'school admins never see reviewer contact details';
+  blocked := false; begin perform public.admin_list_project_feedback(); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'school admins cannot use the platform-admin moderation list';
+  reset role;
+
+  -- Owner reports it: hidden + flagged, and it drops out of the school view.
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  perform public.report_project_feedback(fb_id, 'abusive');
+  assert (select x.hidden_by_owner and x.reported_at is not null from public.get_my_project_feedback() x limit 1), 'reporting hides and flags the feedback';
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', sa, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.get_my_institution_feedback();
+  assert n = 0, 'hidden/reported feedback is not shown to school admins';
+  reset role;
+
+  -- Retention: contact details after 12 months, unconfirmed feedback after 48 hours.
+  update public.project_feedback_contacts set contacts_expire_at = now() - interval '1 day' where feedback_id = fb_id;
+  set local role service_role;
+  perform public.submit_project_feedback('amina-reg', pa, 3, 'Never confirmed.', 'Ghost', 'other', null, 'ghost@test.invalid', '+254700000001', false, repeat('d', 64));
+  reset role;
+  update public.project_feedback set created_at = now() - interval '3 days'
+    where id in (select feedback_id from public.project_feedback_contacts where email = 'ghost@test.invalid');
+  set local role service_role;
+  fb := public.purge_expired_feedback_data();
+  reset role;
+  assert not exists (select 1 from public.project_feedback_contacts where feedback_id = fb_id), 'expired contact details are deleted';
+  assert exists (select 1 from public.project_feedback where id = fb_id), '... but the feedback itself is kept';
+  assert not exists (select 1 from public.project_feedback_contacts where email = 'ghost@test.invalid'), 'unconfirmed feedback is purged after 48 hours';
 
   raise exception 'ALL PASS (rolled back)';
 exception
