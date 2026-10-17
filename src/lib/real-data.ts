@@ -41,6 +41,8 @@ export type MyProject = {
   completion_reason: string | null;
   completed_at: string | null;
   team_id: string | null;
+  pitch_deck_status: string;
+  pitch_deck_checked_at: string | null;
 };
 export type IncomingCollaborationRequest = {
   id: string;
@@ -164,7 +166,7 @@ export async function fetchMyProjects(userId: string) {
   const [proj, ev] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, problem_statement, proposed_solution, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at, pitch_feedback_summary, stage, interviews_csv_url, interviews_count, interviews_synced_at, open_to_collaborators, completion_reason, completed_at, team_id")
+      .select("id, title, description, problem_statement, proposed_solution, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at, pitch_feedback_summary, stage, interviews_csv_url, interviews_count, interviews_synced_at, open_to_collaborators, completion_reason, completed_at, team_id, pitch_deck_status, pitch_deck_checked_at")
       .eq("twin_id", userId)
       .order("created_at", { ascending: false }),
     supabase
@@ -182,7 +184,7 @@ export async function fetchMyProject(userId: string, projectId: string) {
   const [proj, ev, repo, pitches, pitchStats, allGrades, updates, incomingRequests] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, problem_statement, proposed_solution, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at, pitch_feedback_summary, stage, interviews_csv_url, interviews_count, interviews_synced_at, open_to_collaborators, completion_reason, completed_at, team_id")
+      .select("id, title, description, problem_statement, proposed_solution, artifact_url, github_repo, writeup_url, pitch_deck_url, pitch_video_url, created_at, scores_csv_url, pitch_scores, scores_synced_at, pitch_feedback_summary, stage, interviews_csv_url, interviews_count, interviews_synced_at, open_to_collaborators, completion_reason, completed_at, team_id, pitch_deck_status, pitch_deck_checked_at")
       .eq("twin_id", userId)
       .eq("id", projectId)
       .maybeSingle(),

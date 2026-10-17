@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Circle, ExternalLink, FileText, GitFork, Github, History, MessageSquare, Pencil, PlayCircle, Plus, RefreshCw, Rocket, Star, Trash2, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { GITHUB_SYNC_PATH, PITCH_FEEDBACK_SYNC_PATH, type GitHubRepoStats } from "@/lib/api-paths";
+import { DECK_CHECK_PATH, GITHUB_SYNC_PATH, PITCH_FEEDBACK_SYNC_PATH, type DeckCheckStatus, type GitHubRepoStats } from "@/lib/api-paths";
 import { LIMITS } from "@/lib/limits";
 import {
   acceptCollaborationRequest,
@@ -316,6 +316,75 @@ export function MediaTiles({
         ) : (
           <EmptyTile href={addHref} icon={<FileText className="h-5 w-5" />} text="No write-up yet" action="Add write-up" />
         )}
+      </div>
+    </div>
+  );
+}
+
+function formatCheckedAt(iso: string): string {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+async function runDeckCheck(projectId: string): Promise<DeckCheckStatus | null> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return null;
+  try {
+    const res = await fetch(DECK_CHECK_PATH, {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ project_id: projectId }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { status?: DeckCheckStatus; error?: string };
+    if (!res.ok) {
+      toast.error(body.error ?? "Couldn't check the deck right now.");
+      return null;
+    }
+    return body.status ?? null;
+  } catch {
+    toast.error("Couldn't check the deck right now.");
+    return null;
+  }
+}
+
+const DECK_STATUS_COPY: Record<DeckCheckStatus, { tone: "ok" | "bad" | "neutral"; title: string; body?: string }> = {
+  public: { tone: "ok", title: "Anyone with the link can view your deck" },
+  restricted: {
+    tone: "bad",
+    title: "Only you can see this deck right now",
+    body: "Hirers will see a Google sign-in page. In Google, tap Share → General access → “Anyone with the link” → Viewer, then tap Check again.",
+  },
+  not_found: { tone: "bad", title: "We couldn't find this deck", body: "Copy the link again from Share → Copy link, paste it above and save." },
+  unknown: { tone: "neutral", title: "We can't check this kind of link automatically", body: "Open it in a private browser window to make sure anyone can view it." },
+  unchecked: { tone: "neutral", title: "Not checked yet" },
+};
+
+function DeckStatusBadge({ projectId, status, checkedAt, onChecked }: { projectId: string; status: DeckCheckStatus; checkedAt: string | null; onChecked: () => void }) {
+  const [checking, setChecking] = useState(false);
+  const copy = DECK_STATUS_COPY[status] ?? DECK_STATUS_COPY.unchecked;
+  const tone =
+    copy.tone === "ok" ? "border-status-evidence/40 bg-status-evidence-bg text-status-evidence" : copy.tone === "bad" ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-muted text-muted-foreground";
+  async function check() {
+    setChecking(true);
+    const result = await runDeckCheck(projectId);
+    setChecking(false);
+    if (result) onChecked();
+  }
+  return (
+    <div role="status" className={`rounded-lg border p-3 text-xs ${tone}`}>
+      <p className="font-semibold">{copy.tone === "ok" ? "✓ " : copy.tone === "bad" ? "⚠ " : ""}{copy.title}</p>
+      {copy.body && <p className="mt-1 text-foreground/80">{copy.body}</p>}
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        {checkedAt && <span className="text-muted-foreground">Last checked {formatCheckedAt(checkedAt)}</span>}
+        <button type="button" onClick={check} disabled={checking} className="-my-2 py-2 font-medium text-electric hover:underline disabled:opacity-50 sm:my-0 sm:py-0">
+          {checking ? "Checking…" : status === "unchecked" ? "Check now" : "Check again"}
+        </button>
       </div>
     </div>
   );
@@ -812,7 +881,7 @@ export function ProjectLinksForm({
   project,
   onSaved,
 }: {
-  project: Pick<MyProject, "id" | "writeup_url" | "pitch_deck_url" | "pitch_video_url">;
+  project: Pick<MyProject, "id" | "writeup_url" | "pitch_deck_url" | "pitch_video_url" | "pitch_deck_status" | "pitch_deck_checked_at">;
   onSaved: () => void;
 }) {
   const [writeup, setWriteup] = useState(project.writeup_url ?? "");
@@ -843,6 +912,10 @@ export function ProjectLinksForm({
       // Non-fatal: the stage just won't have advanced yet; the next sync/save retries it.
     }
     toast.success("Links saved.");
+    // Check the deck the way a hirer would see it (only if it changed or was never checked).
+    if (deck.trim() && (deck.trim() !== (project.pitch_deck_url ?? "") || project.pitch_deck_status === "unchecked")) {
+      await runDeckCheck(project.id);
+    }
     onSaved();
   }
 
@@ -857,7 +930,14 @@ export function ProjectLinksForm({
         <div className="space-y-1.5">
           <Label htmlFor="pitch-deck-url">Pitch deck (Google Slides/Drive, PDF, Canva…)</Label>
           <Input id="pitch-deck-url" type="url" inputMode="url" autoComplete="off" placeholder="https://docs.google.com/presentation/..." value={deck} onChange={(e) => setDeck(e.target.value)} />
-          <LinkHint url={deck} kind="deck" />
+          <LinkHint
+            url={deck}
+            kind="deck"
+            hideSharingAdvice={deck.trim() === (project.pitch_deck_url ?? "") && project.pitch_deck_status !== "unchecked" && project.pitch_deck_status !== "unknown"}
+          />
+          {deck.trim() && deck.trim() === (project.pitch_deck_url ?? "") && (
+            <DeckStatusBadge projectId={project.id} status={project.pitch_deck_status as DeckCheckStatus} checkedAt={project.pitch_deck_checked_at} onChecked={onSaved} />
+          )}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="pitch-video-url">Pitch video (YouTube, Google Drive or a video file)</Label>

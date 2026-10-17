@@ -21,7 +21,7 @@ function parse(url: string): URL | null {
 const hostOf = (u: URL) => u.hostname.replace(/^www\./, "").toLowerCase();
 const ID = "([A-Za-z0-9_-]+)";
 
-type GoogleRef =
+export type GoogleRef =
   | { app: "slides" | "docs" | "drive"; id: string; published?: false }
   | { app: "slides" | "docs"; id: string; published: true };
 
@@ -45,6 +45,18 @@ function googleRef(u: URL): GoogleRef | null {
     if ((u.pathname === "/open" || u.pathname === "/uc") && qid && new RegExp(`^${ID}$`).test(qid)) return { app: "drive", id: qid };
   }
   return null;
+}
+
+/** Google Slides/Docs/Drive file reference for a pasted link, or null. */
+export function googleFileRef(url: string): GoogleRef | null {
+  const u = parse(url);
+  return u ? googleRef(u) : null;
+}
+
+/** The YouTube video id in a pasted link, or null. */
+export function youTubeVideoId(url: string): string | null {
+  const embed = toYouTubeEmbedUrl(url);
+  return embed ? new URL(embed).pathname.split("/").pop() ?? null : null;
 }
 
 export function toEmbeddableDeckUrl(url: string): string | null {

@@ -22,6 +22,8 @@ export const FEEDBACK_SUBMIT_PATH = "/api/feedback/submit";
 export const FEEDBACK_CONFIRM_PATH = "/api/feedback/confirm";
 /** Page the confirmation email links to: `${FEEDBACK_CONFIRM_PAGE}/<token>`. */
 export const FEEDBACK_CONFIRM_PAGE = "/feedback/confirm";
+export const DECK_CHECK_PATH = "/api/projects/check-deck";
+export type DeckCheckStatus = "unchecked" | "public" | "restricted" | "not_found" | "unknown";
 
 export type GithubConnection = {
   github_username: string;

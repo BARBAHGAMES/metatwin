@@ -914,6 +914,8 @@ export type Database = {
       }
       projects: {
         Row: {
+          pitch_deck_checked_at: string | null
+          pitch_deck_status: string
           artifact_url: string | null
           completed_at: string | null
           completion_reason: string | null
@@ -941,6 +943,8 @@ export type Database = {
           writeup_url: string | null
         }
         Insert: {
+          pitch_deck_checked_at?: string | null
+          pitch_deck_status?: string
           artifact_url?: string | null
           completed_at?: string | null
           completion_reason?: string | null
@@ -968,6 +972,8 @@ export type Database = {
           writeup_url?: string | null
         }
         Update: {
+          pitch_deck_checked_at?: string | null
+          pitch_deck_status?: string
           artifact_url?: string | null
           completed_at?: string | null
           completion_reason?: string | null

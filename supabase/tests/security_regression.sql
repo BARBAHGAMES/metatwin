@@ -724,6 +724,28 @@ begin
   assert exists (select 1 from public.project_feedback where id = fb_id), '... but the feedback itself is kept';
   assert not exists (select 1 from public.project_feedback_contacts where email = 'ghost@test.invalid'), 'unconfirmed feedback is purged after 48 hours';
 
+  ------------------------------------------------- deck viewability status (server-only)
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.projects set pitch_deck_url = 'https://docs.google.com/presentation/d/abc/edit' where id = pa;
+  update public.projects set pitch_deck_status = 'public', pitch_deck_checked_at = now() where id = pa;
+  reset role;
+  assert (select pitch_deck_status = 'unchecked' and pitch_deck_checked_at is null from public.projects where id = pa),
+    'pitch_deck_status / pitch_deck_checked_at must ignore client writes';
+  set local role service_role;
+  update public.projects set pitch_deck_status = 'restricted', pitch_deck_checked_at = now() where id = pa;
+  reset role;
+  assert (select pitch_deck_status from public.projects where id = pa) = 'restricted', 'the server (service_role) records the check result';
+  set local role authenticated;
+  update public.projects set title = 'A project (renamed)' where id = pa;
+  reset role;
+  assert (select pitch_deck_status from public.projects where id = pa) = 'restricted', 'unrelated edits keep the check result';
+  set local role authenticated;
+  update public.projects set pitch_deck_url = 'https://docs.google.com/presentation/d/xyz/edit' where id = pa;
+  reset role;
+  assert (select pitch_deck_status = 'unchecked' and pitch_deck_checked_at is null from public.projects where id = pa),
+    'changing the deck link resets the check result';
+
   raise exception 'ALL PASS (rolled back)';
 exception
   when assert_failure then

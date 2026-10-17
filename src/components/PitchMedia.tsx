@@ -117,12 +117,13 @@ const SHARING_ADVICE = {
 } as const;
 
 /** Live recognition + sharing advice shown under a pasted deck/video link. */
-export function LinkHint({ url, kind }: { url: string; kind: "deck" | "video" | "writeup" }) {
+export function LinkHint({ url, kind, hideSharingAdvice = false }: { url: string; kind: "deck" | "video" | "writeup"; hideSharingAdvice?: boolean }) {
   const described = kind === "video" ? describeVideoLink(url) : describeDeckLink(url);
   if (!described) return null;
   // Write-ups always open in a new tab (MediaTiles links out), so never promise inline play.
   const d = kind === "writeup" ? { ...described, inline: false } : described;
-  const advice = d.sharing ? SHARING_ADVICE[d.sharing] : null;
+  // Hidden once a server check has confirmed the saved link is viewable (or when its own result banner already explains the fix).
+  const advice = d.sharing && !hideSharingAdvice ? SHARING_ADVICE[d.sharing] : null;
   return (
     <div className="space-y-2 text-xs" aria-live="polite">
       {!d.valid ? (
