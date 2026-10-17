@@ -55,5 +55,24 @@ Andrew's in-session OK.
 `@electric-sql/pglite` pinned to 0.3.16. Production may run a different Postgres major version; the harness is a
 safety net, not a replacement for a dev database (Build Plan 0.7).
 
+### D-012 · Visitor feedback model — Accepted (2026-10-15)
+Anyone can rate a project on a public MetaTwin (1-5 stars + comment) after confirming their email; a WhatsApp number is
+required but only format-checked. Contact details live in a separate locked table: students never see them in Release A
+(email unlock is Release B, consent-gated and paid); school admins never; verified platform admins for moderation.
+Contacts are deleted 12 months after confirmation. Feedback is dashboard-only (student + their school), never public.
+Students can hide/report but not edit feedback. The Google Form spreadsheet process stays as "from your outreach".
+
+### D-013 · Projects always show pitch materials publicly — Accepted (2026-10-15)
+On a public profile every project shows its deck, video, write-up and project link (no per-project hide), so students
+can be found for jobs and adoption. `public_show_evidence_details` now covers evidence links and notes only.
+
+### D-014 · Deck views are counts only — Accepted as default (2026-10-15)
+Views are recorded when a visitor opens a deck on MetaTwin, de-duplicated per visitor per day with a daily salted hash;
+no IP/user agent/account id stored; students see totals and countries only. Naming signed-in viewers is still open.
+
+### D-015 · Release B (credits, paid email unlock, n8n recommendations) and business accounts follow Release A — Accepted (2026-10-15)
+n8n gets only per-run data through signed webhooks, never database credentials. Business accounts + challenges get a
+separate design pass (start of Phase 3).
+
 ## Pending owner decisions
 See the "Open decisions" list at the end of `docs/BUILD_PLAN.md`.
