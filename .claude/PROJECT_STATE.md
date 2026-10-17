@@ -755,3 +755,16 @@ Andrew approved pitch flow v3 (`PITCH_FEEDBACK_FLOW.md`; decisions recorded as D
 Verified: `npm ci` 0 vulnerabilities; build/typecheck clean; lint 0 errors (1 pre-existing warning); **226/226 unit tests** (was 153); `test:db` **102 migrations**, both suites PASS, with ~60 new assertions (each new migration shown red without it; three deliberate mutations caught); `db:audit` RLS everywhere and the anon-callable function list unchanged; content-drift clean; gitleaks clean; no server-only names in the client bundle. Browser (360px, mock backend): earlier phone flows 21/21, Release A journeys 30 student + 4 school-admin + 4 platform-admin, deck check 6/6, deck views 5/5, layout crawl 88 page loads with 0 overflow / 0 errors.
 
 Not done / next: daily retention schedule (runbook step 7), Supabase type regeneration after apply, Release B (credits, consent-gated paid email unlock, n8n via signed webhooks), business accounts + challenges design pass.
+
+## Pre-ship code review of Release A (2026-10-16, cloud session, same branch, commit `c5a9d51`)
+
+Andrew asked for a bug review with a 9.5/10 bar before sharing the handoff. A line-by-line review of the whole Release A diff found 11 real issues, all fixed with a test that fails without the fix:
+- PDFs on other websites were promised inline playback, but the CSP blocks those frames → new tab + "share via Google Drive" tip.
+- Unconfirmed feedback was purged 48h after the first submission even with a re-issued valid link → expires with its link.
+- **Email bombing:** the brake counted projects, not emails → new `project_feedback_email_sends` (SHA-256 of address, 24h retention), max 1/min and 5/hour per address across projects (shown red without it).
+- Missing indexes for retention deletes; confirmation links now always use the official origin; the student's own deck opens aren't counted, plus a per-IP limit; the deck check now fails safe (sign-in page → restricted; unrecognised 200 → unknown, never a false green).
+- Feedback form survives a stray outside tap; Turnstile resets after network errors; arrow-key rating; "new" tracked per project and the overview tile opens the right project; the project page no longer flashes/jumps to top on reload; 409 for simultaneous duplicate submissions.
+
+Also added two checks against the real migrated schema that mock-backend tests can't give: all 41 `rpc()` calls match real function signatures, and 261 selected columns exist. Gate: 240 unit tests, `test:db` PASS (102 migrations), browser journeys (36 student, 4 school, 4 platform, 6 deck check, 5 deck views, 21 earlier flows), crawl 132 loads clean, 0 vulnerabilities, gitleaks clean.
+
+Remaining risk that can't be removed from the sandbox: the deck check's mapping of real Google responses (calibration is now a hard gate in the runbook, step 8), and end-to-end behaviour against the real Supabase/PostgREST (covered by the runbook's live smoke test on Andrew's own accounts).
