@@ -6,6 +6,9 @@ import { fetchMySchoolAdminStatus, fetchMyInstitutionGrades, type SchoolAdminSta
 import { Card, PageHero, Section } from "@/components/site";
 import { Button } from "@/components/ui/button";
 import { LoadError } from "@/components/LoadError";
+import { Stars } from "@/components/VisitorFeedbackCard";
+import { fetchInstitutionFeedback, type InstitutionFeedback } from "@/lib/project-feedback";
+import { feedbackRoleLabel } from "@/lib/visitor-feedback";
 
 export const Route = createFileRoute("/school/dashboard")({
   head: () => ({ meta: [{ title: "School admin dashboard · MetaTwin" }] }),
@@ -119,6 +122,52 @@ function SchoolDashboardPage() {
           </ul>
         )}
       </Section>
+      <Section className="pt-0">
+        <InstitutionFeedbackList />
+      </Section>
     </>
+  );
+}
+
+// Visitor feedback on your students' projects (no reviewer contact details;
+// feedback a student hid or reported is not shown).
+function InstitutionFeedbackList() {
+  const [items, setItems] = useState<InstitutionFeedback[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    fetchInstitutionFeedback().then(setItems).catch(() => setFailed(true));
+  }, []);
+  return (
+    <div>
+      <h2 className="text-xl font-semibold">Student project feedback</h2>
+      <p className="mt-1 text-sm text-muted-foreground">From people visiting your students' public MetaTwins.</p>
+      {failed ? (
+        <p className="mt-4 text-sm text-destructive">Couldn't load feedback. Refresh to try again.</p>
+      ) : items === null ? (
+        <p className="mt-4 text-sm text-muted-foreground" role="status">Loading…</p>
+      ) : items.length === 0 ? (
+        <Card className="mt-4 border-dashed"><p className="text-sm text-muted-foreground">No visitor feedback on your students' projects yet.</p></Card>
+      ) : (
+        <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+          {items.map((f) => (
+            <li key={f.id}>
+              <Card className="h-full">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-display font-semibold">{f.project_title}</p>
+                    <p className="truncate text-xs text-muted-foreground">{f.student_name ?? f.student_handle ?? "Student"}</p>
+                  </div>
+                  <Stars value={f.rating} />
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">"{f.comment}"</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {formatDate(f.confirmed_at ?? "")} · {f.reviewer_name} · {feedbackRoleLabel(f.reviewer_role)}{f.reviewer_org ? ` · ${f.reviewer_org}` : ""}
+                </p>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

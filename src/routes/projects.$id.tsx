@@ -21,6 +21,7 @@ import { STAGE_LABELS, type ProjectStage } from "@/lib/project-stage";
 import { safeHref } from "@/lib/url";
 import { LoadError } from "@/components/LoadError";
 import { Card, PageHero, SampleTag, Section, StatusBadge } from "@/components/site";
+import { VisitorFeedbackCard } from "@/components/VisitorFeedbackCard";
 import { Journey } from "@/components/Journey";
 import { Reveal } from "@/components/Reveal";
 import {
@@ -126,6 +127,7 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
           <Link to="/projects" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> My projects</Link>
           <MediaTiles writeupUrl={p.writeup_url} pitchDeckUrl={p.pitch_deck_url} pitchVideoUrl={p.pitch_video_url} addHref="#pitch-links" />
           <ProblemSolutionCards problemStatement={p.problem_statement} proposedSolution={p.proposed_solution} />
+          <VisitorFeedbackCard projectId={projectId} twinId={userId} current={{ problem_statement: p.problem_statement, proposed_solution: p.proposed_solution }} />
           {artifact && (
             <Card>
               <p className="text-xs font-semibold uppercase text-muted-foreground">Project link</p>

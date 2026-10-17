@@ -525,7 +525,8 @@ export function PitchFeedbackCard({
 
   return (
     <Card>
-      <h3 className="flex items-center gap-2 font-semibold"><MessageSquare className="h-4 w-4" /> Pitch feedback</h3>
+      <h3 className="flex items-center gap-2 font-semibold"><MessageSquare className="h-4 w-4" /> Pitch feedback: from your outreach</h3>
+      <p className="mt-0.5 text-xs text-muted-foreground">Responses to the Google Form you share when you pitch. Visitor feedback from your MetaTwin is shown separately.</p>
       <p className="mt-1 text-xs text-muted-foreground">
         Paste your Google Form's response sheet, published to the web as a CSV (Sheet → File → Share → Publish to web → CSV). We
         only read question averages — never the raw responses.

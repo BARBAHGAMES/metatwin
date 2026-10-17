@@ -6,3 +6,4 @@ User-agent: *
 Allow: /
 Disallow: /dashboard
 Disallow: /reset-password
+Disallow: /feedback/

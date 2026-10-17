@@ -9,6 +9,7 @@ import { TwinChat } from "@/components/TwinChat";
 import { PitchDeckButton, PitchVideoButton } from "@/components/PitchMedia";
 import { Journey } from "@/components/Journey";
 import { ProblemSolutionCards } from "@/components/ProjectExtras";
+import { VisitorFeedbackButton } from "@/components/VisitorFeedbackDialog";
 
 export const Route = createFileRoute("/t/$handle")({
   loader: async ({ params }) => {
@@ -69,6 +70,7 @@ function capabilityStatus(c: PublicCapability): "self" | "evidence" | "reviewed"
 
 function PublicProfilePage() {
   const { profile } = Route.useLoaderData() as { profile: PublicProfile };
+  const firstName = profile.name?.trim().split(/\s+/)[0] || "the student";
   const withEvidence = profile.capabilities.filter((c) => c.evidence_count > 0).length;
 
   return (
@@ -328,6 +330,9 @@ function PublicProfilePage() {
                           <div className="mt-3"><Journey steps={buildPublicProjectJourney(p)} /></div>
                         </div>
                       )}
+                      <div className="mt-4 border-t pt-4">
+                        <VisitorFeedbackButton handle={profile.handle} projectId={p.id} projectTitle={p.title} studentFirstName={firstName} />
+                      </div>
                     </Card>
                   </li>
                 );

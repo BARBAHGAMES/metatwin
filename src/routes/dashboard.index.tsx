@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, Bot, Check, FolderGit2, Github, Trophy } from "lucide-react";
+import { averageRating, countNewFeedback, fetchMyProjectFeedback } from "@/lib/project-feedback";
+import { ArrowRight, Bot, Check, FolderGit2, Github, MessageSquareText, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, StatusBadge } from "@/components/site";
 import { Reveal } from "@/components/Reveal";
@@ -42,6 +43,17 @@ function Overview() {
   const [githubStars, setGithubStars] = useState(0);
   const [businessesPitched, setBusinessesPitched] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
+  const [feedback, setFeedback] = useState<{ total: number; fresh: number; avg: number | null } | null>(null);
+
+  // Visitor feedback summary (separate from the main load: a failure here shouldn't block the overview).
+  useEffect(() => {
+    fetchMyProjectFeedback()
+      .then((items) => {
+        const visible = items.filter((f) => !f.hidden_by_owner);
+        setFeedback({ total: visible.length, fresh: countNewFeedback(items), avg: averageRating(visible) });
+      })
+      .catch(() => setFeedback(null));
+  }, [reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,6 +124,23 @@ function Overview() {
         <Card><p className="font-display text-3xl font-semibold">{businessesPitched}</p><p className="text-xs text-muted-foreground">Businesses pitched</p></Card>
         <Card><p className="font-display text-3xl font-semibold">{githubStars}</p><p className="text-xs text-muted-foreground">GitHub stars</p></Card>
       </div>
+
+      {feedback && feedback.total > 0 && (
+        <Link to="/dashboard/projects" className="block">
+          <Card className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <MessageSquareText className="h-5 w-5 text-electric" />
+              <div>
+                <p className="font-semibold">Visitor feedback</p>
+                <p className="text-xs text-muted-foreground">
+                  {feedback.total} {feedback.total === 1 ? "person has" : "people have"} rated your projects{feedback.avg != null ? `, ${feedback.avg.toFixed(1)}/5 on average` : ""}. Open a project to read it.
+                </p>
+              </div>
+            </div>
+            {feedback.fresh > 0 && <span className="rounded-full bg-electric px-2.5 py-1 text-xs font-semibold text-primary-foreground">{feedback.fresh} new</span>}
+          </Card>
+        </Link>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
