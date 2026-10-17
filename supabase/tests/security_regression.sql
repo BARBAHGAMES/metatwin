@@ -145,6 +145,12 @@ begin
   assert prof ->> 'name' = 'Amina', 'public profile is readable via the function';
   assert not (prof::text ~* 'private note|a@test|birth_year|is_adult|parental'), 'public profile must not leak notes, email or age fields';
   assert not (prof -> 'capabilities' -> 0 -> 'evidence' -> 0 ? 'link'), 'evidence links hidden unless the student opts in';
+  -- Projects and their pitch materials are always public on a public profile (pitch flow D7),
+  -- independent of the evidence-links opt-in above.
+  assert (prof -> 'projects' -> 0 ->> 'artifact_url') = 'https://example.com/a',
+    'project links / pitch materials must be public even without the evidence-links opt-in';
+  assert (prof -> 'projects' -> 0) ? 'pitch_deck_url' and (prof -> 'projects' -> 0) ? 'pitch_video_url' and (prof -> 'projects' -> 0) ? 'writeup_url',
+    'public projects always carry their deck/video/write-up keys';
   assert public.get_public_profile('nobody-here') is null, 'unknown handle => null';
   reset role;
   update public.twins set visibility = 'private' where id = a;

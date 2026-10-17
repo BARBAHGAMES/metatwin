@@ -43,7 +43,7 @@ function Privacy() {
 
           <h2>Who can see it</h2>
           <p>
-            Your profile is <strong>private by default</strong>. Only you can see your capabilities, projects and evidence unless you explicitly turn on "Make my profile public" from your dashboard. A public profile shows your name, headline, institution, programme, capabilities and projects to anyone with your link; evidence links and notes are shown only if you separately opt in to "Also show my evidence links, evidence notes and project links." A public profile never shows your email, birth year, age-confirmation status, or year of study.
+            Your profile is <strong>private by default</strong>. Only you can see your capabilities, projects and evidence unless you explicitly turn on "Make my profile public" from your dashboard. A public profile shows your name, headline, institution, programme, capabilities and projects (including each project's problem, solution, pitch deck, pitch video, write-up and project link) to anyone with your link; evidence links and notes are shown only if you separately opt in to "Also show my evidence links and evidence notes." A public profile never shows your email, birth year, age-confirmation status, or year of study.
           </p>
 
           <h2>Who we share it with</h2>
