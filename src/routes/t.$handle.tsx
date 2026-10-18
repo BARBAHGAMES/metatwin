@@ -9,6 +9,29 @@ import { TwinChat } from "@/components/TwinChat";
 import { PitchDeckButton, PitchVideoButton } from "@/components/PitchMedia";
 import { Journey } from "@/components/Journey";
 import { ProblemSolutionCards } from "@/components/ProjectExtras";
+import { VisitorFeedbackButton } from "@/components/VisitorFeedbackDialog";
+import { DECK_VIEW_PATH } from "@/lib/api-paths";
+import { supabase } from "@/integrations/supabase/client";
+
+// Fire-and-forget: tell the server a visitor opened this deck (counted once per
+// visitor per day). Signed-in visitors send their token so the student's own
+// opens aren't counted.
+async function recordDeckView(handle: string, projectId: string) {
+  try {
+    const body = JSON.stringify({ handle, project_id: projectId });
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token && navigator.sendBeacon?.(DECK_VIEW_PATH, new Blob([body], { type: "application/json" }))) return;
+    await fetch(DECK_VIEW_PATH, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body,
+      keepalive: true,
+    });
+  } catch {
+    // never block opening the deck
+  }
+}
 
 export const Route = createFileRoute("/t/$handle")({
   loader: async ({ params }) => {
@@ -38,23 +61,23 @@ export const Route = createFileRoute("/t/$handle")({
 
 function ProfileError() {
   return (
-    <main className="mx-auto max-w-md px-5 py-20 text-center">
+    <div className="mx-auto max-w-md px-5 py-20 text-center">
       <h1 className="text-2xl font-semibold">We couldn't load this MetaTwin</h1>
       <p className="mt-3 text-sm text-muted-foreground">Something went wrong on our side. Please try again in a moment.</p>
       <Button className="mt-6" onClick={() => window.location.reload()}>Try again</Button>
-    </main>
+    </div>
   );
 }
 
 function ProfileNotFound() {
   return (
-    <main className="mx-auto max-w-md px-5 py-20 text-center">
+    <div className="mx-auto max-w-md px-5 py-20 text-center">
       <h1 className="text-2xl font-semibold">This MetaTwin isn't available</h1>
       <p className="mt-3 text-sm text-muted-foreground">
         The link may be wrong, or the student has made their profile private.
       </p>
       <Button asChild variant="hero" className="mt-6"><Link to="/">Back to MetaTwin</Link></Button>
-    </main>
+    </div>
   );
 }
 
@@ -69,6 +92,7 @@ function capabilityStatus(c: PublicCapability): "self" | "evidence" | "reviewed"
 
 function PublicProfilePage() {
   const { profile } = Route.useLoaderData() as { profile: PublicProfile };
+  const firstName = profile.name?.trim().split(/\s+/)[0] || "the student";
   const withEvidence = profile.capabilities.filter((c) => c.evidence_count > 0).length;
 
   return (
@@ -150,7 +174,7 @@ function PublicProfilePage() {
                   <p className="text-xs text-muted-foreground">public repos</p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="text-2xl font-semibold">{profile.github_activity.top_languages[0]?.language ?? "—"}</p>
+                  <p className="truncate text-[0.95rem] font-semibold sm:text-2xl" title={profile.github_activity.top_languages[0]?.language}>{profile.github_activity.top_languages[0]?.language ?? "—"}</p>
                   <p className="text-xs text-muted-foreground">top language</p>
                 </div>
               </div>
@@ -297,10 +321,10 @@ function PublicProfilePage() {
                         </div>
                       )}
                       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                        {href && <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="text-electric hover:underline">View work</a>}
-                        {writeup && <a href={writeup} target="_blank" rel="noopener noreferrer nofollow" className="text-electric hover:underline">Write-up</a>}
-                        {deck && <PitchDeckButton url={deck} label="Pitch deck" className="flex items-center gap-1 text-electric hover:underline" />}
-                        {video && <PitchVideoButton url={video} label="Pitch video" className="flex items-center gap-1 text-electric hover:underline" />}
+                        {href && <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="py-2 text-electric hover:underline sm:py-0">View work</a>}
+                        {writeup && <a href={writeup} target="_blank" rel="noopener noreferrer nofollow" className="py-2 text-electric hover:underline sm:py-0">Write-up</a>}
+                        {deck && <PitchDeckButton url={deck} label="Pitch deck" onOpen={() => void recordDeckView(profile.handle, p.id)} className="flex items-center gap-1 py-2 text-electric hover:underline sm:py-0" />}
+                        {video && <PitchVideoButton url={video} label="Pitch video" className="flex items-center gap-1 py-2 text-electric hover:underline sm:py-0" />}
                       </div>
                       {p.github && (
                         <a href={githubHref ?? "#"} target="_blank" rel="noopener noreferrer nofollow" className="mt-3 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
@@ -328,6 +352,9 @@ function PublicProfilePage() {
                           <div className="mt-3"><Journey steps={buildPublicProjectJourney(p)} /></div>
                         </div>
                       )}
+                      <div className="mt-4 border-t pt-4">
+                        <VisitorFeedbackButton handle={profile.handle} projectId={p.id} projectTitle={p.title} studentFirstName={firstName} />
+                      </div>
                     </Card>
                   </li>
                 );

@@ -18,9 +18,9 @@ export const Route = createFileRoute("/reset-password")({
 function ResetPasswordPage() {
   const { passwordRecovery } = useAuth();
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
+    <div className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
       <HeroBackdrop />
-      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-5 py-16">
+      <div className="relative mx-auto flex min-h-[calc(100svh-4rem)] max-w-md flex-col justify-center px-5 py-16">
         <p className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-electric">Account</p>
         <h1 className="hero-rise-delay-1 mt-3 text-3xl font-semibold">
           {passwordRecovery ? "Choose a new password" : "Reset your password"}

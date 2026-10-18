@@ -914,6 +914,8 @@ export type Database = {
       }
       projects: {
         Row: {
+          pitch_deck_checked_at: string | null
+          pitch_deck_status: string
           artifact_url: string | null
           completed_at: string | null
           completion_reason: string | null
@@ -941,6 +943,8 @@ export type Database = {
           writeup_url: string | null
         }
         Insert: {
+          pitch_deck_checked_at?: string | null
+          pitch_deck_status?: string
           artifact_url?: string | null
           completed_at?: string | null
           completion_reason?: string | null
@@ -968,6 +972,8 @@ export type Database = {
           writeup_url?: string | null
         }
         Update: {
+          pitch_deck_checked_at?: string | null
+          pitch_deck_status?: string
           artifact_url?: string | null
           completed_at?: string | null
           completion_reason?: string | null
@@ -1339,6 +1345,93 @@ export type Database = {
       }
     }
     Functions: {
+      // Hand-added with migration 20261015200100_add_project_feedback (visitor feedback);
+      // regenerate this file from the live project once that migration is applied.
+      admin_delete_project_feedback: { Args: { p_feedback_id: string }; Returns: undefined }
+      admin_list_project_feedback: {
+        Args: never
+        Returns: {
+          comment: string
+          confirmed_at: string | null
+          contacts_expire_at: string | null
+          created_at: string
+          hidden_by_owner: boolean
+          id: string
+          project_title: string
+          rating: number
+          report_reason: string | null
+          reported_at: string | null
+          reviewer_email: string | null
+          reviewer_name: string
+          reviewer_org: string | null
+          reviewer_role: string
+          reviewer_whatsapp: string | null
+          share_email_consent: boolean | null
+          status: string
+          student_handle: string | null
+          student_name: string | null
+        }[]
+      }
+      confirm_project_feedback: { Args: { p_token_hash: string }; Returns: Json }
+      get_my_deck_views: {
+        Args: { p_project_id?: string }
+        Returns: { countries: Json; last_7_days: number; last_viewed_at: string | null; project_id: string; total: number }[]
+      }
+      record_deck_view: { Args: { p_country: string; p_handle: string; p_project_id: string; p_visitor_hash: string }; Returns: boolean }
+      get_my_institution_feedback: {
+        Args: never
+        Returns: {
+          comment: string
+          confirmed_at: string | null
+          id: string
+          project_title: string
+          rating: number
+          reviewer_name: string
+          reviewer_org: string | null
+          reviewer_role: string
+          student_handle: string | null
+          student_name: string | null
+        }[]
+      }
+      get_my_project_feedback: {
+        Args: { p_project_id?: string }
+        Returns: {
+          comment: string
+          confirmed_at: string | null
+          contact_expired: boolean
+          created_at: string
+          email_unlockable: boolean
+          hidden_by_owner: boolean
+          id: string
+          project_id: string
+          project_title: string
+          rating: number
+          reported_at: string | null
+          reviewer_name: string
+          reviewer_org: string | null
+          reviewer_role: string
+          snapshot: Json
+        }[]
+      }
+      purge_expired_feedback_data: { Args: never; Returns: Json }
+      report_project_feedback: { Args: { p_feedback_id: string; p_reason: string }; Returns: undefined }
+      set_project_feedback_hidden: { Args: { p_feedback_id: string; p_hidden: boolean }; Returns: undefined }
+      submit_project_feedback: {
+        Args: {
+          p_comment: string
+          p_consent: boolean
+          p_email: string
+          p_handle: string
+          p_name: string
+          p_org: string | null
+          p_project_id: string
+          p_rating: number
+          p_role: string
+          p_token_hash: string
+          p_whatsapp: string
+        }
+        Returns: Json
+      }
       accept_collaboration_request: {
         Args: { p_request_id: string }
         Returns: undefined

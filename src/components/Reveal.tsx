@@ -1,9 +1,25 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { Children, useEffect, useRef, type ReactNode } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
+  // Trigger positions are measured once; dashboard/profile content loads
+  // after mount and changes the page height, which leaves later triggers
+  // pointing at stale offsets (on a short page, possibly past the bottom, so
+  // that content would never become visible). Re-measure when the page
+  // height changes (debounced).
+  if ("ResizeObserver" in window) {
+    let pending: number | undefined;
+    let lastHeight = 0;
+    new ResizeObserver(() => {
+      const h = document.documentElement.scrollHeight;
+      if (Math.abs(h - lastHeight) < 2) return;
+      lastHeight = h;
+      window.clearTimeout(pending);
+      pending = window.setTimeout(() => ScrollTrigger.refresh(), 150);
+    }).observe(document.documentElement);
+  }
 }
 
 type RevealProps = {
@@ -32,6 +48,9 @@ type RevealProps = {
 // and avoids stranding keyboard/reduced-motion users on an empty section).
 export function Reveal({ children, className, stagger, delay = 0, y = 22, as = "div", scrub = false }: RevealProps) {
   const ref = useRef<HTMLElement>(null);
+  // Lists often render empty first and fill in once data loads: re-run so
+  // the real children are animated (and nothing is targeted while empty).
+  const childCount = Children.count(children);
 
   useEffect(() => {
     const el = ref.current;
@@ -39,6 +58,7 @@ export function Reveal({ children, className, stagger, delay = 0, y = 22, as = "
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const targets: Element | Element[] = stagger ? Array.from(el.children) : el;
+    if (Array.isArray(targets) && targets.length === 0) return;
 
     const ctx = gsap.context(() => {
       gsap.fromTo(
@@ -60,7 +80,7 @@ export function Reveal({ children, className, stagger, delay = 0, y = 22, as = "
     }, el);
 
     return () => ctx.revert();
-  }, [stagger, delay, y, scrub]);
+  }, [stagger, delay, y, scrub, childCount]);
 
   const Tag = as;
   return (

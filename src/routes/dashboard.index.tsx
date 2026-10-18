@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, Bot, Check, FolderGit2, Github, Trophy } from "lucide-react";
+import { averageRating, fetchMyProjectFeedback, newFeedback } from "@/lib/project-feedback";
+import { ArrowRight, Bot, Check, FolderGit2, Github, MessageSquareText, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, StatusBadge } from "@/components/site";
 import { Reveal } from "@/components/Reveal";
@@ -42,6 +43,20 @@ function Overview() {
   const [githubStars, setGithubStars] = useState(0);
   const [businessesPitched, setBusinessesPitched] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
+  const [feedback, setFeedback] = useState<{ total: number; fresh: number; avg: number | null; projectId: string | null } | null>(null);
+
+  // Visitor feedback summary (separate from the main load: a failure here shouldn't block the overview).
+  useEffect(() => {
+    fetchMyProjectFeedback()
+      .then((items) => {
+        const visible = items.filter((f) => !f.hidden_by_owner);
+        const fresh = newFeedback(items);
+        // Open the project with the newest unread feedback (else the newest feedback).
+        const target = fresh[0] ?? visible[0];
+        setFeedback({ total: visible.length, fresh: fresh.length, avg: averageRating(visible), projectId: target?.project_id ?? null });
+      })
+      .catch(() => setFeedback(null));
+  }, [reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +128,23 @@ function Overview() {
         <Card><p className="font-display text-3xl font-semibold">{githubStars}</p><p className="text-xs text-muted-foreground">GitHub stars</p></Card>
       </div>
 
+      {feedback && feedback.total > 0 && (
+        <Link to={feedback.projectId ? "/projects/$id" : "/dashboard/projects"} params={feedback.projectId ? { id: feedback.projectId } : undefined} className="block">
+          <Card className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <MessageSquareText className="h-5 w-5 text-electric" />
+              <div>
+                <p className="font-semibold">Visitor feedback</p>
+                <p className="text-xs text-muted-foreground">
+                  {feedback.total} {feedback.total === 1 ? "person has" : "people have"} rated your projects{feedback.avg != null ? `, ${feedback.avg.toFixed(1)}/5 on average` : ""}. Tap to read{feedback.fresh > 0 ? " the latest" : ""}.
+                </p>
+              </div>
+            </div>
+            {feedback.fresh > 0 && <span className="rounded-full bg-electric px-2.5 py-1 text-xs font-semibold text-primary-foreground">{feedback.fresh} new</span>}
+          </Card>
+        </Link>
+      )}
+
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
           <div className="flex items-center justify-between">
@@ -123,7 +155,7 @@ function Overview() {
           <ul className="mt-4 space-y-2.5 text-sm">
             {checklist.map((c) => (
               <li key={c.label}>
-                <Link to={c.to} className="flex items-center gap-2 hover:text-electric">
+                <Link to={c.to} className="flex items-center gap-2 py-1 hover:text-electric sm:py-0">
                   <span className={cn("grid h-4 w-4 shrink-0 place-items-center rounded-full border", c.done ? "border-electric bg-electric text-primary-foreground" : "border-muted-foreground/40")}>
                     {c.done && <Check className="h-3 w-3" />}
                   </span>
@@ -138,7 +170,7 @@ function Overview() {
         <Card>
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 font-semibold"><FolderGit2 className="h-4 w-4" /> Projects</h3>
-            <Link to="/dashboard/projects" className="text-xs text-electric hover:underline">Add project</Link>
+            <Link to="/dashboard/projects" className="text-xs text-electric hover:underline -my-2 py-2 sm:my-0 sm:py-0">Add project</Link>
           </div>
           {projects.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">No projects yet.</p>
@@ -161,7 +193,7 @@ function Overview() {
         <Card>
           <div className="flex items-center justify-between">
             <h3 className="flex items-center gap-2 font-semibold"><Bot className="h-4 w-4" /> Your AI employees</h3>
-            <Link to="/dashboard/ai-team" className="text-xs text-electric hover:underline">Manage</Link>
+            <Link to="/dashboard/ai-team" className="text-xs text-electric hover:underline -my-2 py-2 sm:my-0 sm:py-0">Manage</Link>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
             {aiEmployeeCount === 0 ? "No AI employees yet. Add the agents and tools that work for you." : `${aiEmployeeCount} AI employee${aiEmployeeCount === 1 ? "" : "s"} listed.`}

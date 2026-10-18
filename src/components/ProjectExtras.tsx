@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Circle, ExternalLink, FileText, GitFork, Github, History, MessageSquare, Pencil, PlayCircle, Plus, RefreshCw, Rocket, Star, Trash2, UserPlus, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { GITHUB_SYNC_PATH, PITCH_FEEDBACK_SYNC_PATH, type GitHubRepoStats } from "@/lib/api-paths";
+import { DECK_CHECK_PATH, GITHUB_SYNC_PATH, PITCH_FEEDBACK_SYNC_PATH, type DeckCheckStatus, type GitHubRepoStats } from "@/lib/api-paths";
 import { LIMITS } from "@/lib/limits";
 import {
   acceptCollaborationRequest,
@@ -17,9 +17,9 @@ import {
 } from "@/lib/real-data";
 import { COMPLETION_REASONS, nextInterviewTarget, type ProjectStage } from "@/lib/project-stage";
 import type { PitchScores } from "@/lib/scores";
-import { safeHref } from "@/lib/url";
+import { isHttpUrl, safeHref } from "@/lib/url";
 import { Card } from "@/components/site";
-import { PitchDeckButton, PitchVideoButton } from "@/components/PitchMedia";
+import { LinkHint, PitchDeckButton, PitchVideoButton } from "@/components/PitchMedia";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -251,8 +251,8 @@ export function PitchTracker({
                 {p.notes && <p className="mt-1 text-xs text-muted-foreground">{p.notes}</p>}
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <button onClick={() => startEdit(p)} aria-label="Edit" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
-                <button onClick={() => removePitch(p.id)} aria-label="Remove" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => startEdit(p)} aria-label="Edit" className="cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => removePitch(p.id)} aria-label="Remove" className="cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
               </div>
             </li>
           ),
@@ -280,10 +280,13 @@ export function MediaTiles({
   writeupUrl,
   pitchDeckUrl,
   pitchVideoUrl,
+  addHref,
 }: {
   writeupUrl: string | null;
   pitchDeckUrl: string | null;
   pitchVideoUrl: string | null;
+  /** Owner view: empty tiles link here (the links form) instead of being dead ends. */
+  addHref?: string;
 }) {
   const writeup = safeHref(writeupUrl);
   const deck = safeHref(pitchDeckUrl);
@@ -295,14 +298,14 @@ export function MediaTiles({
         {video ? (
           <PitchVideoButton url={video} label="Pitch video" className="flex flex-col items-center gap-2 text-electric" />
         ) : (
-          <><PlayCircle className="h-5 w-5 text-muted-foreground" /><span className="text-muted-foreground">No pitch video yet</span></>
+          <EmptyTile href={addHref} icon={<PlayCircle className="h-5 w-5" />} text="No pitch video yet" action="Add pitch video" />
         )}
       </div>
       <div className={tileClass}>
         {deck ? (
           <PitchDeckButton url={deck} label="Pitch deck" className="flex flex-col items-center gap-2 text-electric" />
         ) : (
-          <><FileText className="h-5 w-5 text-muted-foreground" /><span className="text-muted-foreground">No pitch deck yet</span></>
+          <EmptyTile href={addHref} icon={<FileText className="h-5 w-5" />} text="No pitch deck yet" action="Add pitch deck" />
         )}
       </div>
       <div className={tileClass}>
@@ -311,10 +314,89 @@ export function MediaTiles({
             <FileText className="h-5 w-5" /> Project write-up
           </a>
         ) : (
-          <><FileText className="h-5 w-5 text-muted-foreground" /><span className="text-muted-foreground">No write-up yet</span></>
+          <EmptyTile href={addHref} icon={<FileText className="h-5 w-5" />} text="No write-up yet" action="Add write-up" />
         )}
       </div>
     </div>
+  );
+}
+
+function formatCheckedAt(iso: string): string {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+async function runDeckCheck(projectId: string): Promise<DeckCheckStatus | null> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return null;
+  try {
+    const res = await fetch(DECK_CHECK_PATH, {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ project_id: projectId }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { status?: DeckCheckStatus; error?: string };
+    if (!res.ok) {
+      toast.error(body.error ?? "Couldn't check the deck right now.");
+      return null;
+    }
+    return body.status ?? null;
+  } catch {
+    toast.error("Couldn't check the deck right now.");
+    return null;
+  }
+}
+
+const DECK_STATUS_COPY: Record<DeckCheckStatus, { tone: "ok" | "bad" | "neutral"; title: string; body?: string }> = {
+  public: { tone: "ok", title: "Anyone with the link can view your deck" },
+  restricted: {
+    tone: "bad",
+    title: "Only you can see this deck right now",
+    body: "Hirers will see a Google sign-in page. In Google, tap Share → General access → “Anyone with the link” → Viewer, then tap Check again.",
+  },
+  not_found: { tone: "bad", title: "We couldn't find this deck", body: "Copy the link again from Share → Copy link, paste it above and save." },
+  unknown: { tone: "neutral", title: "We can't check this kind of link automatically", body: "Open it in a private browser window to make sure anyone can view it." },
+  unchecked: { tone: "neutral", title: "Not checked yet" },
+};
+
+function DeckStatusBadge({ projectId, status, checkedAt, onChecked }: { projectId: string; status: DeckCheckStatus; checkedAt: string | null; onChecked: () => void }) {
+  const [checking, setChecking] = useState(false);
+  const copy = DECK_STATUS_COPY[status] ?? DECK_STATUS_COPY.unchecked;
+  const tone =
+    copy.tone === "ok" ? "border-status-evidence/40 bg-status-evidence-bg text-status-evidence" : copy.tone === "bad" ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-muted text-muted-foreground";
+  async function check() {
+    setChecking(true);
+    const result = await runDeckCheck(projectId);
+    setChecking(false);
+    if (result) onChecked();
+  }
+  return (
+    <div role="status" className={`rounded-lg border p-3 text-xs ${tone}`}>
+      <p className="font-semibold">{copy.tone === "ok" ? "✓ " : copy.tone === "bad" ? "⚠ " : ""}{copy.title}</p>
+      {copy.body && <p className="mt-1 text-foreground/80">{copy.body}</p>}
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        {checkedAt && <span className="text-muted-foreground">Last checked {formatCheckedAt(checkedAt)}</span>}
+        <button type="button" onClick={check} disabled={checking} className="-my-2 py-2 font-medium text-electric hover:underline disabled:opacity-50 sm:my-0 sm:py-0">
+          {checking ? "Checking…" : status === "unchecked" ? "Check now" : "Check again"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EmptyTile({ href, icon, text, action }: { href?: string; icon: ReactNode; text: string; action: string }) {
+  if (!href) return <><span className="text-muted-foreground">{icon}</span><span className="text-muted-foreground">{text}</span></>;
+  return (
+    <a href={href} className="flex flex-col items-center gap-2 text-electric">
+      {icon}
+      <span>{action}</span>
+    </a>
   );
 }
 
@@ -432,8 +514,8 @@ export function ProjectUpdatesCard({
                 {u.description && <p className="mt-1 text-xs text-muted-foreground">{u.description}</p>}
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <button onClick={() => startEdit(u)} aria-label="Edit" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
-                <button onClick={() => removeUpdate(u.id)} aria-label="Remove" className="cursor-pointer rounded p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => startEdit(u)} aria-label="Edit" className="cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Pencil className="h-4 w-4" /></button>
+                <button onClick={() => removeUpdate(u.id)} aria-label="Remove" className="cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
               </div>
             </li>
           ),
@@ -512,7 +594,8 @@ export function PitchFeedbackCard({
 
   return (
     <Card>
-      <h3 className="flex items-center gap-2 font-semibold"><MessageSquare className="h-4 w-4" /> Pitch feedback</h3>
+      <h3 className="flex items-center gap-2 font-semibold"><MessageSquare className="h-4 w-4" /> Pitch feedback: from your outreach</h3>
+      <p className="mt-0.5 text-xs text-muted-foreground">Responses to the Google Form you share when you pitch. Visitor feedback from your MetaTwin is shown separately.</p>
       <p className="mt-1 text-xs text-muted-foreground">
         Paste your Google Form's response sheet, published to the web as a CSV (Sheet → File → Share → Publish to web → CSV). We
         only read question averages — never the raw responses.
@@ -798,7 +881,7 @@ export function ProjectLinksForm({
   project,
   onSaved,
 }: {
-  project: Pick<MyProject, "id" | "writeup_url" | "pitch_deck_url" | "pitch_video_url">;
+  project: Pick<MyProject, "id" | "writeup_url" | "pitch_deck_url" | "pitch_video_url" | "pitch_deck_status" | "pitch_deck_checked_at">;
   onSaved: () => void;
 }) {
   const [writeup, setWriteup] = useState(project.writeup_url ?? "");
@@ -807,6 +890,11 @@ export function ProjectLinksForm({
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    const bad = [writeup, deck, video].find((v) => v.trim() && !isHttpUrl(v.trim()));
+    if (bad !== undefined) {
+      toast.error("Each link must start with https:// (copy it from the Share button).");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase
       .from("projects")
@@ -824,28 +912,42 @@ export function ProjectLinksForm({
       // Non-fatal: the stage just won't have advanced yet; the next sync/save retries it.
     }
     toast.success("Links saved.");
+    // Check the deck the way a hirer would see it (only if it changed or was never checked).
+    if (deck.trim() && (deck.trim() !== (project.pitch_deck_url ?? "") || project.pitch_deck_status === "unchecked")) {
+      await runDeckCheck(project.id);
+    }
     onSaved();
   }
 
   return (
     <Card>
-      <h3 className="font-semibold">Write-up, deck & pitch video</h3>
+      <h3 id="pitch-links" className="scroll-mt-24 font-semibold">Write-up, deck & pitch video</h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        Paste links — a Google Doc write-up, a Slides/Drive deck, and a pitch video (YouTube or a direct video link). They'll play
-        inline from the tiles above once saved.
+        Paste links to your deck, pitch video and write-up. They show on your public MetaTwin, so make sure anyone with the link
+        can view them. We'll tell you what each link is as you paste it.
       </p>
       <div className="mt-3 space-y-2">
         <div className="space-y-1.5">
-          <Label>Write-up (Google Doc, etc.)</Label>
-          <Input placeholder="https://docs.google.com/..." value={writeup} onChange={(e) => setWriteup(e.target.value)} />
+          <Label htmlFor="pitch-deck-url">Pitch deck (Google Slides/Drive, PDF, Canva…)</Label>
+          <Input id="pitch-deck-url" type="url" inputMode="url" autoComplete="off" placeholder="https://docs.google.com/presentation/..." value={deck} onChange={(e) => setDeck(e.target.value)} />
+          <LinkHint
+            url={deck}
+            kind="deck"
+            hideSharingAdvice={deck.trim() === (project.pitch_deck_url ?? "") && project.pitch_deck_status !== "unchecked" && project.pitch_deck_status !== "unknown"}
+          />
+          {deck.trim() && deck.trim() === (project.pitch_deck_url ?? "") && (
+            <DeckStatusBadge projectId={project.id} status={project.pitch_deck_status as DeckCheckStatus} checkedAt={project.pitch_deck_checked_at} onChecked={onSaved} />
+          )}
         </div>
         <div className="space-y-1.5">
-          <Label>Pitch deck (Google Slides/Drive, etc.)</Label>
-          <Input placeholder="https://docs.google.com/presentation/..." value={deck} onChange={(e) => setDeck(e.target.value)} />
+          <Label htmlFor="pitch-video-url">Pitch video (YouTube, Google Drive or a video file)</Label>
+          <Input id="pitch-video-url" type="url" inputMode="url" autoComplete="off" placeholder="https://youtube.com/watch?v=..." value={video} onChange={(e) => setVideo(e.target.value)} />
+          <LinkHint url={video} kind="video" />
         </div>
         <div className="space-y-1.5">
-          <Label>Pitch video (YouTube or direct link)</Label>
-          <Input placeholder="https://youtube.com/watch?v=..." value={video} onChange={(e) => setVideo(e.target.value)} />
+          <Label htmlFor="writeup-url">Write-up (Google Doc, etc.)</Label>
+          <Input id="writeup-url" type="url" inputMode="url" autoComplete="off" placeholder="https://docs.google.com/..." value={writeup} onChange={(e) => setWriteup(e.target.value)} />
+          <LinkHint url={writeup} kind="writeup" />
         </div>
         <Button variant="outline" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save links"}</Button>
       </div>

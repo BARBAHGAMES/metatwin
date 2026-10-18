@@ -42,21 +42,21 @@ export const Route = createFileRoute("/review/$token")({
 
 function ReviewError() {
   return (
-    <main className="mx-auto max-w-md px-5 py-20 text-center">
+    <div className="mx-auto max-w-md px-5 py-20 text-center">
       <h1 className="text-2xl font-semibold">We couldn't load this review link</h1>
       <p className="mt-3 text-sm text-muted-foreground">Something went wrong on our side. Please try again in a moment.</p>
       <Button className="mt-6" onClick={() => window.location.reload()}>Try again</Button>
-    </main>
+    </div>
   );
 }
 
 function ReviewNotFound() {
   return (
-    <main className="mx-auto max-w-md px-5 py-20 text-center">
+    <div className="mx-auto max-w-md px-5 py-20 text-center">
       <h1 className="text-2xl font-semibold">This review link isn't valid</h1>
       <p className="mt-3 text-sm text-muted-foreground">Double-check the link the student sent you, or ask them to send a new one.</p>
       <Button asChild variant="hero" className="mt-6"><Link to="/">Back to MetaTwin</Link></Button>
-    </main>
+    </div>
   );
 }
 

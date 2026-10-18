@@ -79,16 +79,25 @@ function Build() {
   // wizard (see handleFinish below) — without this check, an unpaid account
   // could build a full profile here without ever hitting PaywallGate on
   // /dashboard. Signed-out visitors are unaffected (preview-only, saves nothing).
+  //
+  // Also: an account that has already onboarded (first_name set) must not
+  // re-run this wizard — it starts blank and handleFinish overwrites the
+  // saved profile with the wizard's values. Homepage/marketing CTAs still
+  // link here, so send those users to their dashboard instead.
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     supabase
       .from("twins")
-      .select("plan_status, plan_paid_until")
+      .select("plan_status, plan_paid_until, first_name")
       .eq("id", user.id)
       .maybeSingle()
       .then(async ({ data }) => {
         if (cancelled || !data) return;
+        if (data.first_name) {
+          navigate({ to: "/dashboard", replace: true });
+          return;
+        }
         if (hasActivePlan(data)) return;
         const viaTeam = await fetchHasTeamPlanAccess();
         if (!cancelled && !viaTeam) navigate({ to: "/dashboard" });
@@ -301,7 +310,7 @@ function Build() {
   if (done) return <Done firstName={firstName} caps={caps} evs={evs} vis={vis} />;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-muted/40">
+    <div className="min-h-[calc(100svh-4rem)] bg-muted/40">
       <div className="relative overflow-hidden bg-gradient-ink text-ink-foreground">
         <HeroBackdrop image={heroImg} imageClassName="object-contain object-right sm:object-right" />
         <div className="relative mx-auto max-w-7xl px-5 py-10 md:py-14">
@@ -313,7 +322,7 @@ function Build() {
           <ol className="mt-2 grid grid-cols-5 gap-2 sm:mt-8">
             {steps.map((s, i) => (
               <li key={s.t}>
-                <button disabled={i > step} onClick={() => setStep(i)} className="w-full cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2 disabled:cursor-not-allowed">
+                <button disabled={i > step} onClick={() => setStep(i)} className="w-full cursor-pointer py-3 text-left focus-visible:outline-none sm:py-0 focus-visible:ring-2 focus-visible:ring-electric focus-visible:ring-offset-2 disabled:cursor-not-allowed">
                   <div className={cn("h-1 rounded-full", i <= step ? "bg-gradient-electric" : "bg-ink-foreground/15")} />
                   <p className={cn("mt-2 flex items-center gap-1.5 text-xs font-medium sm:text-sm", i <= step ? "text-ink-foreground" : "text-ink-muted")}>
                     {i < step ? <Check className="h-3.5 w-3.5 shrink-0 text-electric" /> : <s.i className="hidden h-3.5 w-3.5 shrink-0 sm:block" />}
@@ -442,7 +451,7 @@ function Build() {
                     <p className="min-w-0 truncate font-medium">{c.name}</p>
                     <div className="flex items-center gap-2">
                       <StatusBadge status="self" />
-                      <button onClick={() => setCaps(caps.filter((x) => x.skillId !== c.skillId))} aria-label="Remove" className="cursor-pointer rounded p-1 text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => setCaps(caps.filter((x) => x.skillId !== c.skillId))} aria-label="Remove" className="cursor-pointer rounded p-2.5 sm:p-1 text-muted-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-electric"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </li>
                 ))}
@@ -588,7 +597,7 @@ function Done({ firstName, caps, evs, vis }: { firstName: string; caps: Cap[]; e
     ["reviewed", 0],
   ];
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
+    <div className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
       <HeroBackdrop image={heroImg} />
       <div className="relative mx-auto max-w-3xl px-5 py-20 text-center">
         <div className="pop-in mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-electric shadow-glow"><Check className="h-8 w-8" /></div>

@@ -63,16 +63,17 @@ export async function removeAiEmployee(id: string): Promise<void> {
 }
 
 // The link can be a GitHub repo OR a Claude Skill reference OR anything
-// else — only the GitHub case has public stats to show. Matches the owner/repo
-// extraction github-sync-route.server.ts itself does for a raw "owner/name" input.
-export function parseGithubRepo(url: string): string | null {
-  const match = url.trim().match(/^https?:\/\/(?:www\.)?github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)\/?$/i);
-  return match ? match[1]!.replace(/\.git$/i, "") : null;
-}
+// else — only the GitHub case has public stats to show. The parsing lives in
+// github-repo.ts (pure, shared with github-sync-route.server.ts, which derives
+// the repo from the stored link itself — so the stats shown always describe
+// the link shown).
+export { parseGithubRepo } from "./github-repo";
 
 // Reuses the existing /api/github/sync route (github-sync-route.server.ts) —
 // authenticated and ownership-checked there, which also does the write
 // server-side now (Build Plan 0.5), so this is just the authenticated call.
+// The server syncs the repo in the AI employee's saved link; `repo` is only a
+// hint for older servers and is ignored for AI employees.
 export async function syncAiEmployeeGithubStats(id: string, repo: string): Promise<void> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;

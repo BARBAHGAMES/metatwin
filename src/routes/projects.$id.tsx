@@ -21,6 +21,7 @@ import { STAGE_LABELS, type ProjectStage } from "@/lib/project-stage";
 import { safeHref } from "@/lib/url";
 import { LoadError } from "@/components/LoadError";
 import { Card, PageHero, SampleTag, Section, StatusBadge } from "@/components/site";
+import { DeckViewsCard, VisitorFeedbackCard } from "@/components/VisitorFeedbackCard";
 import { Journey } from "@/components/Journey";
 import { Reveal } from "@/components/Reveal";
 import {
@@ -69,7 +70,7 @@ function ProjectPage() {
   const { id } = Route.useParams();
   const { user, loading } = useAuth();
   if (project) return <SampleProject p={project} />;
-  if (loading) return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  if (loading) return <div className="p-16 text-center text-muted-foreground" role="status">Loading...</div>;
   if (!user) {
     return (
       <Section>
@@ -87,7 +88,9 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
 
   useEffect(() => {
     let cancelled = false;
-    setState("loading");
+    // Only the first load shows the full-page placeholder. Reloads after a save or
+    // sync keep the page (and the student's scroll position) and swap data in place.
+    setState((prev) => (prev === "ready" ? prev : "loading"));
     fetchMyProject(userId, projectId)
       .then((d) => {
         if (cancelled) return;
@@ -104,7 +107,7 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
   }, [userId, projectId, reloadKey]);
 
   if (state === "error") return <LoadError onRetry={() => setReloadKey((k) => k + 1)} />;
-  if (state === "loading") return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+  if (state === "loading") return <div className="p-16 text-center text-muted-foreground" role="status">Loading...</div>;
   if (!data) {
     return (
       <Section>
@@ -124,8 +127,10 @@ function RealProject({ userId, projectId }: { userId: string; projectId: string 
       <Section className="grid gap-8 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0 space-y-6">
           <Link to="/projects" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> My projects</Link>
-          <MediaTiles writeupUrl={p.writeup_url} pitchDeckUrl={p.pitch_deck_url} pitchVideoUrl={p.pitch_video_url} />
+          <MediaTiles writeupUrl={p.writeup_url} pitchDeckUrl={p.pitch_deck_url} pitchVideoUrl={p.pitch_video_url} addHref="#pitch-links" />
           <ProblemSolutionCards problemStatement={p.problem_statement} proposedSolution={p.proposed_solution} />
+          <VisitorFeedbackCard projectId={projectId} twinId={userId} current={{ problem_statement: p.problem_statement, proposed_solution: p.proposed_solution }} />
+          <DeckViewsCard projectId={projectId} hasDeck={!!p.pitch_deck_url} />
           {artifact && (
             <Card>
               <p className="text-xs font-semibold uppercase text-muted-foreground">Project link</p>

@@ -7,6 +7,10 @@ declare
   adm uuid := gen_random_uuid();
   s uuid := gen_random_uuid();
   yr int := extract(year from now())::int;
+  proj uuid;
+  fb jsonb;
+  fb_id uuid;
+  n int;
 begin
   insert into auth.users (id, email, aud, role, raw_user_meta_data) values
     (adm, 'andrew@metaglobetechnologies.co.ke', 'authenticated', 'authenticated', '{"account_type":"platform_admin","full_name":"Admin"}'),
@@ -35,6 +39,39 @@ begin
   exception when assert_failure then raise; when insufficient_privilege then null;  -- 'Not authorized.' (42501)
   end;
   reset role;
+
+  -- Visitor-feedback moderation: only a verified platform admin sees reviewer contacts and can delete.
+  update public.twins set name = 'Sam', handle = 'sam-local', mbti_type = 'INTJ', plan_status = 'grandfathered', visibility = 'public' where id = s;
+  insert into public.projects (twin_id, title) values (s, 'Sam project') returning id into proj;
+  set local role service_role;
+  fb := public.submit_project_feedback('sam-local', proj, 4, 'Solid idea.', 'Visitor', 'mentor', null, 'visitor@test.invalid', '+254711111111', true, repeat('e', 64));
+  fb_id := (fb ->> 'feedback_id')::uuid;
+  perform public.confirm_project_feedback(repeat('e', 64));
+  reset role;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', s, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  begin
+    perform public.admin_list_project_feedback();
+    assert false, 'a student must not be able to list feedback with contact details';
+  exception when assert_failure then raise; when insufficient_privilege then null;
+  end;
+  begin
+    perform public.admin_delete_project_feedback(fb_id);
+    assert false, 'a student must not be able to delete feedback as admin';
+  exception when assert_failure then raise; when insufficient_privilege then null;
+  end;
+  reset role;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', adm, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select to_jsonb(x) into fb from public.admin_list_project_feedback() x where x.id = fb_id;
+  assert fb ->> 'reviewer_email' = 'visitor@test.invalid' and fb ->> 'reviewer_whatsapp' = '+254711111111',
+    'a verified platform admin sees reviewer email and WhatsApp for moderation';
+  perform public.admin_delete_project_feedback(fb_id);
+  reset role;
+  assert not exists (select 1 from public.project_feedback where id = fb_id), 'platform admin delete removes the feedback';
+  assert not exists (select 1 from public.project_feedback_contacts where feedback_id = fb_id), '... and its contact details';
 
   raise exception 'ALL PASS (rolled back)';
 exception

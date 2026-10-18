@@ -6,7 +6,7 @@ import { Card } from "@/components/site";
 // student to self-resolve here, unlike AdultGate — it's a read-only message.
 export function DeactivatedGate() {
   return (
-    <main className="mx-auto max-w-md px-5 py-16">
+    <div className="mx-auto max-w-md px-5 py-16">
       <Card>
         <ShieldOff className="h-8 w-8 text-muted-foreground" />
         <h1 className="mt-4 text-2xl font-semibold">Your account has been deactivated</h1>
@@ -18,6 +18,6 @@ export function DeactivatedGate() {
           .
         </p>
       </Card>
-    </main>
+    </div>
   );
 }

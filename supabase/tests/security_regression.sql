@@ -15,6 +15,8 @@ declare
   c uuid := gen_random_uuid();   -- signup with NO age declaration
   d uuid := gen_random_uuid();   -- new (unpaid) student for the plan/activation section
   e uuid := gen_random_uuid();   -- account whose twin row is removed (client-insert check)
+  sa uuid := gen_random_uuid();  -- school admin (visitor-feedback section)
+  fb jsonb; fb_id uuid;
   s1 uuid; s2 uuid; s3 uuid;
   ca uuid; cb uuid; pb uuid; pa uuid; ev uuid;
   yr int := extract(year from now())::int;
@@ -145,6 +147,12 @@ begin
   assert prof ->> 'name' = 'Amina', 'public profile is readable via the function';
   assert not (prof::text ~* 'private note|a@test|birth_year|is_adult|parental'), 'public profile must not leak notes, email or age fields';
   assert not (prof -> 'capabilities' -> 0 -> 'evidence' -> 0 ? 'link'), 'evidence links hidden unless the student opts in';
+  -- Projects and their pitch materials are always public on a public profile (pitch flow D7),
+  -- independent of the evidence-links opt-in above.
+  assert (prof -> 'projects' -> 0 ->> 'artifact_url') = 'https://example.com/a',
+    'project links / pitch materials must be public even without the evidence-links opt-in';
+  assert (prof -> 'projects' -> 0) ? 'pitch_deck_url' and (prof -> 'projects' -> 0) ? 'pitch_video_url' and (prof -> 'projects' -> 0) ? 'writeup_url',
+    'public projects always carry their deck/video/write-up keys';
   assert public.get_public_profile('nobody-here') is null, 'unknown handle => null';
   reset role;
   update public.twins set visibility = 'private' where id = a;
@@ -587,6 +595,221 @@ begin
   reset role;
   assert (select github_full_name is null and github_stars is null and github_synced_at is null from public.ai_employees where id = ai_emp_id),
     'changing link_url must reset the stale github_* stats';
+
+  ------------------------------------------------- visitor feedback (pitch flow Release A)
+  -- Browser roles have no access to the tables or the server-only functions.
+  set local role anon;
+  blocked := false; begin perform 1 from public.project_feedback limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not read project_feedback';
+  blocked := false; begin insert into public.project_feedback_contacts (feedback_id, project_id, email, whatsapp) values (gen_random_uuid(), pa, 'x@y.z', '+254700000000'); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not write feedback contacts';
+  blocked := false; begin perform 1 from public.project_feedback_email_sends limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not read the confirmation-email log';
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 5, 'Great', 'X', 'other', null, 'x@test.invalid', '+254700000000', true, repeat('a', 64)); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not call submit_project_feedback directly (server route only)';
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  blocked := false; begin perform 1 from public.project_feedback_contacts limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'signed-in users must not read feedback contacts';
+  blocked := false; begin perform public.confirm_project_feedback(repeat('a', 64)); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'signed-in users must not call confirm_project_feedback directly';
+  blocked := false; begin perform public.purge_expired_feedback_data(); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'signed-in users must not call the purge';
+  reset role;
+
+  -- Server route path (service_role): submit -> pending (invisible) -> confirm -> visible.
+  set local role service_role;
+  fb := public.submit_project_feedback('amina-reg', pa, 4, 'Clear problem, test pricing next.', 'Wanjiru K', 'business_owner', 'Kiosk Co', 'Reviewer@Test.invalid', '+254712345678', true, repeat('a', 64));
+  fb_id := (fb ->> 'feedback_id')::uuid;
+  assert (select status from public.project_feedback where id = fb_id) = 'pending', 'new feedback starts pending';
+  assert (select email from public.project_feedback_contacts where feedback_id = fb_id) = 'reviewer@test.invalid', 'email stored normalised';
+  blocked := false; begin perform public.submit_project_feedback('dee-reg', pa, 5, 'x', 'X', 'other', null, 'z@test.invalid', '+254700000000', false, repeat('b', 64)); exception when others then blocked := true; end;
+  assert blocked, 'feedback only on projects shown on that (public, active, paid) profile';
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pb, 5, 'x', 'X', 'other', null, 'z@test.invalid', '+254700000000', false, repeat('b', 64)); exception when others then blocked := true; end;
+  assert blocked, 'feedback cannot target another student''s project through this handle';
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 5, 'x', 'X', 'other', null, 'a@test.invalid', '+254700000000', false, repeat('b', 64)); exception when others then blocked := true; end;
+  assert blocked, 'a student cannot review their own project';
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 5, 'see https://spam.example', 'X', 'other', null, 'y@test.invalid', '+254700000000', false, repeat('b', 64)); exception when check_violation then blocked := true; end;
+  assert blocked, 'links are not allowed in feedback comments';
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 5, 'ok', 'X', 'other', null, 'y@test.invalid', '0712345678', false, repeat('b', 64)); exception when check_violation then blocked := true; end;
+  assert blocked, 'WhatsApp number must be stored in +<country><number> form';
+  reset role;
+
+  -- Confirmation-email brake (cross-isolate): one per minute and five per hour per address.
+  set local role service_role;
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 4, 'Again', 'Wanjiru K', 'business_owner', null, 'reviewer@test.invalid', '+254712345678', true, repeat('9', 64)); exception when others then blocked := sqlerrm = 'rate_limited'; end;
+  assert blocked, 'a second confirmation email to the same address within a minute is refused';
+  reset role;
+  assert (select count(*) from public.project_feedback_email_sends) = 1, 'only one confirmation email was recorded';
+  -- five sends to one inbox in the last hour (spaced > 1 minute) -> the sixth is refused, whatever the project
+  insert into public.project_feedback_email_sends (email_hash, sent_at)
+    select encode(sha256(convert_to('victim@test.invalid', 'UTF8')), 'hex'), now() - make_interval(mins => 5 * g) from generate_series(1, 5) g;
+  set local role service_role;
+  blocked := false; begin perform public.submit_project_feedback('amina-reg', pa, 3, 'Spam', 'X', 'other', null, 'Victim@Test.invalid', '+254700000009', false, repeat('8', 64)); exception when others then blocked := sqlerrm = 'rate_limited'; end;
+  assert blocked, 'a sixth confirmation email to one address within an hour is refused (stops email bombing)';
+  reset role;
+  delete from public.project_feedback_email_sends;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.get_my_project_feedback();
+  assert n = 0, 'pending (unconfirmed) feedback is invisible to the student';
+  reset role;
+
+  set local role service_role;
+  assert public.confirm_project_feedback(repeat('f', 64)) ->> 'status' = 'invalid', 'unknown token is rejected';
+  assert public.confirm_project_feedback(repeat('a', 64)) ->> 'status' = 'confirmed', 'right token confirms';
+  assert public.confirm_project_feedback(repeat('a', 64)) ->> 'status' = 'invalid', 'confirmation tokens are single-use';
+  reset role;
+
+  set local role authenticated;  -- student A
+  select to_jsonb(x) into fb from public.get_my_project_feedback() x limit 1;
+  assert fb ->> 'comment' = 'Clear problem, test pricing next.' and (fb ->> 'rating')::int = 4, 'student sees confirmed feedback';
+  assert not (fb::text ~* 'reviewer@test|\+254712345678|whatsapp|email"'), 'student never receives reviewer email or WhatsApp';
+  assert (fb ->> 'email_unlockable')::boolean, 'consent is reported for the later unlock feature';
+  reset role;
+
+  -- Re-submission by the same email waits for confirmation, then replaces the old version (still one row).
+  update public.project_feedback_email_sends set sent_at = sent_at - interval '2 minutes';
+  set local role service_role;
+  perform public.submit_project_feedback('amina-reg', pa, 5, 'Updated: pricing test done, looks strong.', 'Wanjiru K', 'business_owner', 'Kiosk Co', 'reviewer@test.invalid', '+254712345678', false, repeat('c', 64));
+  reset role;
+  set local role authenticated;
+  assert (select x.comment from public.get_my_project_feedback() x limit 1) = 'Clear problem, test pricing next.', 'an unconfirmed update does not replace visible feedback';
+  reset role;
+  set local role service_role;
+  perform public.confirm_project_feedback(repeat('c', 64));
+  reset role;
+  set local role authenticated;
+  select count(*) into n from public.get_my_project_feedback();
+  assert n = 1 and (select x.rating from public.get_my_project_feedback() x limit 1) = 5, 'a confirmed update replaces the old version in place';
+  assert not (select x.email_unlockable from public.get_my_project_feedback() x limit 1), 'consent follows the latest confirmed submission';
+  reset role;
+
+  -- Another student cannot see or hide it.
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.get_my_project_feedback();
+  assert n = 0, 'another student sees none of A''s feedback';
+  blocked := false; begin perform public.set_project_feedback_hidden(fb_id, true); exception when others then blocked := true; end;
+  assert blocked, 'another student cannot hide A''s feedback';
+  reset role;
+
+  -- School admin of A's institution sees it (never contacts); an unverified admin sees nothing.
+  select id into uni from public.universities order by sort_order limit 1;
+  update public.twins set university_id = uni where id = a;
+  insert into auth.users (id, email, aud, role, raw_user_meta_data) values
+    (sa, 'regression-staff@mku.ac.ke', 'authenticated', 'authenticated',
+     jsonb_build_object('account_type', 'school_admin', 'full_name', 'Reg Staff', 'phone', '0700000000', 'university_id', uni));
+  perform set_config('request.jwt.claims', json_build_object('sub', sa, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.get_my_institution_feedback();
+  assert n = 0, 'an unverified school admin sees no feedback';
+  reset role;
+  update public.school_admins set status = 'verified', verified_at = now() where id = sa;
+  set local role authenticated;
+  select to_jsonb(x) into fb from public.get_my_institution_feedback() x limit 1;
+  assert fb ->> 'student_handle' = 'amina-reg', 'a verified school admin sees their institution''s feedback';
+  assert not (fb::text ~* 'reviewer@test|\+254712345678'), 'school admins never see reviewer contact details';
+  blocked := false; begin perform public.admin_list_project_feedback(); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'school admins cannot use the platform-admin moderation list';
+  reset role;
+
+  -- Owner reports it: hidden + flagged, and it drops out of the school view.
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  perform public.report_project_feedback(fb_id, 'abusive');
+  assert (select x.hidden_by_owner and x.reported_at is not null from public.get_my_project_feedback() x limit 1), 'reporting hides and flags the feedback';
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', sa, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.get_my_institution_feedback();
+  assert n = 0, 'hidden/reported feedback is not shown to school admins';
+  reset role;
+
+  -- Retention: contact details after 12 months, unconfirmed feedback after 48 hours.
+  update public.project_feedback_contacts set contacts_expire_at = now() - interval '1 day' where feedback_id = fb_id;
+  set local role service_role;
+  perform public.submit_project_feedback('amina-reg', pa, 3, 'Never confirmed.', 'Ghost', 'other', null, 'ghost@test.invalid', '+254700000001', false, repeat('d', 64));
+  reset role;
+  update public.project_feedback set created_at = now() - interval '3 days'
+    where id in (select feedback_id from public.project_feedback_contacts where email = 'ghost@test.invalid');
+  -- Ghost's link has expired; a second unconfirmed visitor re-submitted recently (old first try, fresh link).
+  update public.project_feedback_contacts set token_expires_at = now() - interval '1 hour' where email = 'ghost@test.invalid';
+  set local role service_role;
+  perform public.submit_project_feedback('amina-reg', pa, 4, 'Second try, fresh link.', 'Late', 'other', null, 'late@test.invalid', '+254700000002', false, repeat('7', 64));
+  reset role;
+  update public.project_feedback set created_at = now() - interval '5 days'
+    where id in (select feedback_id from public.project_feedback_contacts where email = 'late@test.invalid');
+  insert into public.project_feedback_email_sends (email_hash, sent_at) values (repeat('0', 64), now() - interval '2 days');
+  set local role service_role;
+  fb := public.purge_expired_feedback_data();
+  reset role;
+  assert not exists (select 1 from public.project_feedback_contacts where feedback_id = fb_id), 'expired contact details are deleted';
+  assert exists (select 1 from public.project_feedback where id = fb_id), '... but the feedback itself is kept';
+  assert not exists (select 1 from public.project_feedback_contacts where email = 'ghost@test.invalid'), 'unconfirmed feedback is purged once its link expires';
+  assert exists (select 1 from public.project_feedback_contacts where email = 'late@test.invalid'),
+    'unconfirmed feedback with a still-valid (re-issued) link is kept, even if first submitted days ago';
+  assert not exists (select 1 from public.project_feedback_email_sends where email_hash = repeat('0', 64)), 'the email send log is purged after 24 hours';
+
+  ------------------------------------------------- deck viewability status (server-only)
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.projects set pitch_deck_url = 'https://docs.google.com/presentation/d/abc/edit' where id = pa;
+  update public.projects set pitch_deck_status = 'public', pitch_deck_checked_at = now() where id = pa;
+  reset role;
+  assert (select pitch_deck_status = 'unchecked' and pitch_deck_checked_at is null from public.projects where id = pa),
+    'pitch_deck_status / pitch_deck_checked_at must ignore client writes';
+  set local role service_role;
+  update public.projects set pitch_deck_status = 'restricted', pitch_deck_checked_at = now() where id = pa;
+  reset role;
+  assert (select pitch_deck_status from public.projects where id = pa) = 'restricted', 'the server (service_role) records the check result';
+  set local role authenticated;
+  update public.projects set title = 'A project (renamed)' where id = pa;
+  reset role;
+  assert (select pitch_deck_status from public.projects where id = pa) = 'restricted', 'unrelated edits keep the check result';
+  set local role authenticated;
+  update public.projects set pitch_deck_url = 'https://docs.google.com/presentation/d/xyz/edit' where id = pa;
+  reset role;
+  assert (select pitch_deck_status = 'unchecked' and pitch_deck_checked_at is null from public.projects where id = pa),
+    'changing the deck link resets the check result';
+
+  ------------------------------------------------- deck views (server-only writes, owner counts only)
+  set local role anon;
+  blocked := false; begin perform 1 from public.project_deck_views limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not read deck views';
+  blocked := false; begin perform public.record_deck_view('amina-reg', pa, repeat('1', 64), 'KE'); exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'anon must not call record_deck_view directly (server route only)';
+  reset role;
+  update public.projects set pitch_deck_url = 'https://docs.google.com/presentation/d/xyz/edit' where id = pa;
+  set local role service_role;
+  assert public.record_deck_view('amina-reg', pa, repeat('1', 64), 'KE'), 'first view of the day is counted';
+  assert not public.record_deck_view('amina-reg', pa, repeat('1', 64), 'KE'), 'same visitor, same day: not counted again';
+  assert public.record_deck_view('amina-reg', pa, repeat('2', 64), 'UG'), 'a different visitor is counted';
+  assert not public.record_deck_view('amina-reg', pb, repeat('3', 64), 'KE'), 'views only count for projects shown on that public profile';
+  assert not public.record_deck_view('dee-reg', pa, repeat('3', 64), 'KE'), 'no views through a profile the project does not belong to';
+  blocked := false; begin perform public.record_deck_view('amina-reg', pa, 'not-a-hash', 'KE'); exception when check_violation then blocked := true; end;
+  assert blocked, 'only a 64-hex visitor hash is stored (no raw identifiers)';
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select to_jsonb(x) into fb from public.get_my_deck_views(pa) x;
+  assert (fb ->> 'total')::int = 2 and (fb ->> 'last_7_days')::int = 2, 'owner sees view totals';
+  assert not (fb::text ~* 'visitor_hash|1111|2222'), 'owner never sees visitor-level identifiers';
+  blocked := false; begin perform 1 from public.project_deck_views limit 1; exception when insufficient_privilege then blocked := true; end;
+  assert blocked, 'owner cannot read raw view rows either';
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.get_my_deck_views(pa);
+  assert n = 0, 'another student cannot see A''s view counts';
+  reset role;
+  update public.project_deck_views set created_at = now() - interval '14 months' where project_id = pa and visitor_hash = repeat('1', 64);
+  set local role service_role;
+  perform public.purge_expired_feedback_data();
+  reset role;
+  assert (select count(*) from public.project_deck_views where project_id = pa) = 1, 'deck views older than 13 months are purged';
 
   raise exception 'ALL PASS (rolled back)';
 exception

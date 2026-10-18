@@ -15,6 +15,8 @@ import { Card, PageHero, Section } from "@/components/site";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LoadError } from "@/components/LoadError";
+import { adminDeleteProjectFeedback, adminListProjectFeedback, type AdminProjectFeedback } from "@/lib/project-feedback";
+import { feedbackRoleLabel } from "@/lib/visitor-feedback";
 
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({ meta: [{ title: "Platform admin dashboard · MetaTwin" }] }),
@@ -113,7 +115,7 @@ function AdminDashboardPage() {
   }
 
   if (authLoading || state === "loading") {
-    return <main className="p-16 text-center text-muted-foreground">Loading...</main>;
+    return <div className="p-16 text-center text-muted-foreground" role="status">Loading...</div>;
   }
   if (state === "error") return <LoadError onRetry={() => setReloadKey((k) => k + 1)} />;
 
@@ -241,6 +243,8 @@ function AdminDashboardPage() {
             </div>
           )}
         </div>
+
+        <FeedbackModeration />
       </Section>
 
       <Dialog open={!!confirmTarget} onOpenChange={(open) => !open && setConfirmTarget(null)}>
@@ -259,5 +263,89 @@ function AdminDashboardPage() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+// Visitor feedback moderation (verified platform admins only; the database
+// refuses everyone else). Reported feedback first. This is the only screen
+// that shows reviewer email + WhatsApp.
+function FeedbackModeration() {
+  const [items, setItems] = useState<AdminProjectFeedback[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [target, setTarget] = useState<AdminProjectFeedback | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    try {
+      setItems(await adminListProjectFeedback());
+      setFailed(false);
+    } catch {
+      setFailed(true);
+    }
+  }
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function remove() {
+    if (!target) return;
+    setBusy(true);
+    try {
+      await adminDeleteProjectFeedback(target.id);
+      toast.success("Feedback deleted.");
+      setTarget(null);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't delete it.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const reported = (items ?? []).filter((f) => f.reported_at).length;
+  return (
+    <div>
+      <h2 className="font-display text-lg font-semibold">Visitor feedback {reported > 0 && <span className="ml-2 rounded-full bg-destructive px-2 py-0.5 text-xs text-white">{reported} reported</span>}</h2>
+      <p className="mt-1 text-xs text-muted-foreground">Reviewer contact details are shown here for moderation only. They're deleted 12 months after confirmation.</p>
+      {failed ? (
+        <p className="mt-3 text-sm text-destructive">Couldn't load feedback. <button type="button" className="underline" onClick={load}>Try again</button></p>
+      ) : items === null ? (
+        <p className="mt-3 text-sm text-muted-foreground" role="status">Loading…</p>
+      ) : items.length === 0 ? (
+        <Card className="mt-3 border-dashed"><p className="text-sm text-muted-foreground">No visitor feedback yet.</p></Card>
+      ) : (
+        <ul className="mt-3 space-y-3">
+          {items.map((f) => (
+            <li key={f.id}>
+              <Card className={f.reported_at ? "border-destructive/50" : ""}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold">{f.project_title} <span className="font-normal text-muted-foreground">· {f.student_name ?? f.student_handle}</span></p>
+                    <p className="text-xs text-muted-foreground">{f.status === "pending" ? "Unconfirmed" : `Confirmed ${formatDateTime(f.confirmed_at ?? f.created_at)}`} · {f.rating}/5{f.hidden_by_owner ? " · hidden by student" : ""}</p>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => setTarget(f)}>Delete</Button>
+                </div>
+                <p className="mt-2 whitespace-pre-line text-sm">{f.comment}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {f.reviewer_name} · {feedbackRoleLabel(f.reviewer_role)}{f.reviewer_org ? ` · ${f.reviewer_org}` : ""}
+                  {f.reviewer_email ? <> · {f.reviewer_email} · {f.reviewer_whatsapp}{f.share_email_consent ? " · consented to share email" : ""}</> : " · contact details expired"}
+                </p>
+                {f.reported_at && <p className="mt-2 text-xs text-destructive">Reported {formatDateTime(f.reported_at)}{f.report_reason ? `: "${f.report_reason}"` : ""}</p>}
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Dialog open={!!target} onOpenChange={(o) => !o && setTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete this feedback?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">It's removed for the student and their school, along with the reviewer's contact details. This can't be undone.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTarget(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={remove} disabled={busy}>{busy ? "Deleting…" : "Delete"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

@@ -79,9 +79,10 @@ M-Pesa STK Push (Daraja **sandbox**) for MetaTwin's own subscription plans (indi
    guard triggers on `twins` (adult declaration, plan, activation), `competencies.evidence_count`, `projects.stage`,
    `school_admins`/`platform_admins` status; and by zero-grant tables (`payments`, `pitch_scores`, `project_grades`,
    `teams`, `team_members`, `github_connections`).
-   **Known open violations** (Build Plan stage 0.5): `projects.interviews_count`/`interviews_synced_at` (drives stage
-   advancement), `projects.pitch_scores`/`scores_synced_at`, `github_repos` stats, `ai_employees.github_*` — fetched by
-   the server but written by the browser.
+   Since 0.5 (2026-10-15) the server-fetched proof numbers (`projects.interviews_count`/`pitch_scores`, `github_repos`,
+   `ai_employees.github_*`) are written only by authenticated, ownership-checked server routes. **Limits that remain**
+   (Build Plan 2.1a): a synced GitHub repo isn't yet proven to be the builder's, and sheet-based counts come from a
+   sheet the student controls.
 4. **Server routes that act on a user's behalf verify the caller's Supabase access token** and check ownership before
    any side effect (e.g. before an STK push).
 5. **Untrusted URLs:** http(s)-only CHECK constraints; rendered via `safeHref`; server-side fetches are host-restricted
@@ -92,6 +93,12 @@ M-Pesa STK Push (Daraja **sandbox**) for MetaTwin's own subscription plans (indi
 
 ## 6. Non-functional
 
-- **Mobile-first**, East African connections: ~1.2 MB raw JS total, largest chunk ~101 KB gzipped (2026-10-14 build).
-  Hero images are pre-compressed; the 8 MB pitch-deck MP4 loads only on demand.
+- **Mobile-first**, East African connections. Supported widths: 320px and up; layouts verified at 320/360/768/1280px
+  (no horizontal overflow; tap targets >= 32px for standalone controls; form fields >= 16px on touch devices so iOS
+  doesn't zoom). Root font size steps 17px (phones) / 18px (tablets) / 19px (desktop). Hero photos ship an 800px
+  variant via `srcset` (~30 KB vs ~90 KB on phones). Ambient hero animations are off below 640px. Largest JS chunk
+  ~101 KB gzipped; the shared `site` chunk is ~72 KB gzipped (mostly supabase-js, incl. unused realtime).
+- **Layout rules that prevent clipped content** (`src/styles.css`): `.grid` defaults to `minmax(0, 1fr)` columns and
+  body text uses `overflow-wrap: anywhere`. `html { overflow-x: clip }` stays as a safety net, but anything it clips
+  is invisible, so new layouts must not rely on it.
 - **Honesty:** fictional sample data is always labelled; unbuilt features are labelled "Preview"/"Coming soon".

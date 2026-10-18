@@ -245,11 +245,12 @@ function ProfileTab() {
               checked={form.public_show_evidence_details}
               onChange={(e) => setForm({ ...form, public_show_evidence_details: e.target.checked })}
             />
-            <span>Also show my evidence links, evidence notes and project links</span>
+            <span>Also show my evidence links and evidence notes</span>
           </label>
           <p className="text-xs text-muted-foreground">
-            The public page shows your name, headline, institution, programme, capabilities, evidence titles and projects. It never
-            shows your email, birth year, year of study, gender or MBTI type.
+            The public page shows your name, headline, institution, programme, capabilities, evidence titles and every project with
+            its problem, solution, pitch deck, pitch video, write-up and project link, so people can find your work. It never shows
+            your email, birth year, year of study, gender or MBTI type.
           </p>
           {twin.visibility === "public" && twin.handle && (
             <div className="flex flex-wrap items-center gap-3 rounded-lg bg-background p-3 text-sm">

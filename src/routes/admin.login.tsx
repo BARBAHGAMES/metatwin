@@ -35,9 +35,9 @@ function AdminLoginPage() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
+    <div className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
       <HeroBackdrop />
-      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-5 py-16">
+      <div className="relative mx-auto flex min-h-[calc(100svh-4rem)] max-w-md flex-col justify-center px-5 py-16">
         <p className="hero-rise flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.2em] text-electric"><ShieldCheck className="h-3.5 w-3.5" /> Platform admin</p>
         <h1 className="hero-rise-delay-1 mt-3 text-3xl font-semibold">Log in</h1>
         <Card className="hero-rise-delay-2 mt-8 bg-card/95 text-foreground backdrop-blur-sm">

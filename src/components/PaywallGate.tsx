@@ -27,7 +27,7 @@ export function PaywallGate({ onPaid }: { onPaid: () => void }) {
   }
 
   return (
-    <main className="mx-auto max-w-md px-5 py-16">
+    <div className="mx-auto max-w-md px-5 py-16">
       <Card>
         <ShieldCheck className="h-8 w-8 text-electric" />
         <h1 className="mt-4 text-2xl font-semibold">Unlock your MetaTwin</h1>
@@ -73,6 +73,6 @@ export function PaywallGate({ onPaid }: { onPaid: () => void }) {
           </form>
         )}
       </Card>
-    </main>
+    </div>
   );
 }

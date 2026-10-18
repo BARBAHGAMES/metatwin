@@ -71,9 +71,9 @@ function SchoolSignupPage() {
 
   if (done) {
     return (
-      <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
+      <div className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
         <HeroBackdrop />
-        <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-5 py-16 text-center">
+        <div className="relative mx-auto flex min-h-[calc(100svh-4rem)] max-w-md flex-col justify-center px-5 py-16 text-center">
           <GraduationCap className="mx-auto h-10 w-10 text-electric" />
           <h1 className="mt-4 text-2xl font-semibold">Thanks — you're on the list</h1>
           <p className="mt-2 text-ink-muted">We'll verify your university affiliation and email you once your account is active. This is a manual check, so it may take a day or two.</p>
@@ -84,9 +84,9 @@ function SchoolSignupPage() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
+    <div className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-gradient-ink text-ink-foreground">
       <HeroBackdrop />
-      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-5 py-16">
+      <div className="relative mx-auto flex min-h-[calc(100svh-4rem)] max-w-md flex-col justify-center px-5 py-16">
         <p className="hero-rise flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.2em] text-electric"><GraduationCap className="h-3.5 w-3.5" /> School admin</p>
         <h1 className="hero-rise-delay-1 mt-3 text-3xl font-semibold">Grade your students' projects</h1>
         <p className="hero-rise-delay-1 mt-2 text-ink-muted">For Mount Kenya University staff. We verify every account by hand before it can see any student data.</p>

@@ -40,7 +40,7 @@ export function AdultGate({ onDeclared }: { onDeclared: () => void }) {
   }
 
   return (
-    <main className="mx-auto max-w-md px-5 py-16">
+    <div className="mx-auto max-w-md px-5 py-16">
       <Card>
         <h1 className="text-2xl font-semibold">One quick step</h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -69,6 +69,6 @@ export function AdultGate({ onDeclared }: { onDeclared: () => void }) {
           <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Continue"}</Button>
         </form>
       </Card>
-    </main>
+    </div>
   );
 }

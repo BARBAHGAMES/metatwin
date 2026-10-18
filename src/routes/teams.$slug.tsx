@@ -31,21 +31,21 @@ export const Route = createFileRoute("/teams/$slug")({
 
 function TeamError() {
   return (
-    <main className="mx-auto max-w-md px-5 py-20 text-center">
+    <div className="mx-auto max-w-md px-5 py-20 text-center">
       <h1 className="text-2xl font-semibold">We couldn't load this team</h1>
       <p className="mt-3 text-sm text-muted-foreground">Something went wrong on our side. Please try again in a moment.</p>
       <Button className="mt-6" onClick={() => window.location.reload()}>Try again</Button>
-    </main>
+    </div>
   );
 }
 
 function TeamNotFound() {
   return (
-    <main className="mx-auto max-w-md px-5 py-20 text-center">
+    <div className="mx-auto max-w-md px-5 py-20 text-center">
       <h1 className="text-2xl font-semibold">This team isn't available</h1>
       <p className="mt-3 text-sm text-muted-foreground">The link may be wrong, or the team has gone private.</p>
       <Button asChild variant="hero" className="mt-6"><Link to="/">Back to MetaTwin</Link></Button>
-    </main>
+    </div>
   );
 }
 
